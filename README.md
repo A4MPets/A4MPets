@@ -4,29 +4,52 @@
 
 Proyecto monorepo:
 
-- **backend/** → API en Laravel 12 (PHP + SQLite)
-- **frontend/** → App en Flutter
+-   **backend/** → API en Laravel 12 (PHP + SQLite)\
+-   **frontend/** → App en Flutter
+
+------------------------------------------------------------------------
 
 ### 1. Requisitos (una sola vez en el PC)
 
 Ya deberían estar instalados y funcionando:
 
-- **PHP** (ruta tipo `C:\src\php-8.x...`)
-- **Composer**
-- **Flutter SDK** (ruta tipo `C:\src\flutter`)
-- **Git**
-- **Navegador** (Chrome recomendado para Flutter web)
+-   **PHP** (ruta tipo `C:\src\php-8.x...`)
+-   **Composer**
+-   **Flutter SDK** (ruta tipo `C:\src\flutter`)
+-   **Git**
+-   **Navegador** (Chrome recomendado para Flutter web)
+
+#### 🔗 Links oficiales de descarga
+
+-   **Git**\
+    https://git-scm.com/download/win
+
+-   **PHP 8.x para Windows**\
+    https://windows.php.net/download/
+
+-   **Composer (Windows installer)**\
+    https://getcomposer.org/download/
+
+-   **Flutter SDK para Windows**\
+    https://docs.flutter.dev/get-started/install/windows
+
+> Recomendado pero opcional:\
+> **Visual Studio Code** → https://code.visualstudio.com/
+
+------------------------------------------------------------------------
 
 ### 2. Primera vez que clono el repositorio
 
-```bash
+``` bash
 git clone <url-del-repo> A4MPets
 cd A4MPets
 ```
 
-### 2.1. Backend (Laravel) – configuración inicial
+------------------------------------------------------------------------
 
-```bash
+### 2.1. Backend (Laravel) -- configuración inicial
+
+``` bash
 cd backend
 
 # Instalar dependencias
@@ -39,9 +62,10 @@ copy .env.example .env  # en PowerShell/CMD de Windows
 php artisan key:generate
 ```
 
-Editar el archivo **`backend/.env`** y asegurarse de que quede así para la base de datos SQLite:
+Editar el archivo **`backend/.env`** y asegurarse de que quede así para
+la base de datos SQLite:
 
-```env
+``` env
 DB_CONNECTION=sqlite
 DB_DATABASE=database/database.sqlite
 
@@ -51,48 +75,48 @@ CACHE_DRIVER=file
 
 Crear el archivo de base de datos (vacío) en:
 
-```text
+``` text
 backend/database/database.sqlite
 ```
 
 Luego ejecutar las migraciones:
 
-```bash
+``` bash
 php artisan migrate
 ```
 
 Si todo sale bien, ya se puede levantar el servidor:
 
-```bash
+``` bash
 php artisan serve
 # Servidor en: http://127.0.0.1:8000
 ```
 
----
+------------------------------------------------------------------------
 
-### 2.2. Frontend (Flutter) – configuración inicial
+### 2.2. Frontend (Flutter) -- configuración inicial
 
 Desde la raíz del proyecto (si aún no existe la carpeta):
 
-```bash
+``` bash
 cd A4MPets
 flutter create frontend   # Solo la primera vez
 ```
 
 Entrar a la carpeta del frontend y obtener dependencias:
 
-```bash
+``` bash
 cd frontend
 flutter pub get
 ```
 
 Probar la app en Chrome:
 
-```bash
+``` bash
 flutter run -d chrome
 ```
 
----
+------------------------------------------------------------------------
 
 ## 3. Cada vez que quiera ejecutar el proyecto
 
@@ -100,7 +124,7 @@ flutter run -d chrome
 
 En una terminal:
 
-```bash
+``` bash
 cd A4MPets/backend
 php artisan serve
 # http://127.0.0.1:8000
@@ -110,46 +134,48 @@ php artisan serve
 
 En otra terminal:
 
-```bash
+``` bash
 cd A4MPets/frontend
 flutter run -d chrome
 ```
 
----
+------------------------------------------------------------------------
 
 ## 4. Comandos útiles
 
-* Limpiar caché/config de Laravel (por si cambio algo en `.env`):
+-   Limpiar caché/config de Laravel (por si cambio algo en `.env`):
 
-  ```bash
-  cd backend
-  php artisan config:clear
-  php artisan cache:clear
-  php artisan optimize:clear
-  ```
+``` bash
+cd backend
+php artisan config:clear
+php artisan cache:clear
+php artisan optimize:clear
+```
 
-* Volver a correr migraciones (si cambio el esquema):
+-   Volver a correr migraciones (si cambio el esquema):
 
-  ```bash
-  cd backend
-  php artisan migrate
-  ```
+``` bash
+cd backend
+php artisan migrate
+```
 
----
+------------------------------------------------------------------------
 
 ## 5. Notas
 
-* Si aparece un error tipo **`could not find driver (Connection: sqlite)`**:
+-   Si aparece un error tipo
+    **`could not find driver (Connection: sqlite)`**:
 
-  * Revisar que en `php.ini` estén activadas las extensiones:
+    -   Revisar que en `php.ini` estén activadas las extensiones:
 
-    ```ini
-    extension=pdo_sqlite
-    extension=sqlite3
-    ```
-  * Cerrar terminal, abrir otra y probar de nuevo.
+        ``` ini
+        extension=pdo_sqlite
+        extension=sqlite3
+        ```
 
-* Siempre tener **dos terminales**:
+    -   Cerrar terminal, abrir otra y probar de nuevo.
 
-  * Una para `php artisan serve`
-  * Otra para `flutter run -d chrome`
+-   Siempre tener **dos terminales**:
+
+    -   Una para `php artisan serve`
+    -   Otra para `flutter run -d chrome`
