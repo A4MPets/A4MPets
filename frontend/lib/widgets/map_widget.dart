@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../theme/app_palette.dart';
+
 class MapWidget extends StatefulWidget {
   final bool isDarkMode;
   final LatLng center;
@@ -33,10 +35,10 @@ class _MapWidgetState extends State<MapWidget> {
   double currentZoom = 13;
 
   // Color palette
-  static const Color primary = Color(0xFF5984BC); // Primary color - "Start Trip" button
+  static const Color primary = AppPalette.primaryBlue; // Primary color - "Start Trip" button
   static const Color secondary = Color(0xFF0F176E); // Secondary color - "Report Danger" buttron
-  static const Color white = Color(0xFFFFFFFF);
-  static const Color contentGray = Color(0xFF404040); // Text/icon color inside translucent buttons
+  static const Color white = AppPalette.white;
+  static const Color contentGray = AppPalette.charcoal; // Text/icon color inside translucent buttons
   static const Color translucentWhite = Color(0xCCFFFFFF); // White with 0.8 alpha
 
   @override

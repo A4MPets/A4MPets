@@ -23,6 +23,7 @@ class AppModalPanel extends StatelessWidget {
   final BorderRadius borderRadius;
   final VoidCallback onClosePressed;
   final bool showBackButton;
+  final bool scrollContent;
   final Duration animationDuration;
   final Curve animationCurve;
 
@@ -41,6 +42,7 @@ class AppModalPanel extends StatelessWidget {
     this.maxHeight,
     this.borderRadius = const BorderRadius.all(Radius.circular(20)),
     this.showBackButton = false,
+    this.scrollContent = true,
     this.animationDuration = const Duration(milliseconds: 260),
     this.animationCurve = Curves.easeOutCubic,
   });
@@ -101,18 +103,31 @@ class AppModalPanel extends StatelessWidget {
                 ),
                 child: Stack(
                   children: [
-                    if (adaptHeightToContent)
-                      _PanelScrollableBody(
-                        topPadding: hasTitle ? 56 : 12,
-                        child: child,
-                        adaptHeightToContent: true,
-                      )
+                    if (scrollContent)
+                      if (adaptHeightToContent)
+                        _PanelScrollableBody(
+                          topPadding: hasTitle ? 56 : 12,
+                          adaptHeightToContent: true,
+                          child: child,
+                        )
+                      else
+                        Positioned.fill(
+                          child: _PanelScrollableBody(
+                            topPadding: hasTitle ? 56 : 12,
+                            adaptHeightToContent: false,
+                            child: child,
+                          ),
+                        )
                     else
                       Positioned.fill(
-                        child: _PanelScrollableBody(
-                          topPadding: hasTitle ? 56 : 12,
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            16,
+                            hasTitle ? 56 : 12,
+                            16,
+                            18,
+                          ),
                           child: child,
-                          adaptHeightToContent: false,
                         ),
                       ),
                     if (hasTitle)

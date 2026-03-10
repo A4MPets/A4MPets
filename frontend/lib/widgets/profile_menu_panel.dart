@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class ProfileMenuPanel extends StatelessWidget {
+import '../models/local_user_profile.dart';
+import '../providers/local_data_providers.dart';
+import 'shared/user_identity_header.dart';
+
+class ProfileMenuPanel extends ConsumerWidget {
   final bool isDarkMode;
   final VoidCallback? onLoginPressed;
   final VoidCallback? onRegisterPressed;
@@ -17,15 +22,7 @@ class ProfileMenuPanel extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final Color textColor = isDarkMode
-        ? const Color(0xFFAAAAAA)
-        : const Color(0xFF404040);
-
-    final Color avatarBorderColor = isDarkMode
-        ? const Color(0xFFFFFFFF)
-        : const Color(0xFF404040);
-
+  Widget build(BuildContext context, WidgetRef ref) {
     final Color neutralButtonBackground = isDarkMode
         ? const Color(0xFF404040)
         : const Color(0xFFFFFFFF);
@@ -34,21 +31,26 @@ class ProfileMenuPanel extends StatelessWidget {
         ? const Color(0xFFFFFFFF)
         : const Color(0xFF404040);
 
+    final AsyncValue<LocalUserProfile> userProfile = ref.watch(localUserProfileProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Center(
-          child: _ProfileAvatar(borderColor: avatarBorderColor),
-        ),
-        const SizedBox(height: 14),
-        Text(
-          'Usuario',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: textColor,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
+        userProfile.when(
+          data: (LocalUserProfile profile) {
+            return UserIdentityHeader(
+              isDarkMode: isDarkMode,
+              username: profile.username,
+              avatarPath: profile.avatarPath,
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (Object error, StackTrace stackTrace) {
+            return UserIdentityHeader(
+              isDarkMode: isDarkMode,
+              username: 'Usuario',
+            );
+          },
         ),
         const SizedBox(height: 22),
         Row(
@@ -91,41 +93,6 @@ class ProfileMenuPanel extends StatelessWidget {
           onPressed: onManageRoutesPressed,
         ),
       ],
-    );
-  }
-}
-
-class _ProfileAvatar extends StatelessWidget {
-  final Color borderColor;
-
-  const _ProfileAvatar({required this.borderColor});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 106,
-      height: 106,
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: borderColor, width: 2),
-      ),
-      child: ClipOval(
-        child: Image.asset(
-          'assets/images/default_user.png',
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              color: const Color(0xFFCFCFCF),
-              child: const Icon(
-                Icons.person,
-                size: 48,
-                color: Color(0xFF666666),
-              ),
-            );
-          },
-        ),
-      ),
     );
   }
 }

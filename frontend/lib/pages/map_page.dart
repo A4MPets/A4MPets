@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../providers/theme_provider.dart';
+import '../models/pet_record.dart';
 import '../widgets/auth_panels.dart';
 import '../widgets/map_widget.dart';
 import '../widgets/panel_modal.dart';
+import '../widgets/pet_management_panels.dart';
 import '../widgets/profile_menu_panel.dart';
 
 class MapPage extends ConsumerStatefulWidget {
@@ -60,6 +62,18 @@ class _MapPageState extends ConsumerState<MapPage> {
     _replaceTopPanel(_buildRegisterRoute(isDarkMode));
   }
 
+  void _openManagePetsPanel(bool isDarkMode) {
+    _pushPanel(_buildManagePetsRoute(isDarkMode));
+  }
+
+  void _openAddPetPanel(bool isDarkMode) {
+    _pushPanel(_buildAddPetRoute(isDarkMode));
+  }
+
+  void _openEditPetPanel(bool isDarkMode, PetRecord pet) {
+    _pushPanel(_buildEditPetRoute(isDarkMode, pet));
+  }
+
   _PanelRoute _buildProfileRoute(bool isDarkMode) {
     return _PanelRoute(
       transitionKey: ++_panelTransitionSeed,
@@ -77,7 +91,7 @@ class _MapPageState extends ConsumerState<MapPage> {
           isDarkMode: isDarkMode,
           onLoginPressed: () => _openLoginPanel(isDarkMode),
           onRegisterPressed: () => _openRegisterPanel(isDarkMode),
-          onManagePetsPressed: () {},
+          onManagePetsPressed: () => _openManagePetsPanel(isDarkMode),
           onManageRoutesPressed: () {},
         );
       },
@@ -101,6 +115,74 @@ class _MapPageState extends ConsumerState<MapPage> {
           isDarkMode: isDarkMode,
           onSwitchToRegister: () => _switchToRegisterPanel(isDarkMode),
           onSubmit: () {},
+        );
+      },
+    );
+  }
+
+  _PanelRoute _buildManagePetsRoute(bool isDarkMode) {
+    return _PanelRoute(
+      transitionKey: ++_panelTransitionSeed,
+      title: 'Gestionar Mascotas',
+      anchor: PanelAnchor.topLeft,
+      width: 380,
+      height: 620,
+      maxHeight: 620,
+      adaptHeightToContent: false,
+      expandHorizontal: false,
+      expandVertical: true,
+      scrollContent: false,
+      borderRadius: BorderRadius.circular(22),
+      contentBuilder: (BuildContext context) {
+        return ManagePetsPanelContent(
+          isDarkMode: isDarkMode,
+          onAddPetPressed: () => _openAddPetPanel(isDarkMode),
+          onEditPetPressed: (PetRecord pet) => _openEditPetPanel(isDarkMode, pet),
+        );
+      },
+    );
+  }
+
+  _PanelRoute _buildAddPetRoute(bool isDarkMode) {
+    return _PanelRoute(
+      transitionKey: ++_panelTransitionSeed,
+      title: 'Agregar mascota',
+      anchor: PanelAnchor.topLeft,
+      width: 380,
+      height: 620,
+      maxHeight: 620,
+      adaptHeightToContent: false,
+      expandHorizontal: false,
+      expandVertical: true,
+      scrollContent: false,
+      borderRadius: BorderRadius.circular(22),
+      contentBuilder: (BuildContext context) {
+        return AddPetPanelContent(
+          isDarkMode: isDarkMode,
+          onSaved: _closeCurrentPanel,
+        );
+      },
+    );
+  }
+
+  _PanelRoute _buildEditPetRoute(bool isDarkMode, PetRecord pet) {
+    return _PanelRoute(
+      transitionKey: ++_panelTransitionSeed,
+      title: 'Editar mascota',
+      anchor: PanelAnchor.topLeft,
+      width: 380,
+      height: 620,
+      maxHeight: 620,
+      adaptHeightToContent: false,
+      expandHorizontal: false,
+      expandVertical: true,
+      scrollContent: false,
+      borderRadius: BorderRadius.circular(22),
+      contentBuilder: (BuildContext context) {
+        return EditPetPanelContent(
+          pet: pet,
+          isDarkMode: isDarkMode,
+          onSaved: _closeCurrentPanel,
         );
       },
     );
@@ -185,6 +267,7 @@ class _MapPageState extends ConsumerState<MapPage> {
           adaptHeightToContent: currentPanel.adaptHeightToContent,
           expandHorizontal: currentPanel.expandHorizontal,
           expandVertical: currentPanel.expandVertical,
+          scrollContent: currentPanel.scrollContent,
           borderRadius: currentPanel.borderRadius,
           showBackButton: _panelStack.length > 1,
           onClosePressed: _closeCurrentPanel,
@@ -228,6 +311,7 @@ class _PanelRoute {
   final bool adaptHeightToContent;
   final bool expandHorizontal;
   final bool expandVertical;
+  final bool scrollContent;
   final BorderRadius borderRadius;
   final Widget Function(BuildContext context) contentBuilder;
 
@@ -242,6 +326,7 @@ class _PanelRoute {
     this.adaptHeightToContent = false,
     this.expandHorizontal = false,
     this.expandVertical = false,
+    this.scrollContent = true,
     this.borderRadius = const BorderRadius.all(Radius.circular(20)),
   });
 }
