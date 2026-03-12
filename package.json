@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "scripts": {
+    "frontend": "cd frontend && flutter run -d chrome",
+    "backend": "cd backend && php artisan serve",
+    "dev": "concurrently --names \"BACKEND,FRONTEND\" --prefix-colors \"cyan,magenta\" \"npm run backend\" \"npm run frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}

@@ -4,12 +4,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/local_user_profile.dart';
 import '../models/pet_record.dart';
+import '../models/route_record.dart';
 
 class LocalDatabaseManager {
   LocalDatabaseManager();
 
   static const String _userKey = 'local_user_profile_json';
   static const String _petsKey = 'pets_list_json';
+  static const String _routesKey = 'routes_list_json';
 
   Future<SharedPreferences> get _prefs async => SharedPreferences.getInstance();
 
@@ -20,6 +22,11 @@ class LocalDatabaseManager {
 
     if (!prefs.containsKey(_petsKey)) {
       await prefs.setString(_petsKey, jsonEncode(<Map<String, Object?>>[]));
+    }
+
+    if (!prefs.containsKey(_routesKey)) {
+      await prefs.setString(_routesKey, jsonEncode(<Map<String, Object?>>[]));
+
     }
   }
 
@@ -122,6 +129,86 @@ class LocalDatabaseManager {
         .toList();
 
     await prefs.setString(_petsKey, jsonEncode(encodedPets));
+  }
+
+  Future<List<RouteRecord>> getRoutes() async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final String raw = prefs.getString(_routesKey)!;
+    final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
+    return decoded
+        .map((dynamic row) => RouteRecord.fromMap(
+              (row as Map<String, dynamic>).cast<String, Object?>(),
+            ))
+        .toList(growable: false);
+  }
+
+  Future<int> addRoute({
+    required String name,
+    required List<RoutePoint> points,
+  }) async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final List<RouteRecord> current = await getRoutes();
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    final int nextId = current.isEmpty
+        ? 1
+        : current.map((RouteRecord r) => r.id).reduce((int a, int b) => a > b ? a : b) + 1;
+    final RouteRecord newRoute = RouteRecord(
+      id: nextId,
+      name: name,
+      points: points,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(now),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+      needsSync: true,
+    );
+    final List<Map<String, Object?>> encoded = <Map<String, Object?>>[
+      ...current.map((RouteRecord r) => r.toMap()),
+      newRoute.toMap(),
+    ];
+    await prefs.setString(_routesKey, jsonEncode(encoded));
+    return nextId;
+  }
+
+  Future<int> getRoutesCount() async {
+    final List<RouteRecord> routes = await getRoutes();
+    return routes.length;
+  }
+
+  Future<void> deleteRoute({required int routeId}) async {
+    final SharedPreferences prefs = await _prefs;
+    final List<RouteRecord> current = await getRoutes();
+    final List<Map<String, Object?>> encoded = current
+        .where((RouteRecord r) => r.id != routeId)
+        .map((RouteRecord r) => r.toMap())
+        .toList();
+    await prefs.setString(_routesKey, jsonEncode(encoded));
+  }
+
+  Future<void> updateRoute({
+    required int routeId,
+    required String name,
+    required List<RoutePoint> points,
+  }) async {
+    final SharedPreferences prefs = await _prefs;
+    final List<RouteRecord> current = await getRoutes();
+    final int now = DateTime.now().millisecondsSinceEpoch;
+
+    final List<Map<String, Object?>> encoded = current.map((RouteRecord route) {
+      if (route.id == routeId) {
+        return RouteRecord(
+          id: route.id,
+          name: name,
+          points: points,
+          createdAt: route.createdAt,
+          updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+          needsSync: true,
+        ).toMap();
+      }
+      return route.toMap();
+    }).toList();
+
+    await prefs.setString(_routesKey, jsonEncode(encoded));
   }
 
   Future<void> markUserDataForFutureSync() async {}

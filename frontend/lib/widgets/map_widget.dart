@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'dart:math' as math;
 
 import '../theme/app_palette.dart';
 
@@ -13,6 +14,17 @@ class MapWidget extends StatefulWidget {
   final VoidCallback? onProfileTap;
   final bool hideDefaultControls;
   final Widget? panelOverlay;
+  final List<LatLng> routePoints;
+  final List<LatLng> routePolylinePoints;
+  final int? selectedRoutePointIndex;
+  final void Function(int index)? onRoutePointPointerDown;
+  final void Function(int index)? onRoutePointTap;
+  final bool canDragRoutePoints;
+  final void Function(int index)? onRoutePointDragStart;
+  final void Function(int index, LatLng point)? onRoutePointDragUpdate;
+  final void Function(int index, LatLng point)? onRoutePointDragEnd;
+  final bool isSelectingRoutePoint;
+  final void Function(LatLng)? onMapTap;
 
   const MapWidget({
     super.key,
@@ -24,6 +36,17 @@ class MapWidget extends StatefulWidget {
     this.onProfileTap,
     this.hideDefaultControls = false,
     this.panelOverlay,
+    this.routePoints = const [],
+    this.routePolylinePoints = const [],
+    this.selectedRoutePointIndex,
+    this.onRoutePointPointerDown,
+    this.onRoutePointTap,
+    this.canDragRoutePoints = false,
+    this.onRoutePointDragStart,
+    this.onRoutePointDragUpdate,
+    this.onRoutePointDragEnd,
+    this.isSelectingRoutePoint = false,
+    this.onMapTap,
   });
 
   @override
@@ -33,6 +56,9 @@ class MapWidget extends StatefulWidget {
 class _MapWidgetState extends State<MapWidget> {
   late MapController mapController;
   double currentZoom = 13;
+  bool _isDraggingRoutePoint = false;
+  int? _draggingRoutePointIndex;
+  LatLng? _draggingPoint;
 
   // Color palette
   static const Color primary = AppPalette.primaryBlue; // Primary color - "Start Trip" button
@@ -57,7 +83,7 @@ class _MapWidgetState extends State<MapWidget> {
   // Zoom In
   void _zoomIn() {
     if (currentZoom < 17) {
-      mapController.move(mapController.center, currentZoom + 1);
+      mapController.move(mapController.camera.center, currentZoom + 1);
       setState(() => currentZoom += 1);
     }
   }
@@ -65,7 +91,7 @@ class _MapWidgetState extends State<MapWidget> {
   // Zoom Out
   void _zoomOut() {
     if (currentZoom > 11) {
-      mapController.move(mapController.center, currentZoom - 1);
+      mapController.move(mapController.camera.center, currentZoom - 1);
       setState(() => currentZoom -= 1);
     }
   }
@@ -93,16 +119,33 @@ class _MapWidgetState extends State<MapWidget> {
     widget.onThemeToggle?.call();
   }
 
+  LatLng _applyPixelDeltaToLatLng({
+    required LatLng source,
+    required Offset delta,
+  }) {
+    final double zoom = mapController.camera.zoom;
+    final double latitudeRadians = source.latitude * (math.pi / 180.0);
+    final double cosLat = math.cos(latitudeRadians).abs().clamp(0.0001, 1.0);
+    final double metersPerPixel =
+        156543.03392 * math.cos(latitudeRadians) / math.pow(2, zoom);
+
+    final double deltaMetersEast = delta.dx * metersPerPixel;
+    final double deltaMetersNorth = -delta.dy * metersPerPixel;
+
+    final double deltaLat = deltaMetersNorth / 111320.0;
+    final double deltaLng = deltaMetersEast / (111320.0 * cosLat);
+
+    return LatLng(
+      source.latitude + deltaLat,
+      source.longitude + deltaLng,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final String tileUrl = widget.isDarkMode
         ? 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png'
         : 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
-
-    final LatLngBounds caliBounds = LatLngBounds(
-      const LatLng(3.30, -76.60), // SW
-      const LatLng(3.52, -76.45), // NE
-    );
 
     final bool isWeb = MediaQuery.of(context).size.width > 900;
     final bool controlsVisible = !widget.hideDefaultControls;
@@ -117,7 +160,13 @@ class _MapWidgetState extends State<MapWidget> {
             initialZoom: widget.zoom,
             minZoom: 11,
             maxZoom: 17,
-            cameraConstraint: CameraConstraint.contain(bounds: caliBounds),
+            interactionOptions: InteractionOptions(
+              flags:
+                  _isDraggingRoutePoint ? InteractiveFlag.none : InteractiveFlag.all,
+            ),
+            onTap: (TapPosition tapPosition, LatLng point) {
+              widget.onMapTap?.call(point);
+            },
           ),
           children: [
             TileLayer(
@@ -125,6 +174,74 @@ class _MapWidgetState extends State<MapWidget> {
               subdomains: const ['a', 'b', 'c', 'd'],
               userAgentPackageName: 'com.example.app',
             ),
+            if (widget.routePolylinePoints.length >= 2)
+              PolylineLayer(
+                polylines: [
+                  Polyline(
+                    points: widget.routePolylinePoints,
+                    color: AppPalette.primaryBlue,
+                    strokeWidth: 3.0,
+                  ),
+                ],
+              ),
+            if (widget.routePoints.isNotEmpty)
+              MarkerLayer(
+                markers: List<Marker>.generate(
+                  widget.routePoints.length,
+                  (int index) => Marker(
+                    point: widget.routePoints[index],
+                    width: 30,
+                    height: 30,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTapDown: (_) => widget.onRoutePointPointerDown?.call(index),
+                      onTap: () => widget.onRoutePointTap?.call(index),
+                      onPanStart: widget.canDragRoutePoints
+                          ? (_) {
+                              setState(() {
+                                _isDraggingRoutePoint = true;
+                                _draggingRoutePointIndex = index;
+                                _draggingPoint = widget.routePoints[index];
+                              });
+                              widget.onRoutePointDragStart?.call(index);
+                            }
+                          : null,
+                      onPanUpdate: widget.canDragRoutePoints
+                          ? (DragUpdateDetails details) {
+                              if (_draggingRoutePointIndex != index ||
+                                  _draggingPoint == null) {
+                                return;
+                              }
+
+                              final LatLng next = _applyPixelDeltaToLatLng(
+                                source: _draggingPoint!,
+                                delta: details.delta,
+                              );
+                              _draggingPoint = next;
+                              widget.onRoutePointDragUpdate?.call(index, next);
+                            }
+                          : null,
+                      onPanEnd: widget.canDragRoutePoints
+                          ? (_) {
+                              final LatLng? finalPoint = _draggingPoint;
+                              setState(() {
+                                _isDraggingRoutePoint = false;
+                                _draggingRoutePointIndex = null;
+                                _draggingPoint = null;
+                              });
+                              if (finalPoint != null) {
+                                widget.onRoutePointDragEnd?.call(index, finalPoint);
+                              }
+                            }
+                          : null,
+                      child: _NumberedMapMarker(
+                        number: index + 1,
+                        isSelected: widget.selectedRoutePointIndex == index,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
 
@@ -242,7 +359,7 @@ class _MapWidgetState extends State<MapWidget> {
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
+                        color: Colors.black.withValues(alpha: 0.2),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -275,7 +392,7 @@ class _MapWidgetState extends State<MapWidget> {
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
+                        color: Colors.black.withValues(alpha: 0.2),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -399,7 +516,7 @@ class _MapWidgetState extends State<MapWidget> {
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
+                        color: Colors.black.withValues(alpha: 0.2),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -432,7 +549,7 @@ class _MapWidgetState extends State<MapWidget> {
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
+                        color: Colors.black.withValues(alpha: 0.2),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -449,6 +566,44 @@ class _MapWidgetState extends State<MapWidget> {
           ),
         ],
 
+        if (widget.isSelectingRoutePoint)
+          Positioned(
+            bottom: isWeb ? 24 : 20,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppPalette.primaryBlue,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.25),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.touch_app, color: Colors.white, size: 16),
+                    SizedBox(width: 6),
+                    Text(
+                      'Toca el mapa para agregar el punto',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         if (widget.panelOverlay != null)
           Positioned.fill(
             child: widget.panelOverlay!,
@@ -495,6 +650,47 @@ class _MapWidgetState extends State<MapWidget> {
           duration: const Duration(milliseconds: 240),
           curve: Curves.easeOutCubic,
           child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _NumberedMapMarker extends StatelessWidget {
+  final int number;
+  final bool isSelected;
+
+  const _NumberedMapMarker({
+    required this.number,
+    this.isSelected = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isSelected ? AppPalette.dangerRed : AppPalette.primaryBlue,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.white,
+          width: isSelected ? 3 : 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Text(
+          '$number',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );

@@ -7,6 +7,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../models/local_user_profile.dart';
 import '../models/pet_record.dart';
+import '../models/route_record.dart';
 
 class LocalDatabaseManager {
   LocalDatabaseManager();
@@ -14,6 +15,7 @@ class LocalDatabaseManager {
   static const String _databaseName = 'a4mpets_local.db';
   static const String _userTable = 'local_user_profile';
   static const String _petsTable = 'pets';
+  static const String _routesTable = 'routes';
 
   Database? _database;
   Future<Database>? _databaseFuture;
@@ -51,7 +53,7 @@ class LocalDatabaseManager {
 
     return openDatabase(
       databasePath,
-      version: 1,
+      version: 2,
       onCreate: (Database db, int version) async {
         await db.execute('''
           CREATE TABLE $_userTable (
@@ -73,6 +75,31 @@ class LocalDatabaseManager {
             needs_sync INTEGER NOT NULL DEFAULT 1
           )
         ''');
+
+        await db.execute('''
+          CREATE TABLE $_routesTable (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            points_json TEXT NOT NULL DEFAULT '[]',
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL,
+            needs_sync INTEGER NOT NULL DEFAULT 1
+          )
+        ''');
+      },
+      onUpgrade: (Database db, int oldVersion, int newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS $_routesTable (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name TEXT NOT NULL,
+              points_json TEXT NOT NULL DEFAULT '[]',
+              created_at INTEGER NOT NULL,
+              updated_at INTEGER NOT NULL,
+              needs_sync INTEGER NOT NULL DEFAULT 1
+            )
+          ''');
+        }
       },
     );
   }
@@ -171,6 +198,80 @@ class LocalDatabaseManager {
       _petsTable,
       where: 'id = ?',
       whereArgs: <Object?>[petId],
+    );
+  }
+
+  Future<List<RouteRecord>> getRoutes() async {
+    final Database db = await database;
+    final List<Map<String, Object?>> rows = await db.query(
+      _routesTable,
+      orderBy: 'created_at ASC',
+    );
+    return rows.map(RouteRecord.fromMap).toList(growable: false);
+  }
+
+  Future<int> addRoute({
+    required String name,
+    required List<RoutePoint> points,
+  }) async {
+    final Database db = await database;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    final RouteRecord dummy = RouteRecord(
+      id: 0,
+      name: name,
+      points: points,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(now),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+      needsSync: true,
+    );
+    final Map<String, Object?> data = dummy.toMap()
+      ..remove('id');
+    return db.insert(_routesTable, data);
+  }
+
+  Future<int> getRoutesCount() async {
+    final Database db = await database;
+    final int? result = Sqflite.firstIntValue(
+      await db.rawQuery('SELECT COUNT(*) FROM $_routesTable'),
+    );
+    return result ?? 0;
+  }
+
+  Future<void> deleteRoute({required int routeId}) async {
+    final Database db = await database;
+    await db.delete(
+      _routesTable,
+      where: 'id = ?',
+      whereArgs: <Object?>[routeId],
+    );
+  }
+
+  Future<void> updateRoute({
+    required int routeId,
+    required String name,
+    required List<RoutePoint> points,
+  }) async {
+    final Database db = await database;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    final RouteRecord updated = RouteRecord(
+      id: routeId,
+      name: name,
+      points: points,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(now),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+      needsSync: true,
+    );
+    final Map<String, Object?> map = updated.toMap();
+    await db.update(
+      _routesTable,
+      <String, Object?>{
+        'name': map['name'],
+        'points_json': map['points_json'],
+        'updated_at': map['updated_at'],
+        'needs_sync': 1,
+      },
+      where: 'id = ?',
+      whereArgs: <Object?>[routeId],
     );
   }
 
