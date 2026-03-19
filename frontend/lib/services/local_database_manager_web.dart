@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/local_user_profile.dart';
+import '../models/hazard_report_record.dart';
 import '../models/pet_record.dart';
 import '../models/route_record.dart';
 
@@ -12,6 +13,7 @@ class LocalDatabaseManager {
   static const String _userKey = 'local_user_profile_json';
   static const String _petsKey = 'pets_list_json';
   static const String _routesKey = 'routes_list_json';
+  static const String _hazardsKey = 'hazard_reports_list_json';
 
   Future<SharedPreferences> get _prefs async => SharedPreferences.getInstance();
 
@@ -27,6 +29,10 @@ class LocalDatabaseManager {
     if (!prefs.containsKey(_routesKey)) {
       await prefs.setString(_routesKey, jsonEncode(<Map<String, Object?>>[]));
 
+    }
+
+    if (!prefs.containsKey(_hazardsKey)) {
+      await prefs.setString(_hazardsKey, jsonEncode(<Map<String, Object?>>[]));
     }
   }
 
@@ -209,6 +215,108 @@ class LocalDatabaseManager {
     }).toList();
 
     await prefs.setString(_routesKey, jsonEncode(encoded));
+  }
+
+  Future<List<HazardReportRecord>> getHazardReports() async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final String raw = prefs.getString(_hazardsKey)!;
+    final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
+    return decoded
+        .map((dynamic row) => HazardReportRecord.fromMap(
+              (row as Map<String, dynamic>).cast<String, Object?>(),
+            ))
+        .toList(growable: false);
+  }
+
+  Future<int> addHazardReport({
+    required double incidentLatitude,
+    required double incidentLongitude,
+    required int impactRadiusMeters,
+    required String categoryCode,
+    required String narrativeDescription,
+    required DateTime reportedAt,
+    required String estimatedDurationCode,
+    required String riskLevelCode,
+    String? evidencePhotoUrl,
+    required String reportedByUsername,
+  }) async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+
+    final List<HazardReportRecord> current = await getHazardReports();
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    final int nextId = current.isEmpty
+        ? 1
+        : current
+                .map((HazardReportRecord report) => report.id)
+                .reduce((int a, int b) => a > b ? a : b) +
+            1;
+
+    final HazardReportRecord newReport = HazardReportRecord(
+      id: nextId,
+      incidentLatitude: incidentLatitude,
+      incidentLongitude: incidentLongitude,
+      impactRadiusMeters: impactRadiusMeters,
+      categoryCode: categoryCode,
+      narrativeDescription: narrativeDescription,
+      reportedAt: reportedAt,
+      estimatedDurationCode: estimatedDurationCode,
+      riskLevelCode: riskLevelCode,
+      evidencePhotoUrl: evidencePhotoUrl,
+      reportedByUsername: reportedByUsername,
+      comments: const <HazardCommentRecord>[],
+      createdAt: DateTime.fromMillisecondsSinceEpoch(now),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+      needsSync: true,
+    );
+
+    final List<Map<String, Object?>> encoded = <Map<String, Object?>>[
+      ...current.map((HazardReportRecord report) => report.toMap()),
+      newReport.toMap(),
+    ];
+
+    await prefs.setString(_hazardsKey, jsonEncode(encoded));
+    return nextId;
+  }
+
+  Future<void> addCommentToHazard({
+    required int hazardId,
+    required HazardCommentRecord comment,
+  }) async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+
+    final List<HazardReportRecord> current = await getHazardReports();
+    final int now = DateTime.now().millisecondsSinceEpoch;
+
+    final List<Map<String, Object?>> encoded = current
+        .map((HazardReportRecord report) {
+          if (report.id != hazardId) {
+            return report.toMap();
+          }
+
+          return HazardReportRecord(
+            id: report.id,
+            incidentLatitude: report.incidentLatitude,
+            incidentLongitude: report.incidentLongitude,
+            impactRadiusMeters: report.impactRadiusMeters,
+            categoryCode: report.categoryCode,
+            narrativeDescription: report.narrativeDescription,
+            reportedAt: report.reportedAt,
+            estimatedDurationCode: report.estimatedDurationCode,
+            riskLevelCode: report.riskLevelCode,
+            evidencePhotoUrl: report.evidencePhotoUrl,
+            reportedByUsername: report.reportedByUsername,
+            comments: <HazardCommentRecord>[...report.comments, comment],
+            createdAt: report.createdAt,
+            updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+            needsSync: true,
+          ).toMap();
+        })
+        .toList(growable: false);
+
+    await prefs.setString(_hazardsKey, jsonEncode(encoded));
   }
 
   Future<void> markUserDataForFutureSync() async {}

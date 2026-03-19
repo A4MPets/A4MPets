@@ -166,6 +166,7 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
   String _defaultPetName = 'Mascota';
   bool _isSaving = false;
   bool _isPickingPhoto = false;
+  String? _errorText;
 
   @override
   void initState() {
@@ -203,6 +204,7 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
 
   Future<void> _pickPhoto() async {
     setState(() {
+      _errorText = null;
       _isPickingPhoto = true;
     });
 
@@ -216,16 +218,13 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
       setState(() {
         _storedPhotoPath = storedPath;
       });
-    } catch (error) {
+    } catch (_) {
       if (!mounted) {
         return;
       }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('No se pudo cargar la imagen: $error'),
-        ),
-      );
+      setState(() {
+        _errorText = 'No se pudo cargar la imagen. Intenta nuevamente.';
+      });
     } finally {
       if (mounted) {
         setState(() {
@@ -237,6 +236,7 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
 
   Future<void> _savePet() async {
     setState(() {
+      _errorText = null;
       _isSaving = true;
     });
 
@@ -255,16 +255,14 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
       }
 
       widget.onSaved();
-    } catch (error) {
+    } catch (_) {
       if (!mounted) {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('No se pudo guardar la mascota: $error'),
-        ),
-      );
+      setState(() {
+        _errorText = 'No se pudo guardar la mascota. Intenta nuevamente.';
+      });
     } finally {
       if (mounted) {
         setState(() {
@@ -311,6 +309,17 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
           isDarkMode: widget.isDarkMode,
           controller: _nameController,
         ),
+        if (_errorText != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            _errorText!,
+            style: const TextStyle(
+              color: AppPalette.dangerRed,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
         const SizedBox(height: 12),
         SizedBox(
           height: 48,
@@ -619,6 +628,7 @@ class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
   bool _isSaving = false;
   bool _isDeleting = false;
   bool _isPickingPhoto = false;
+  String? _errorText;
 
   @override
   void initState() {
@@ -635,6 +645,9 @@ class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
 
   Future<void> _pickPhoto() async {
     setState(() {
+      _errorText = null;
+    });
+    setState(() {
       _isPickingPhoto = true;
     });
 
@@ -648,16 +661,13 @@ class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
       setState(() {
         _storedPhotoPath = storedPath;
       });
-    } catch (error) {
+    } catch (_) {
       if (!mounted) {
         return;
       }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('No se pudo cargar la imagen: $error'),
-        ),
-      );
+      setState(() {
+        _errorText = 'No se pudo cargar la imagen. Intenta nuevamente.';
+      });
     } finally {
       if (mounted) {
         setState(() {
@@ -669,6 +679,7 @@ class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
 
   Future<void> _updatePet() async {
     setState(() {
+      _errorText = null;
       _isSaving = true;
     });
 
@@ -688,16 +699,13 @@ class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
       }
 
       widget.onSaved();
-    } catch (error) {
+    } catch (_) {
       if (!mounted) {
         return;
       }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('No se pudo guardar la mascota: $error'),
-        ),
-      );
+      setState(() {
+        _errorText = 'No se pudo guardar la mascota. Intenta nuevamente.';
+      });
     } finally {
       if (mounted) {
         setState(() {
@@ -709,6 +717,7 @@ class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
 
   Future<void> _deletePet() async {
     setState(() {
+      _errorText = null;
       _isDeleting = true;
     });
 
@@ -720,16 +729,13 @@ class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
       }
 
       widget.onSaved();
-    } catch (error) {
+    } catch (_) {
       if (!mounted) {
         return;
       }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('No se pudo eliminar la mascota: $error'),
-        ),
-      );
+      setState(() {
+        _errorText = 'No se pudo eliminar la mascota. Intenta nuevamente.';
+      });
     } finally {
       if (mounted) {
         setState(() {
@@ -829,6 +835,17 @@ class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
           isDarkMode: widget.isDarkMode,
           controller: _nameController,
         ),
+        if (_errorText != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            _errorText!,
+            style: const TextStyle(
+              color: AppPalette.dangerRed,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
         const SizedBox(height: 12),
         Row(
           children: [

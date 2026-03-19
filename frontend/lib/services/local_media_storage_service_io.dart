@@ -37,4 +37,38 @@ class LocalMediaStorageService {
     await File(selectedFile.path!).copy(targetPath);
     return targetPath;
   }
+
+  Future<String?> pickAndStoreHazardPhoto() async {
+    final FilePickerResult? result = await FilePicker.platform.pickFiles(
+      allowMultiple: false,
+      type: FileType.image,
+      withData: false,
+    );
+
+    if (result == null || result.files.isEmpty) {
+      return null;
+    }
+
+    final PlatformFile selectedFile = result.files.single;
+    if (selectedFile.path == null) {
+      return null;
+    }
+
+    final Directory appDirectory = await getApplicationDocumentsDirectory();
+    final Directory bucketDirectory = Directory(
+      p.join(appDirectory.path, 'local_bucket', 'hazard_photos'),
+    );
+
+    if (!bucketDirectory.existsSync()) {
+      bucketDirectory.createSync(recursive: true);
+    }
+
+    final String extension = p.extension(selectedFile.path!).toLowerCase();
+    final String fileName =
+        'hazard_${DateTime.now().millisecondsSinceEpoch}$extension';
+    final String targetPath = p.join(bucketDirectory.path, fileName);
+
+    await File(selectedFile.path!).copy(targetPath);
+    return targetPath;
+  }
 }

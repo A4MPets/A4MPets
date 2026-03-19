@@ -20,6 +20,7 @@ class AppModalPanel extends StatelessWidget {
   final bool expandVertical;
   final bool adaptHeightToContent;
   final double? maxHeight;
+  final double? maxHeightFactor;
   final BorderRadius borderRadius;
   final VoidCallback onClosePressed;
   final bool showBackButton;
@@ -40,11 +41,12 @@ class AppModalPanel extends StatelessWidget {
     this.expandVertical = false,
     this.adaptHeightToContent = false,
     this.maxHeight,
+    this.maxHeightFactor,
     this.borderRadius = const BorderRadius.all(Radius.circular(20)),
     this.showBackButton = false,
     this.scrollContent = true,
-    this.animationDuration = const Duration(milliseconds: 260),
-    this.animationCurve = Curves.easeOutCubic,
+    this.animationDuration = const Duration(milliseconds: 140),
+    this.animationCurve = Curves.linear,
   });
 
   static const double _margin = 16;
@@ -72,16 +74,17 @@ class AppModalPanel extends StatelessWidget {
             ? availableWidth
             : math.min(width ?? 380, availableWidth);
 
+        final double requestedMaxHeight = maxHeightFactor != null
+            ? availableHeight * maxHeightFactor!
+            : (maxHeight ?? height ?? availableHeight * 0.62);
+
         final double resolvedMaxHeight = expandVertical
-          ? availableHeight
-          : math.min(
-            maxHeight ?? height ?? availableHeight * 0.62,
-            availableHeight,
-            );
+            ? availableHeight
+            : math.min(requestedMaxHeight, availableHeight);
 
         final double resolvedFixedHeight = expandVertical
-          ? availableHeight
-          : math.min(height ?? availableHeight * 0.62, availableHeight);
+            ? availableHeight
+            : math.min(height ?? resolvedMaxHeight, resolvedMaxHeight);
 
         final Widget panelBody = Padding(
           padding: const EdgeInsets.all(_margin),

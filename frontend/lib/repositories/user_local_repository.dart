@@ -1,4 +1,5 @@
 import '../models/local_user_profile.dart';
+import '../models/hazard_report_record.dart';
 import '../models/pet_record.dart';
 import '../models/route_record.dart';
 import '../services/local_database_manager.dart';
@@ -79,6 +80,50 @@ class UserLocalRepository {
     required List<RoutePoint> points,
   }) async {
     await databaseManager.updateRoute(routeId: routeId, name: name, points: points);
+    await databaseManager.markUserDataForFutureSync();
+    await syncCoordinator.scheduleSync();
+  }
+
+  Future<List<HazardReportRecord>> getHazardReports() {
+    return databaseManager.getHazardReports();
+  }
+
+  Future<void> addHazardReport({
+    required double incidentLatitude,
+    required double incidentLongitude,
+    required int impactRadiusMeters,
+    required String categoryCode,
+    required String narrativeDescription,
+    required DateTime reportedAt,
+    required String estimatedDurationCode,
+    required String riskLevelCode,
+    String? evidencePhotoUrl,
+    required String reportedByUsername,
+  }) async {
+    await databaseManager.addHazardReport(
+      incidentLatitude: incidentLatitude,
+      incidentLongitude: incidentLongitude,
+      impactRadiusMeters: impactRadiusMeters,
+      categoryCode: categoryCode,
+      narrativeDescription: narrativeDescription,
+      reportedAt: reportedAt,
+      estimatedDurationCode: estimatedDurationCode,
+      riskLevelCode: riskLevelCode,
+      evidencePhotoUrl: evidencePhotoUrl,
+      reportedByUsername: reportedByUsername,
+    );
+    await databaseManager.markUserDataForFutureSync();
+    await syncCoordinator.scheduleSync();
+  }
+
+  Future<void> addCommentToHazard({
+    required int hazardId,
+    required HazardCommentRecord comment,
+  }) async {
+    await databaseManager.addCommentToHazard(
+      hazardId: hazardId,
+      comment: comment,
+    );
     await databaseManager.markUserDataForFutureSync();
     await syncCoordinator.scheduleSync();
   }

@@ -26,6 +26,29 @@ class LocalMediaStorageService {
     return 'data:$mimeType;base64,$base64Value';
   }
 
+  Future<String?> pickAndStoreHazardPhoto() async {
+    final FilePickerResult? result = await FilePicker.platform.pickFiles(
+      allowMultiple: false,
+      type: FileType.image,
+      withData: true,
+    );
+
+    if (result == null || result.files.isEmpty) {
+      return null;
+    }
+
+    final PlatformFile selectedFile = result.files.single;
+    final List<int>? bytes = selectedFile.bytes;
+    if (bytes == null || bytes.isEmpty) {
+      return null;
+    }
+
+    final String extension = _safeFileExtension(selectedFile.extension);
+    final String mimeType = _guessMimeType(extension);
+    final String base64Value = base64Encode(bytes);
+    return 'data:$mimeType;base64,$base64Value';
+  }
+
   String _safeFileExtension(String? extension) {
     if (extension == null || extension.isEmpty) {
       return 'png';

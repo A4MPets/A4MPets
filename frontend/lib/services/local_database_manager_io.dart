@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
@@ -6,6 +7,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../models/local_user_profile.dart';
+import '../models/hazard_report_record.dart';
 import '../models/pet_record.dart';
 import '../models/route_record.dart';
 
@@ -16,6 +18,7 @@ class LocalDatabaseManager {
   static const String _userTable = 'local_user_profile';
   static const String _petsTable = 'pets';
   static const String _routesTable = 'routes';
+  static const String _hazardsTable = 'hazard_reports';
 
   Database? _database;
   Future<Database>? _databaseFuture;
@@ -53,7 +56,7 @@ class LocalDatabaseManager {
 
     return openDatabase(
       databasePath,
-      version: 2,
+      version: 4,
       onCreate: (Database db, int version) async {
         await db.execute('''
           CREATE TABLE $_userTable (
@@ -86,6 +89,26 @@ class LocalDatabaseManager {
             needs_sync INTEGER NOT NULL DEFAULT 1
           )
         ''');
+
+        await db.execute('''
+          CREATE TABLE $_hazardsTable (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            incident_latitude REAL NOT NULL,
+            incident_longitude REAL NOT NULL,
+            impact_radius_meters INTEGER NOT NULL,
+            category_code TEXT NOT NULL,
+            narrative_description TEXT NOT NULL,
+            reported_at INTEGER NOT NULL,
+            estimated_duration_code TEXT NOT NULL,
+            risk_level_code TEXT NOT NULL,
+            evidence_photo_url TEXT,
+            reported_by_username TEXT NOT NULL DEFAULT 'Anónimo',
+            comments_json TEXT NOT NULL DEFAULT '[]',
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL,
+            needs_sync INTEGER NOT NULL DEFAULT 1
+          )
+        ''');
       },
       onUpgrade: (Database db, int oldVersion, int newVersion) async {
         if (oldVersion < 2) {
@@ -99,6 +122,37 @@ class LocalDatabaseManager {
               needs_sync INTEGER NOT NULL DEFAULT 1
             )
           ''');
+        }
+
+        if (oldVersion < 3) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS $_hazardsTable (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              incident_latitude REAL NOT NULL,
+              incident_longitude REAL NOT NULL,
+              impact_radius_meters INTEGER NOT NULL,
+              category_code TEXT NOT NULL,
+              narrative_description TEXT NOT NULL,
+              reported_at INTEGER NOT NULL,
+              estimated_duration_code TEXT NOT NULL,
+              risk_level_code TEXT NOT NULL,
+              evidence_photo_url TEXT,
+              reported_by_username TEXT NOT NULL DEFAULT 'Anónimo',
+              comments_json TEXT NOT NULL DEFAULT '[]',
+              created_at INTEGER NOT NULL,
+              updated_at INTEGER NOT NULL,
+              needs_sync INTEGER NOT NULL DEFAULT 1
+            )
+          ''');
+        }
+
+        if (oldVersion < 4) {
+          await db.execute(
+            'ALTER TABLE $_hazardsTable ADD COLUMN reported_by_username TEXT NOT NULL DEFAULT "Anónimo"',
+          );
+          await db.execute(
+            'ALTER TABLE $_hazardsTable ADD COLUMN comments_json TEXT NOT NULL DEFAULT "[]"',
+          );
         }
       },
     );
@@ -272,6 +326,89 @@ class LocalDatabaseManager {
       },
       where: 'id = ?',
       whereArgs: <Object?>[routeId],
+    );
+  }
+
+  Future<List<HazardReportRecord>> getHazardReports() async {
+    final Database db = await database;
+    final List<Map<String, Object?>> rows = await db.query(
+      _hazardsTable,
+      orderBy: 'reported_at DESC',
+    );
+    return rows.map(HazardReportRecord.fromMap).toList(growable: false);
+  }
+
+  Future<int> addHazardReport({
+    required double incidentLatitude,
+    required double incidentLongitude,
+    required int impactRadiusMeters,
+    required String categoryCode,
+    required String narrativeDescription,
+    required DateTime reportedAt,
+    required String estimatedDurationCode,
+    required String riskLevelCode,
+    String? evidencePhotoUrl,
+    required String reportedByUsername,
+  }) async {
+    final Database db = await database;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+
+    final HazardReportRecord draft = HazardReportRecord(
+      id: 0,
+      incidentLatitude: incidentLatitude,
+      incidentLongitude: incidentLongitude,
+      impactRadiusMeters: impactRadiusMeters,
+      categoryCode: categoryCode,
+      narrativeDescription: narrativeDescription,
+      reportedAt: reportedAt,
+      estimatedDurationCode: estimatedDurationCode,
+      riskLevelCode: riskLevelCode,
+      evidencePhotoUrl: evidencePhotoUrl,
+      reportedByUsername: reportedByUsername,
+      comments: const <HazardCommentRecord>[],
+      createdAt: DateTime.fromMillisecondsSinceEpoch(now),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+      needsSync: true,
+    );
+
+    final Map<String, Object?> map = draft.toMap()..remove('id');
+    return db.insert(_hazardsTable, map);
+  }
+
+  Future<void> addCommentToHazard({
+    required int hazardId,
+    required HazardCommentRecord comment,
+  }) async {
+    final Database db = await database;
+    final List<Map<String, Object?>> rows = await db.query(
+      _hazardsTable,
+      where: 'id = ?',
+      whereArgs: <Object?>[hazardId],
+      limit: 1,
+    );
+
+    if (rows.isEmpty) {
+      return;
+    }
+
+    final HazardReportRecord current = HazardReportRecord.fromMap(rows.first);
+    final List<HazardCommentRecord> updatedComments = <HazardCommentRecord>[
+      ...current.comments,
+      comment,
+    ];
+    final int now = DateTime.now().millisecondsSinceEpoch;
+
+    await db.update(
+      _hazardsTable,
+      <String, Object?>{
+        'comments_json': jsonEncode(
+          updatedComments.map((HazardCommentRecord c) => c.toMap()).toList(),
+        ),
+        'updated_at': now,
+        'needs_sync': 1,
+      },
+      where: 'id = ?',
+      whereArgs: <Object?>[hazardId],
     );
   }
 

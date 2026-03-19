@@ -4,11 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../models/local_user_profile.dart';
 import '../models/route_record.dart';
 import '../providers/local_data_providers.dart';
 import '../theme/app_palette.dart';
-import 'shared/user_identity_header.dart';
 
 // ───────────────────────────── Gestionar Rutas ─────────────────────────────
 
@@ -16,7 +14,8 @@ class ManageRoutesPanelContent extends ConsumerWidget {
   final bool isDarkMode;
   final VoidCallback onAddRoutePressed;
   final void Function(RouteRecord route) onRoutePressed;
-  final void Function(RouteRecord route) onEditRoutePressed;
+  final void Function(RouteRecord route)? onEditRoutePressed;
+  final void Function(RouteRecord route)? onDeleteRoutePressed;
   final int? selectedRouteId;
 
   const ManageRoutesPanelContent({
@@ -24,14 +23,13 @@ class ManageRoutesPanelContent extends ConsumerWidget {
     required this.isDarkMode,
     required this.onAddRoutePressed,
     required this.onRoutePressed,
-    required this.onEditRoutePressed,
+    this.onEditRoutePressed,
+    this.onDeleteRoutePressed,
     this.selectedRouteId,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<LocalUserProfile> userProfile =
-        ref.watch(localUserProfileProvider);
     final AsyncValue<List<RouteRecord>> routesValue =
         ref.watch(routesControllerProvider);
 
@@ -40,85 +38,78 @@ class ManageRoutesPanelContent extends ConsumerWidget {
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        final double gridSquareSize = math.min(
-          constraints.maxWidth,
-          constraints.maxHeight * 0.52,
-        );
+        final double gridMaxWidth = math.min(constraints.maxWidth, 320);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            userProfile.when(
-              data: (LocalUserProfile profile) => UserIdentityHeader(
-                isDarkMode: isDarkMode,
-                username: profile.username,
-                avatarPath: profile.avatarPath,
-              ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, __) =>
-                  UserIdentityHeader(isDarkMode: isDarkMode, username: 'Usuario'),
-            ),
-            const SizedBox(height: 18),
-            Center(
-              child: Container(
-                width: gridSquareSize,
-                height: gridSquareSize,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.transparent,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: cardBorder),
-                ),
-                child: routesValue.when(
-                  data: (List<RouteRecord> routes) {
-                    if (routes.isEmpty) {
-                      return Center(
-                        child: Text(
-                          'Aún no has agregado rutas',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
+            Expanded(
+              child: Center(
+                child: Container(
+                  width: gridMaxWidth,
+                  height: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: cardBorder),
+                  ),
+                  child: routesValue.when(
+                    data: (List<RouteRecord> routes) {
+                      if (routes.isEmpty) {
+                        return Center(
+                          child: Text(
+                            'Aún no has agregado rutas',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: textColor,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        );
+                      }
+                      return GridView.builder(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 0.78,
+                        ),
+                        itemCount: routes.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          return _RouteCard(
+                            route: routes[index],
+                            isDarkMode: isDarkMode,
+                            isSelected: selectedRouteId == routes[index].id,
+                            onPressed: () => onRoutePressed(routes[index]),
+                            onEditPressed: onEditRoutePressed == null
+                              ? null
+                              : () => onEditRoutePressed!(routes[index]),
+                            onDeletePressed: onDeleteRoutePressed == null
+                              ? null
+                              : () => onDeleteRoutePressed!(routes[index]),
+                          );
+                        },
+                      );
+                    },
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (_, __) => Center(
+                      child: Text(
+                        'No se pudieron cargar las rutas',
+                        style: TextStyle(
                             color: textColor,
                             fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      );
-                    }
-                    return GridView.builder(
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 0.78,
+                            fontWeight: FontWeight.w600),
                       ),
-                      itemCount: routes.length,
-                      itemBuilder: (BuildContext context, int index) {
-                        return _RouteCard(
-                          route: routes[index],
-                          isDarkMode: isDarkMode,
-                          isSelected: selectedRouteId == routes[index].id,
-                          onPressed: () => onRoutePressed(routes[index]),
-                          onEditPressed: () => onEditRoutePressed(routes[index]),
-                        );
-                      },
-                    );
-                  },
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (_, __) => Center(
-                    child: Text(
-                      'No se pudieron cargar las rutas',
-                      style: TextStyle(
-                          color: textColor,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
               ),
             ),
-            const Spacer(),
+            const SizedBox(height: 10),
             SizedBox(
               height: 48,
               child: ElevatedButton(
@@ -149,7 +140,8 @@ class _RouteCard extends StatelessWidget {
   final bool isDarkMode;
   final bool isSelected;
   final VoidCallback onPressed;
-  final VoidCallback onEditPressed;
+  final VoidCallback? onEditPressed;
+  final VoidCallback? onDeletePressed;
 
   const _RouteCard({
     required this.route,
@@ -157,6 +149,7 @@ class _RouteCard extends StatelessWidget {
     required this.isSelected,
     required this.onPressed,
     required this.onEditPressed,
+    required this.onDeletePressed,
   });
 
   @override
@@ -194,8 +187,9 @@ class _RouteCard extends StatelessWidget {
                   ),
                   Positioned(
                     top: 6,
-                    right: 6,
+                    left: 6,
                     child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
                       onTap: onEditPressed,
                       child: Container(
                         width: 26,
@@ -206,6 +200,27 @@ class _RouteCard extends StatelessWidget {
                         ),
                         child: const Icon(
                           Icons.settings,
+                          size: 15,
+                          color: AppPalette.charcoal,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: onDeletePressed,
+                      child: Container(
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          color: AppPalette.white.withValues(alpha: 0.92),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.close,
                           size: 15,
                           color: AppPalette.charcoal,
                         ),
@@ -325,6 +340,7 @@ class _AddRoutePanelContentState extends ConsumerState<AddRoutePanelContent> {
   late final TextEditingController _nameController;
   String _defaultRouteName = 'Ruta 1';
   bool _isSaving = false;
+  String? _saveErrorText;
 
   @override
   void initState() {
@@ -356,7 +372,10 @@ class _AddRoutePanelContentState extends ConsumerState<AddRoutePanelContent> {
     }
   }
 
-    Future<void> _saveWithName(String name) async {
+  Future<void> _saveWithName(String name) async {
+    setState(() {
+      _saveErrorText = null;
+    });
     setState(() => _isSaving = true);
 
     final List<RoutePoint> points = widget.points
@@ -379,11 +398,11 @@ class _AddRoutePanelContentState extends ConsumerState<AddRoutePanelContent> {
       }
       if (!mounted) return;
       widget.onSavedComplete();
-    } catch (error) {
+    } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo guardar la ruta: $error')),
-      );
+      setState(() {
+        _saveErrorText = 'No se pudo guardar la ruta. Intenta nuevamente.';
+      });
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -557,6 +576,17 @@ class _AddRoutePanelContentState extends ConsumerState<AddRoutePanelContent> {
             color: AppPalette.border(widget.isDarkMode)
                 .withValues(alpha: 0.4)),
         const SizedBox(height: 8),
+        if (_saveErrorText != null) ...[
+          Text(
+            _saveErrorText!,
+            style: const TextStyle(
+              color: AppPalette.dangerRed,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
 
         // Save button
         SizedBox(

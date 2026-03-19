@@ -4,7 +4,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../models/pet_record.dart';
+import '../models/hazard_report_record.dart';
 import '../models/route_record.dart';
+import '../providers/local_data_providers.dart';
 import '../providers/theme_provider.dart';
 import '../services/osm_routing_service.dart';
 import '../theme/app_palette.dart';
@@ -13,6 +15,10 @@ import '../widgets/map_widget.dart';
 import '../widgets/panel_modal.dart';
 import '../widgets/pet_management_panels.dart';
 import '../widgets/profile_menu_panel.dart';
+import '../widgets/hazard_reporting_panel.dart';
+import '../widgets/hazard_details_panel.dart';
+import '../widgets/hazard_comments_panel.dart';
+import '../widgets/hazard_layers_panel.dart';
 import '../widgets/route_management_panels.dart';
 
 class MapPage extends ConsumerStatefulWidget {
@@ -36,6 +42,13 @@ class _MapPageState extends ConsumerState<MapPage> {
   int? _selectedRouteId;
   int? _editingRouteId;
   String? _editingRouteName;
+  bool _isSelectingHazardLocationOnMap = false;
+  LatLng? _developerHazardLocation;
+  HazardReportRecord? _selectedHazard;
+  int _hazardFocusRevision = 0;
+  bool _showLowRiskHazardCircles = true;
+  bool _showMediumRiskHazardCircles = true;
+  bool _showHighRiskHazardCircles = true;
 
   bool get _hasOpenPanels => _panelStack.isNotEmpty;
 
@@ -94,6 +107,93 @@ class _MapPageState extends ConsumerState<MapPage> {
     _pushPanel(_buildManageRoutesRoute(isDarkMode));
   }
 
+  void _openReportHazardPanel(bool isDarkMode) {
+    if (_hasOpenPanels) {
+      return;
+    }
+    setState(() {
+      _isSelectingHazardLocationOnMap = false;
+      _developerHazardLocation = null;
+    });
+    _pushPanel(_buildReportHazardRoute(isDarkMode));
+  }
+
+  void _openHazardLayersSettingsPanel(bool isDarkMode) {
+    if (_hasOpenPanels) {
+      return;
+    }
+
+    _pushPanel(_buildHazardLayersSettingsRoute());
+  }
+
+  Future<void> _openHazardDetailsPanel(
+    bool isDarkMode,
+    HazardReportRecord hazard,
+  ) async {
+    if (_hasOpenPanels && !_panelStack.last.isHazardDetailsPanel) {
+      final _PanelRoute currentPanel = _panelStack.last;
+
+      if (currentPanel.isAddRoutePanel && _draftRoutePoints.isNotEmpty) {
+        final bool discard = await _confirmDiscardDraftRoute();
+        if (!discard || !mounted) {
+          return;
+        }
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        if (currentPanel.isAddRoutePanel) {
+          _clearDraftRouteVisuals();
+        }
+        if (currentPanel.isReportHazardPanel) {
+          _isSelectingHazardLocationOnMap = false;
+          _developerHazardLocation = null;
+        }
+        if (currentPanel.isHazardDetailsPanel) {
+          _selectedHazard = null;
+        }
+        _panelStack.removeLast();
+      });
+    }
+
+    setState(() {
+      _selectedHazard = hazard;
+      _hazardFocusRevision += 1;
+    });
+
+    final _PanelRoute route = _buildHazardDetailsRoute(isDarkMode, hazard);
+    if (_hasOpenPanels && _panelStack.last.isHazardDetailsPanel) {
+      _replaceTopPanel(route);
+      return;
+    }
+
+    if (_hasOpenPanels) {
+      return;
+    }
+
+    _pushPanel(route);
+  }
+
+  void _openHazardCommentsPanel(bool isDarkMode, HazardReportRecord hazard) {
+    _pushPanel(_buildHazardCommentsRoute(isDarkMode, hazard));
+  }
+
+  void _startDeveloperHazardMapSelection() {
+    setState(() {
+      _isSelectingHazardLocationOnMap = true;
+    });
+  }
+
+  void _clearDeveloperHazardMapSelection() {
+    setState(() {
+      _isSelectingHazardLocationOnMap = false;
+      _developerHazardLocation = null;
+    });
+  }
+
   void _openAddRoutePanel(bool isDarkMode) {
     setState(() {
       _draftRoutePoints = <LatLng>[];
@@ -134,6 +234,77 @@ class _MapPageState extends ConsumerState<MapPage> {
     _refreshDraftRoutePolyline(points);
   }
 
+  Future<void> _confirmAndDeleteRoute(
+    BuildContext context,
+    RouteRecord route,
+  ) async {
+    final bool isDarkMode = ref.read(themeModeProvider);
+
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: AppPalette.dialogBackground(isDarkMode),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: AppPalette.border(isDarkMode)),
+          ),
+          title: Text(
+            'Eliminar ruta',
+            style: TextStyle(
+              color: AppPalette.dialogTitle(isDarkMode),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: Text(
+            '¿Estás seguro de borrar la ruta "${route.name}"?',
+            style: TextStyle(color: AppPalette.dialogBody(isDarkMode)),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(
+                'Cancelar',
+                style: TextStyle(
+                  color: AppPalette.dialogCancel(isDarkMode),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text(
+                'Borrar',
+                style: TextStyle(
+                  color: AppPalette.dangerRed,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    await ref
+        .read(routesControllerProvider.notifier)
+        .deleteRoute(routeId: route.id);
+
+    if (!mounted) {
+      return;
+    }
+
+    if (_selectedRouteId == route.id) {
+      setState(() {
+        _clearDraftRouteVisuals();
+      });
+    }
+  }
+
   _PanelRoute _buildProfileRoute(bool isDarkMode) {
     return _PanelRoute(
       transitionKey: ++_panelTransitionSeed,
@@ -164,11 +335,10 @@ class _MapPageState extends ConsumerState<MapPage> {
       title: 'Gestionar Rutas',
       anchor: PanelAnchor.topLeft,
       width: 380,
-      height: 620,
-      maxHeight: 620,
+      maxHeightFactor: 0.40,
       adaptHeightToContent: false,
       expandHorizontal: false,
-      expandVertical: true,
+      expandVertical: false,
       scrollContent: false,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
@@ -179,6 +349,140 @@ class _MapPageState extends ConsumerState<MapPage> {
           onRoutePressed: _showRouteOnMap,
           onEditRoutePressed: (RouteRecord route) =>
               _openEditRoutePanel(isDarkMode, route),
+          onDeleteRoutePressed: (RouteRecord route) =>
+              _confirmAndDeleteRoute(context, route),
+        );
+      },
+    );
+  }
+
+  _PanelRoute _buildReportHazardRoute(bool isDarkMode) {
+    return _PanelRoute(
+      transitionKey: ++_panelTransitionSeed,
+      title: 'Reportar Peligro',
+      anchor: PanelAnchor.bottomLeft,
+      width: 380,
+      height: 620,
+      maxHeight: 620,
+      adaptHeightToContent: false,
+      expandHorizontal: false,
+      expandVertical: false,
+      scrollContent: false,
+      isReportHazardPanel: true,
+      borderRadius: BorderRadius.circular(22),
+      contentBuilder: (BuildContext context) {
+        return ReportHazardPanelContent(
+          isDarkMode: isDarkMode,
+          developerSelectedLocation: _developerHazardLocation,
+          isDeveloperSelectingOnMap: _isSelectingHazardLocationOnMap,
+          onStartDeveloperMapSelection: _startDeveloperHazardMapSelection,
+          onClearDeveloperLocation: _clearDeveloperHazardMapSelection,
+          onReported: () {
+            _closeCurrentPanel();
+          },
+        );
+      },
+    );
+  }
+
+  _PanelRoute _buildHazardLayersSettingsRoute() {
+    return _PanelRoute(
+      transitionKey: ++_panelTransitionSeed,
+      title: 'Configuración de mapa',
+      anchor: PanelAnchor.topRight,
+      width: 360,
+      height: 260,
+      maxHeight: 320,
+      adaptHeightToContent: false,
+      expandHorizontal: false,
+      expandVertical: false,
+      scrollContent: false,
+      isHazardSettingsPanel: true,
+      borderRadius: BorderRadius.circular(22),
+      contentBuilder: (BuildContext context) {
+        return Consumer(
+          builder: (BuildContext context, WidgetRef ref, Widget? child) {
+            final bool currentDarkMode = ref.watch(themeModeProvider);
+
+            return HazardLayersPanelContent(
+              isDarkMode: currentDarkMode,
+              isDarkModeEnabled: currentDarkMode,
+              showLowRiskCircles: _showLowRiskHazardCircles,
+              showMediumRiskCircles: _showMediumRiskHazardCircles,
+              showHighRiskCircles: _showHighRiskHazardCircles,
+              onToggleDarkMode: (bool value) {
+                ref.read(themeModeProvider.notifier).state = value;
+              },
+              onToggleLowRisk: (bool value) {
+                setState(() {
+                  _showLowRiskHazardCircles = value;
+                });
+              },
+              onToggleMediumRisk: (bool value) {
+                setState(() {
+                  _showMediumRiskHazardCircles = value;
+                });
+              },
+              onToggleHighRisk: (bool value) {
+                setState(() {
+                  _showHighRiskHazardCircles = value;
+                });
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  _PanelRoute _buildHazardDetailsRoute(
+    bool isDarkMode,
+    HazardReportRecord hazard,
+  ) {
+    return _PanelRoute(
+      transitionKey: ++_panelTransitionSeed,
+      title: 'Detalle de Peligro',
+      anchor: PanelAnchor.bottomLeft,
+      width: 380,
+      height: 560,
+      maxHeight: 620,
+      adaptHeightToContent: false,
+      expandHorizontal: false,
+      expandVertical: false,
+      scrollContent: false,
+      isHazardDetailsPanel: true,
+      borderRadius: BorderRadius.circular(22),
+      contentBuilder: (BuildContext context) {
+        return HazardDetailsPanelContent(
+          isDarkMode: isDarkMode,
+          hazard: hazard,
+          onViewComments: () => _openHazardCommentsPanel(isDarkMode, hazard),
+        );
+      },
+    );
+  }
+
+  _PanelRoute _buildHazardCommentsRoute(
+    bool isDarkMode,
+    HazardReportRecord hazard,
+  ) {
+    return _PanelRoute(
+      transitionKey: ++_panelTransitionSeed,
+      title: 'Comentarios',
+      anchor: PanelAnchor.bottomLeft,
+      width: 380,
+      height: 560,
+      maxHeight: 620,
+      adaptHeightToContent: false,
+      expandHorizontal: false,
+      expandVertical: false,
+      scrollContent: false,
+      isHazardCommentsPanel: true,
+      borderRadius: BorderRadius.circular(22),
+      contentBuilder: (BuildContext context) {
+        return HazardCommentsPanelContent(
+          isDarkMode: isDarkMode,
+          hazard: hazard,
         );
       },
     );
@@ -380,6 +684,16 @@ class _MapPageState extends ConsumerState<MapPage> {
   }
 
   void _onMapTap(LatLng point) {
+    if (_hasOpenPanels &&
+        _panelStack.last.isReportHazardPanel &&
+        _isSelectingHazardLocationOnMap) {
+      setState(() {
+        _developerHazardLocation = point;
+        _isSelectingHazardLocationOnMap = false;
+      });
+      return;
+    }
+
     if (!_hasOpenPanels || !_panelStack.last.isAddRoutePanel) {
       return;
     }
@@ -431,11 +745,6 @@ class _MapPageState extends ConsumerState<MapPage> {
       setState(() {
         _draftRoutePolyline = List<LatLng>.from(waypoints);
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No se pudo trazar por vías en este momento.'),
-        ),
-      );
     }
   }
 
@@ -447,12 +756,6 @@ class _MapPageState extends ConsumerState<MapPage> {
       }
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Permiso de ubicación denegado')),
-          );
-        }
         return;
       }
       final Position pos = await Geolocator.getCurrentPosition();
@@ -466,12 +769,8 @@ class _MapPageState extends ConsumerState<MapPage> {
         _draftRoutePoints = updated;
       });
       _refreshDraftRoutePolyline(updated);
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No se pudo obtener la ubicación: $error')),
-        );
-      }
+    } catch (_) {
+      return;
     }
   }
 
@@ -611,16 +910,23 @@ class _MapPageState extends ConsumerState<MapPage> {
       if (currentPanel.isAddRoutePanel) {
         _clearDraftRouteVisuals();
       }
+      if (currentPanel.isReportHazardPanel) {
+        _isSelectingHazardLocationOnMap = false;
+        _developerHazardLocation = null;
+      }
+      if (currentPanel.isHazardDetailsPanel) {
+        _selectedHazard = null;
+      }
       _panelStack.removeLast();
     });
   }
 
   Widget _buildPanelOverlay(bool isDarkMode) {
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 240),
-      reverseDuration: const Duration(milliseconds: 190),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
+      duration: const Duration(milliseconds: 120),
+      reverseDuration: const Duration(milliseconds: 90),
+      switchInCurve: Curves.linear,
+      switchOutCurve: Curves.linear,
       transitionBuilder: (Widget child, Animation<double> animation) {
         final Animation<Offset> slide = Tween<Offset>(
           begin: const Offset(0, 0.035),
@@ -654,6 +960,7 @@ class _MapPageState extends ConsumerState<MapPage> {
           width: currentPanel.width,
           height: currentPanel.height,
           maxHeight: currentPanel.maxHeight,
+          maxHeightFactor: currentPanel.maxHeightFactor,
           adaptHeightToContent: currentPanel.adaptHeightToContent,
           expandHorizontal: currentPanel.expandHorizontal,
           expandVertical: currentPanel.expandVertical,
@@ -670,6 +977,23 @@ class _MapPageState extends ConsumerState<MapPage> {
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = ref.watch(themeModeProvider);
+    final List<HazardReportRecord> hazardReports =
+        ref.watch(hazardReportsControllerProvider).asData?.value ??
+            const <HazardReportRecord>[];
+    final List<HazardReportRecord> visibleHazardCircles = hazardReports.where(
+      (HazardReportRecord report) {
+        switch (report.riskLevelCode) {
+          case 'low':
+            return _showLowRiskHazardCircles;
+          case 'medium':
+            return _showMediumRiskHazardCircles;
+          case 'high':
+            return _showHighRiskHazardCircles;
+          default:
+            return _showHighRiskHazardCircles;
+        }
+      },
+    ).toList(growable: false);
 
     return Scaffold(
       body: MapWidget(
@@ -707,14 +1031,26 @@ class _MapPageState extends ConsumerState<MapPage> {
         isSelectingRoutePoint: _hasOpenPanels &&
             _panelStack.last.isAddRoutePanel &&
             _activeRouteTool == _RouteMapTool.addPoint,
-        onMapTap: _onMapTap,
-        onThemeToggle: () {
-          ref.read(themeModeProvider.notifier).state = !isDarkMode;
+        hazardReports: hazardReports,
+        visibleHazardCircles: visibleHazardCircles,
+        highlightedHazard: _selectedHazard,
+        onHazardTap: (HazardReportRecord hazard) {
+          _openHazardDetailsPanel(isDarkMode, hazard);
         },
+        cameraFocusTarget: _selectedHazard == null
+            ? null
+            : LatLng(
+                _selectedHazard!.incidentLatitude,
+                _selectedHazard!.incidentLongitude,
+              ),
+        cameraFocusZoom: _selectedHazard == null ? null : 16,
+        cameraFocusRevision: _hazardFocusRevision,
+        onMapTap: _onMapTap,
+        onSettingsTap: () => _openHazardLayersSettingsPanel(isDarkMode),
         onStartTrip: () {
           // TODO: Implement start trip logic
-          print('Start trip triggered');
         },
+        onReportDangerTap: () => _openReportHazardPanel(isDarkMode),
       ),
     );
   }
@@ -727,11 +1063,16 @@ class _PanelRoute {
   final double? width;
   final double? height;
   final double? maxHeight;
+  final double? maxHeightFactor;
   final bool adaptHeightToContent;
   final bool expandHorizontal;
   final bool expandVertical;
   final bool scrollContent;
   final bool isAddRoutePanel;
+  final bool isReportHazardPanel;
+  final bool isHazardDetailsPanel;
+  final bool isHazardSettingsPanel;
+  final bool isHazardCommentsPanel;
   final BorderRadius borderRadius;
   final Widget Function(BuildContext context) contentBuilder;
 
@@ -743,11 +1084,16 @@ class _PanelRoute {
     this.width,
     this.height,
     this.maxHeight,
+    this.maxHeightFactor,
     this.adaptHeightToContent = false,
     this.expandHorizontal = false,
     this.expandVertical = false,
     this.scrollContent = true,
     this.isAddRoutePanel = false,
+    this.isReportHazardPanel = false,
+    this.isHazardDetailsPanel = false,
+    this.isHazardSettingsPanel = false,
+    this.isHazardCommentsPanel = false,
     this.borderRadius = const BorderRadius.all(Radius.circular(20)),
   });
 }

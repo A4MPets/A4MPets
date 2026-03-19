@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/hazard_report_record.dart';
 import '../models/local_user_profile.dart';
 import '../models/pet_record.dart';
 import '../models/route_record.dart';
@@ -116,6 +117,62 @@ class RoutesController extends AsyncNotifier<List<RouteRecord>> {
     required List<RoutePoint> points,
   }) async {
     await _repository.updateRoute(routeId: routeId, name: name, points: points);
+    await reload();
+  }
+}
+
+final hazardReportsControllerProvider =
+    AsyncNotifierProvider<HazardReportsController, List<HazardReportRecord>>(
+        HazardReportsController.new);
+
+class HazardReportsController extends AsyncNotifier<List<HazardReportRecord>> {
+  UserLocalRepository get _repository => ref.read(userLocalRepositoryProvider);
+
+  @override
+  Future<List<HazardReportRecord>> build() {
+    return _repository.getHazardReports();
+  }
+
+  Future<void> reload() async {
+    state = const AsyncLoading<List<HazardReportRecord>>().copyWithPrevious(state);
+    state = await AsyncValue.guard(_repository.getHazardReports);
+  }
+
+  Future<void> addHazardReport({
+    required double incidentLatitude,
+    required double incidentLongitude,
+    required int impactRadiusMeters,
+    required String categoryCode,
+    required String narrativeDescription,
+    required DateTime reportedAt,
+    required String estimatedDurationCode,
+    required String riskLevelCode,
+    String? evidencePhotoUrl,
+    required String reportedByUsername,
+  }) async {
+    await _repository.addHazardReport(
+      incidentLatitude: incidentLatitude,
+      incidentLongitude: incidentLongitude,
+      impactRadiusMeters: impactRadiusMeters,
+      categoryCode: categoryCode,
+      narrativeDescription: narrativeDescription,
+      reportedAt: reportedAt,
+      estimatedDurationCode: estimatedDurationCode,
+      riskLevelCode: riskLevelCode,
+      evidencePhotoUrl: evidencePhotoUrl,
+      reportedByUsername: reportedByUsername,
+    );
+    await reload();
+  }
+
+  Future<void> addCommentToHazard({
+    required int hazardId,
+    required HazardCommentRecord comment,
+  }) async {
+    await _repository.addCommentToHazard(
+      hazardId: hazardId,
+      comment: comment,
+    );
     await reload();
   }
 }

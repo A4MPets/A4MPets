@@ -3,13 +3,15 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'dart:math' as math;
 
+import '../models/hazard_report_record.dart';
 import '../theme/app_palette.dart';
 
 class MapWidget extends StatefulWidget {
   final bool isDarkMode;
   final LatLng center;
   final double zoom;
-  final VoidCallback? onThemeToggle;
+  final VoidCallback? onSettingsTap;
+  final VoidCallback? onReportDangerTap;
   final VoidCallback? onStartTrip;
   final VoidCallback? onProfileTap;
   final bool hideDefaultControls;
@@ -25,13 +27,21 @@ class MapWidget extends StatefulWidget {
   final void Function(int index, LatLng point)? onRoutePointDragEnd;
   final bool isSelectingRoutePoint;
   final void Function(LatLng)? onMapTap;
+  final List<HazardReportRecord> hazardReports;
+  final List<HazardReportRecord> visibleHazardCircles;
+  final HazardReportRecord? highlightedHazard;
+  final void Function(HazardReportRecord report)? onHazardTap;
+  final LatLng? cameraFocusTarget;
+  final double? cameraFocusZoom;
+  final int cameraFocusRevision;
 
   const MapWidget({
     super.key,
     required this.isDarkMode,
     required this.center,
     this.zoom = 13,
-    this.onThemeToggle,
+    this.onSettingsTap,
+    this.onReportDangerTap,
     this.onStartTrip,
     this.onProfileTap,
     this.hideDefaultControls = false,
@@ -47,6 +57,13 @@ class MapWidget extends StatefulWidget {
     this.onRoutePointDragEnd,
     this.isSelectingRoutePoint = false,
     this.onMapTap,
+    this.hazardReports = const <HazardReportRecord>[],
+    this.visibleHazardCircles = const <HazardReportRecord>[],
+    this.highlightedHazard,
+    this.onHazardTap,
+    this.cameraFocusTarget,
+    this.cameraFocusZoom,
+    this.cameraFocusRevision = 0,
   });
 
   @override
@@ -54,8 +71,14 @@ class MapWidget extends StatefulWidget {
 }
 
 class _MapWidgetState extends State<MapWidget> {
+  static final LatLngBounds _caliBounds = LatLngBounds(
+    LatLng(3.3000, -76.6500),
+    LatLng(3.5500, -76.4500),
+  );
+  static const double _minZoomLevel = 11;
+  static const double _maxZoomLevel = 22;
+
   late MapController mapController;
-  double currentZoom = 13;
   bool _isDraggingRoutePoint = false;
   int? _draggingRoutePointIndex;
   LatLng? _draggingPoint;
@@ -71,7 +94,18 @@ class _MapWidgetState extends State<MapWidget> {
   void initState() {
     super.initState();
     mapController = MapController();
-    currentZoom = widget.zoom;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _prewarmTileCache();
+    });
+  }
+
+  void _prewarmTileCache() {
+    final LatLng caliCenter = const LatLng(3.4372, -76.5197);
+    final List<double> zoomLevels = [11.0, 12.0, 13.0, 14.0, 15.0, 16.0];
+    for (final double zoom in zoomLevels) {
+      mapController.move(caliCenter, zoom);
+    }
+    mapController.move(caliCenter, 13.0);
   }
 
   @override
@@ -80,33 +114,41 @@ class _MapWidgetState extends State<MapWidget> {
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(covariant MapWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.cameraFocusTarget != null &&
+        widget.cameraFocusRevision != oldWidget.cameraFocusRevision) {
+      final double nextZoom =
+          widget.cameraFocusZoom ?? mapController.camera.zoom;
+      mapController.move(widget.cameraFocusTarget!, nextZoom);
+    }
+  }
+
   // Zoom In
   void _zoomIn() {
-    if (currentZoom < 17) {
-      mapController.move(mapController.camera.center, currentZoom + 1);
-      setState(() => currentZoom += 1);
-    }
+    final double zoom = mapController.camera.zoom;
+    if (zoom >= _maxZoomLevel) return;
+    mapController.move(mapController.camera.center, (zoom + 1).clamp(_minZoomLevel, _maxZoomLevel));
   }
 
   // Zoom Out
   void _zoomOut() {
-    if (currentZoom > 11) {
-      mapController.move(mapController.camera.center, currentZoom - 1);
-      setState(() => currentZoom -= 1);
-    }
+    final double zoom = mapController.camera.zoom;
+    if (zoom <= _minZoomLevel) return;
+    mapController.move(mapController.camera.center, (zoom - 1).clamp(_minZoomLevel, _maxZoomLevel));
   }
 
   // Report Danger - Ready to add functionality
   void _onReportarPeligro() {
-    // TODO: Implement logic to report danger
-    print('Report Danger - To implement');
+    widget.onReportDangerTap?.call();
   }
 
   // Start Trip - Ready to add functionality
   void _onIniciarViaje() {
     // TODO: Implement logic to start trip
     widget.onStartTrip?.call();
-    print('Start Trip - To implement');
   }
 
   // Profile - Ready to add functionality
@@ -114,9 +156,31 @@ class _MapWidgetState extends State<MapWidget> {
     widget.onProfileTap?.call();
   }
 
-  // Toggle theme
-  void _toggleTheme() {
-    widget.onThemeToggle?.call();
+  // Open settings panel
+  void _openSettings() {
+    widget.onSettingsTap?.call();
+  }
+
+  Color _hazardBorderColor(HazardReportRecord report) {
+    switch (report.riskLevelCode) {
+      case 'low':
+        return AppPalette.dangerYellow;
+      case 'medium':
+        return AppPalette.dangerOrange;
+      default:
+        return AppPalette.dangerRed;
+    }
+  }
+
+  Color _hazardFillColor(HazardReportRecord report) {
+    switch (report.riskLevelCode) {
+      case 'low':
+        return AppPalette.dangerYellow40;
+      case 'medium':
+        return AppPalette.dangerOrange40;
+      default:
+        return AppPalette.dangerRed40;
+    }
   }
 
   LatLng _applyPixelDeltaToLatLng({
@@ -144,22 +208,31 @@ class _MapWidgetState extends State<MapWidget> {
   @override
   Widget build(BuildContext context) {
     final String tileUrl = widget.isDarkMode
-        ? 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
+        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    final Color mapBackgroundColor = widget.isDarkMode
+      ? AppPalette.cardDark
+      : AppPalette.cardLight;
 
     final bool isWeb = MediaQuery.of(context).size.width > 900;
     final bool controlsVisible = !widget.hideDefaultControls;
 
     return Stack(
       children: [
+        Positioned.fill(
+          child: ColoredBox(color: mapBackgroundColor),
+        ),
         // MAP
         FlutterMap(
           mapController: mapController,
           options: MapOptions(
             initialCenter: widget.center,
             initialZoom: widget.zoom,
-            minZoom: 11,
-            maxZoom: 17,
+            minZoom: _minZoomLevel,
+            maxZoom: _maxZoomLevel,
+            backgroundColor: mapBackgroundColor,
+            keepAlive: true,
+            cameraConstraint: CameraConstraint.contain(bounds: _caliBounds),
             interactionOptions: InteractionOptions(
               flags:
                   _isDraggingRoutePoint ? InteractiveFlag.none : InteractiveFlag.all,
@@ -173,26 +246,108 @@ class _MapWidgetState extends State<MapWidget> {
               urlTemplate: tileUrl,
               subdomains: const ['a', 'b', 'c', 'd'],
               userAgentPackageName: 'com.example.app',
+              maxNativeZoom: 22,
+              minZoom: _minZoomLevel,
+              maxZoom: _maxZoomLevel,
+              retinaMode: false,
+              keepBuffer: 12,
+              panBuffer: 6,
+              tileDisplay: const TileDisplay.instantaneous(opacity: 1.0),
+              tileUpdateTransformer:
+                  TileUpdateTransformers.throttle(Duration(milliseconds: 150)),
             ),
+            if (widget.highlightedHazard != null)
+              RepaintBoundary(
+                child: CircleLayer(
+                  circles: [
+                    CircleMarker(
+                      point: LatLng(
+                        widget.highlightedHazard!.incidentLatitude,
+                        widget.highlightedHazard!.incidentLongitude,
+                      ),
+                      color: _hazardFillColor(widget.highlightedHazard!),
+                      borderColor:
+                          _hazardBorderColor(widget.highlightedHazard!),
+                      borderStrokeWidth: 1.5,
+                      useRadiusInMeter: true,
+                      radius: widget.highlightedHazard!.impactRadiusMeters
+                          .toDouble(),
+                    ),
+                  ],
+                ),
+              ),
+            if (widget.highlightedHazard == null &&
+                widget.visibleHazardCircles.isNotEmpty)
+              RepaintBoundary(
+                child: CircleLayer(
+                  circles: widget.visibleHazardCircles
+                      .map((HazardReportRecord report) {
+                        return CircleMarker(
+                          point: LatLng(
+                            report.incidentLatitude,
+                            report.incidentLongitude,
+                          ),
+                          color: _hazardFillColor(report),
+                          borderColor: _hazardBorderColor(report),
+                          borderStrokeWidth: 1.0,
+                          useRadiusInMeter: true,
+                          radius: report.impactRadiusMeters.toDouble(),
+                        );
+                      })
+                      .toList(growable: false),
+                ),
+              ),
+            if (widget.hazardReports.isNotEmpty)
+              RepaintBoundary(
+                child: MarkerLayer(
+                  markers: widget.hazardReports
+                      .map((HazardReportRecord report) {
+                    return Marker(
+                      point: LatLng(
+                        report.incidentLatitude,
+                        report.incidentLongitude,
+                      ),
+                      width: 18,
+                      height: 18,
+                      child: GestureDetector(
+                        onTap: () => widget.onHazardTap?.call(report),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppPalette.dangerRed,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppPalette.white,
+                              width: 1.0,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(growable: false),
+                ),
+              ),
             if (widget.routePolylinePoints.length >= 2)
-              PolylineLayer(
-                polylines: [
-                  Polyline(
-                    points: widget.routePolylinePoints,
-                    color: AppPalette.primaryBlue,
-                    strokeWidth: 3.0,
-                  ),
-                ],
+              RepaintBoundary(
+                child: PolylineLayer(
+                  polylines: [
+                    Polyline(
+                      points: widget.routePolylinePoints,
+                      color: AppPalette.primaryBlue,
+                      strokeWidth: 2.5,
+                    ),
+                  ],
+                ),
               ),
             if (widget.routePoints.isNotEmpty)
-              MarkerLayer(
-                markers: List<Marker>.generate(
-                  widget.routePoints.length,
-                  (int index) => Marker(
-                    point: widget.routePoints[index],
-                    width: 30,
-                    height: 30,
-                    child: GestureDetector(
+              RepaintBoundary(
+                child: MarkerLayer(
+                  markers: List<Marker>.generate(
+                    widget.routePoints.length,
+                    (int index) => Marker(
+                      point: widget.routePoints[index],
+                      width: 28,
+                      height: 28,
+                      child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTapDown: (_) => widget.onRoutePointPointerDown?.call(index),
                       onTap: () => widget.onRoutePointTap?.call(index),
@@ -238,6 +393,7 @@ class _MapWidgetState extends State<MapWidget> {
                         number: index + 1,
                         isSelected: widget.selectedRoutePointIndex == index,
                       ),
+                    ),
                     ),
                   ),
                 ),
@@ -375,7 +531,7 @@ class _MapWidgetState extends State<MapWidget> {
             ),
           ),
 
-          // Theme toggle button - Mobile (top right corner) - square with rounded corners
+          // Settings button - Mobile (top right corner)
           Positioned(
             top: 16,
             right: 16,
@@ -383,7 +539,7 @@ class _MapWidgetState extends State<MapWidget> {
               visible: controlsVisible,
               hiddenOffset: const Offset(0.06, 0),
               child: GestureDetector(
-                onTap: _toggleTheme,
+                onTap: _openSettings,
               child: Container(
                   width: 48,
                   height: 48,
@@ -398,8 +554,8 @@ class _MapWidgetState extends State<MapWidget> {
                       ),
                     ],
                   ),
-                  child: Icon(
-                    widget.isDarkMode ? Icons.wb_sunny : Icons.nightlight_round,
+                  child: const Icon(
+                    Icons.settings,
                     color: contentGray,
                     size: 24,
                   ),
@@ -532,7 +688,7 @@ class _MapWidgetState extends State<MapWidget> {
             ),
           ),
 
-          // Theme toggle button - Web (top right corner) - square with rounded corners
+          // Settings button - Web (top right corner)
           Positioned(
             top: 16,
             right: 16,
@@ -540,7 +696,7 @@ class _MapWidgetState extends State<MapWidget> {
               visible: controlsVisible,
               hiddenOffset: const Offset(0.06, 0),
               child: GestureDetector(
-                onTap: _toggleTheme,
+                onTap: _openSettings,
                 child: Container(
                   width: 48,
                   height: 48,
@@ -555,8 +711,8 @@ class _MapWidgetState extends State<MapWidget> {
                       ),
                     ],
                   ),
-                  child: Icon(
-                    widget.isDarkMode ? Icons.wb_sunny : Icons.nightlight_round,
+                  child: const Icon(
+                    Icons.settings,
                     color: contentGray,
                     size: 24,
                   ),
@@ -643,12 +799,12 @@ class _MapWidgetState extends State<MapWidget> {
       ignoring: !visible,
       child: AnimatedOpacity(
         opacity: visible ? 1 : 0,
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.linear,
         child: AnimatedSlide(
           offset: visible ? Offset.zero : hiddenOffset,
-          duration: const Duration(milliseconds: 240),
-          curve: Curves.easeOutCubic,
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.linear,
           child: child,
         ),
       ),
@@ -667,29 +823,23 @@ class _NumberedMapMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: isSelected ? AppPalette.dangerRed : AppPalette.primaryBlue,
         shape: BoxShape.circle,
         border: Border.all(
           color: Colors.white,
-          width: isSelected ? 3 : 2,
+          width: isSelected ? 2.0 : 1.5,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Center(
         child: Text(
           '$number',
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            height: 1.0,
           ),
         ),
       ),

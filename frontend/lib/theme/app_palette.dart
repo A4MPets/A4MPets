@@ -4,7 +4,12 @@ class AppPalette {
   const AppPalette._();
 
   static const Color primaryBlue = Color(0xFF5984BC);
+  static const Color dangerYellow = Color(0xFFD9B400);
+  static const Color dangerOrange = Color(0xFFDB7A00);
   static const Color dangerRed = Color(0xFFA12121);
+  static const Color dangerYellow40 = Color(0x66D9B400);
+  static const Color dangerOrange40 = Color(0x66DB7A00);
+  static const Color dangerRed40 = Color(0x66A12121);
 
   static const Color white = Color(0xFFFFFFFF);
   static const Color charcoal = Color(0xFF404040);
