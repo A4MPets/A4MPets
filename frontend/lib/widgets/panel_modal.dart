@@ -45,8 +45,8 @@ class AppModalPanel extends StatelessWidget {
     this.borderRadius = const BorderRadius.all(Radius.circular(20)),
     this.showBackButton = false,
     this.scrollContent = true,
-    this.animationDuration = const Duration(milliseconds: 140),
-    this.animationCurve = Curves.linear,
+    this.animationDuration = const Duration(milliseconds: 260),
+    this.animationCurve = Curves.easeOutCubic,
   });
 
   static const double _margin = 16;

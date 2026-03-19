@@ -923,10 +923,10 @@ class _MapPageState extends ConsumerState<MapPage> {
 
   Widget _buildPanelOverlay(bool isDarkMode) {
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 120),
-      reverseDuration: const Duration(milliseconds: 90),
-      switchInCurve: Curves.linear,
-      switchOutCurve: Curves.linear,
+      duration: const Duration(milliseconds: 240),
+      reverseDuration: const Duration(milliseconds: 190),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
       transitionBuilder: (Widget child, Animation<double> animation) {
         final Animation<Offset> slide = Tween<Offset>(
           begin: const Offset(0, 0.035),
@@ -1049,6 +1049,7 @@ class _MapPageState extends ConsumerState<MapPage> {
         onSettingsTap: () => _openHazardLayersSettingsPanel(isDarkMode),
         onStartTrip: () {
           // TODO: Implement start trip logic
+          print('Start trip triggered');
         },
         onReportDangerTap: () => _openReportHazardPanel(isDarkMode),
       ),
