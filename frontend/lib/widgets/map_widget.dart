@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
+import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import '../models/hazard_report_record.dart';
 import '../theme/app_palette.dart';
@@ -15,6 +18,7 @@ class MapWidget extends StatefulWidget {
   final VoidCallback? onStartTrip;
   final VoidCallback? onProfileTap;
   final bool hideDefaultControls;
+  final bool keepReportDangerVisible;
   final Widget? panelOverlay;
   final List<LatLng> routePoints;
   final List<LatLng> routePolylinePoints;
@@ -34,6 +38,7 @@ class MapWidget extends StatefulWidget {
   final LatLng? cameraFocusTarget;
   final double? cameraFocusZoom;
   final int cameraFocusRevision;
+  final void Function(LatLng location)? onUserLocationChanged;
 
   const MapWidget({
     super.key,
@@ -45,6 +50,7 @@ class MapWidget extends StatefulWidget {
     this.onStartTrip,
     this.onProfileTap,
     this.hideDefaultControls = false,
+    this.keepReportDangerVisible = false,
     this.panelOverlay,
     this.routePoints = const [],
     this.routePolylinePoints = const [],
@@ -64,6 +70,7 @@ class MapWidget extends StatefulWidget {
     this.cameraFocusTarget,
     this.cameraFocusZoom,
     this.cameraFocusRevision = 0,
+    this.onUserLocationChanged,
   });
 
   @override
@@ -75,6 +82,12 @@ class _MapWidgetState extends State<MapWidget> {
   bool _isDraggingRoutePoint = false;
   int? _draggingRoutePointIndex;
   LatLng? _draggingPoint;
+  
+  // Location tracking
+  LatLng? _userLocation;
+  double _userHeading = 0.0;
+  bool _hasLocationPermission = false;
+  StreamSubscription<Position>? _positionStreamSub;
   
   // Color cache for hazard rendering (avoid recalculation every frame)
   final Map<String, Color> _borderColorCache = {};
@@ -93,6 +106,71 @@ class _MapWidgetState extends State<MapWidget> {
     mapController = MapController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _prewarmTileCache();
+      _requestLocationPermission();
+    });
+  }
+
+  Future<void> _requestLocationPermission() async {
+    try {
+      final bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() => _hasLocationPermission = false);
+        return;
+      }
+
+      final LocationPermission permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        setState(() => _hasLocationPermission = false);
+      } else if (permission == LocationPermission.deniedForever) {
+        setState(() => _hasLocationPermission = false);
+      } else {
+        setState(() => _hasLocationPermission = true);
+        await _getCurrentLocationAndHeading();
+        _startLocationTracking();
+      }
+    } catch (e) {
+      debugPrint('Error requesting location permission: $e');
+    }
+  }
+
+  Future<void> _getCurrentLocationAndHeading() async {
+    try {
+      final Position position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      
+      if (mounted) {
+        setState(() {
+          _userLocation = LatLng(position.latitude, position.longitude);
+          _userHeading = position.heading.isNaN ? 0.0 : position.heading;
+        });
+        widget.onUserLocationChanged?.call(_userLocation!);
+      }
+    } catch (e) {
+      debugPrint('Error getting current location: $e');
+    }
+  }
+
+  void _startLocationTracking() {
+    if (!_hasLocationPermission) return;
+    
+    final LocationSettings locationSettings = LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 5, // Update every 5 meters
+    );
+
+    _positionStreamSub?.cancel();
+    _positionStreamSub = Geolocator.getPositionStream(
+      locationSettings: locationSettings,
+    ).listen((Position position) {
+      if (mounted) {
+        final LatLng nextLocation = LatLng(position.latitude, position.longitude);
+        setState(() {
+          _userLocation = nextLocation;
+          _userHeading = position.heading.isNaN ? _userHeading : position.heading;
+        });
+        widget.onUserLocationChanged?.call(nextLocation);
+      }
     });
   }
 
@@ -109,6 +187,7 @@ class _MapWidgetState extends State<MapWidget> {
 
   @override
   void dispose() {
+    _positionStreamSub?.cancel();
     mapController.dispose();
     super.dispose();
   }
@@ -219,6 +298,7 @@ class _MapWidgetState extends State<MapWidget> {
 
     final bool isWeb = MediaQuery.of(context).size.width > 900;
     final bool controlsVisible = !widget.hideDefaultControls;
+    final bool reportDangerVisible = controlsVisible || widget.keepReportDangerVisible;
 
     return Stack(
       children: [
@@ -261,6 +341,20 @@ class _MapWidgetState extends State<MapWidget> {
               tileUpdateTransformer:
                   TileUpdateTransformers.throttle(const Duration(milliseconds: 90)),
             ),
+            // User location marker
+            if (_hasLocationPermission && _userLocation != null)
+              RepaintBoundary(
+                child: MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: _userLocation!,
+                      width: 40,
+                      height: 40,
+                      child: _CurrentLocationMarker(heading: _userHeading),
+                    ),
+                  ],
+                ),
+              ),
             if (widget.highlightedHazard != null)
               RepaintBoundary(
                 child: CircleLayer(
@@ -404,60 +498,63 @@ class _MapWidgetState extends State<MapWidget> {
             bottom: 16,
             child: SafeArea(
               child: _buildAnimatedControl(
-                visible: controlsVisible,
+                visible: reportDangerVisible,
                 hiddenOffset: const Offset(0, 0.08),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _onReportarPeligro,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: secondary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                    if (reportDangerVisible)
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: _onReportarPeligro,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: secondary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
-                        ),
-                        child: const Text(
-                          'Reportar Peligro',
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _onIniciarViaje,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: const Text(
-                          'Iniciar Viaje',
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                          child: const Text(
+                            'Reportar Peligro',
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                    if (controlsVisible) ...[
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: _onIniciarViaje,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            'Iniciar Viaje',
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -556,7 +653,7 @@ class _MapWidgetState extends State<MapWidget> {
             left: 16,
             bottom: 16,
             child: _buildAnimatedControl(
-              visible: controlsVisible,
+              visible: reportDangerVisible,
               hiddenOffset: const Offset(-0.06, 0.06),
               child: SizedBox(
                 width: 220,
@@ -836,4 +933,76 @@ class _NumberedMapMarker extends StatelessWidget {
       ),
     );
   }
+}
+
+class _CurrentLocationMarker extends StatelessWidget {
+  final double heading;
+
+  const _CurrentLocationMarker({required this.heading});
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.rotate(
+      angle: (heading * math.pi) / 180, // Convert degrees to radians
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Blue circle
+          SizedBox(
+            width: 36,
+            height: 36,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppPalette.primaryBlue.withValues(alpha: 0.30),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          // White center dot
+          SizedBox(
+            width: 14,
+            height: 14,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppPalette.primaryBlue,
+                  width: 2,
+                ),
+              ),
+            ),
+          ),
+          // Direction indicator (small tip)
+          Positioned(
+            top: 1,
+            child: CustomPaint(
+              size: const Size(10, 10),
+              painter: _ArrowPainter(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ArrowPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = AppPalette.primaryBlue
+      ..style = PaintingStyle.fill;
+
+    final ui.Path path = ui.Path();
+    path.moveTo(size.width / 2, 0);
+    path.lineTo(0, size.height);
+    path.lineTo(size.width, size.height);
+    path.close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
