@@ -75,13 +75,17 @@ class _MapWidgetState extends State<MapWidget> {
   bool _isDraggingRoutePoint = false;
   int? _draggingRoutePointIndex;
   LatLng? _draggingPoint;
+  
+  // Color cache for hazard rendering (avoid recalculation every frame)
+  final Map<String, Color> _borderColorCache = {};
+  final Map<String, Color> _fillColorCache = {};
 
   // Color palette
-  static const Color primary = AppPalette.primaryBlue; // Primary color - "Start Trip" button
-  static const Color secondary = Color(0xFF0F176E); // Secondary color - "Report Danger" buttron
+  static const Color primary = AppPalette.primaryBlue;
+  static const Color secondary = Color(0xFF0F176E);
   static const Color white = AppPalette.white;
-  static const Color contentGray = AppPalette.charcoal; // Text/icon color inside translucent buttons
-  static const Color translucentWhite = Color(0xCCFFFFFF); // White with 0.8 alpha
+  static const Color contentGray = AppPalette.charcoal;
+  static const Color translucentWhite = Color(0xCCFFFFFF);
 
   @override
   void initState() {
@@ -94,10 +98,11 @@ class _MapWidgetState extends State<MapWidget> {
 
   Future<void> _prewarmTileCache() async {
     const LatLng caliCenter = LatLng(3.4372, -76.5197);
-    await Future<void>.delayed(const Duration(milliseconds: 100));
-    for (double zoom = 11.0; zoom <= 16.0; zoom += 1.0) {
+    // Faster pre-warming: reduce intervals and cycles
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    for (double zoom = 12.0; zoom <= 15.0; zoom += 1.0) {
       mapController.move(caliCenter, zoom);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(const Duration(milliseconds: 30));
     }
     mapController.move(widget.center, widget.zoom);
   }
@@ -153,25 +158,31 @@ class _MapWidgetState extends State<MapWidget> {
   }
 
   Color _hazardBorderColor(HazardReportRecord report) {
-    switch (report.riskLevelCode) {
-      case 'low':
-        return AppPalette.dangerYellow;
-      case 'medium':
-        return AppPalette.dangerOrange;
-      default:
-        return AppPalette.dangerRed;
-    }
+    final String key = '${report.riskLevelCode}_border';
+    return _borderColorCache.putIfAbsent(key, () {
+      switch (report.riskLevelCode) {
+        case 'low':
+          return AppPalette.dangerYellow;
+        case 'medium':
+          return AppPalette.dangerOrange;
+        default:
+          return AppPalette.dangerRed;
+      }
+    });
   }
 
   Color _hazardFillColor(HazardReportRecord report) {
-    switch (report.riskLevelCode) {
-      case 'low':
-        return AppPalette.dangerYellow40;
-      case 'medium':
-        return AppPalette.dangerOrange40;
-      default:
-        return AppPalette.dangerRed40;
-    }
+    final String key = '${report.riskLevelCode}_fill';
+    return _fillColorCache.putIfAbsent(key, () {
+      switch (report.riskLevelCode) {
+        case 'low':
+          return AppPalette.dangerYellow40;
+        case 'medium':
+          return AppPalette.dangerOrange40;
+        default:
+          return AppPalette.dangerRed40;
+      }
+    });
   }
 
   LatLng _applyPixelDeltaToLatLng({
@@ -244,11 +255,11 @@ class _MapWidgetState extends State<MapWidget> {
               minZoom: 11,
               maxZoom: 22,
               retinaMode: false,
-              keepBuffer: 8,
-              panBuffer: 4,
+              keepBuffer: 6,
+              panBuffer: 3,
               tileDisplay: const TileDisplay.instantaneous(opacity: 1.0),
               tileUpdateTransformer:
-                  TileUpdateTransformers.throttle(Duration(milliseconds: 80)),
+                  TileUpdateTransformers.throttle(const Duration(milliseconds: 90)),
             ),
             if (widget.highlightedHazard != null)
               RepaintBoundary(
@@ -299,20 +310,11 @@ class _MapWidgetState extends State<MapWidget> {
                         report.incidentLatitude,
                         report.incidentLongitude,
                       ),
-                      width: 18,
-                      height: 18,
+                      width: 16,
+                      height: 16,
                       child: GestureDetector(
                         onTap: () => widget.onHazardTap?.call(report),
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: AppPalette.dangerRed,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppPalette.white,
-                              width: 1.0,
-                            ),
-                          ),
-                        ),
+                        child: const _HazardMarkerWidget(),
                       ),
                     );
                   }).toList(growable: false),
@@ -499,24 +501,19 @@ class _MapWidgetState extends State<MapWidget> {
               hiddenOffset: const Offset(-0.06, 0),
               child: GestureDetector(
                 onTap: _onProfileTap,
-                child: Container(
+                child: SizedBox(
                   width: 48,
                   height: 48,
-                  decoration: BoxDecoration(
-                    color: translucentWhite,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.person,
-                    color: contentGray,
-                    size: 24,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: translucentWhite,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.person,
+                      color: contentGray,
+                      size: 24,
+                    ),
                   ),
                 ),
               ),
@@ -532,24 +529,19 @@ class _MapWidgetState extends State<MapWidget> {
               hiddenOffset: const Offset(0.06, 0),
               child: GestureDetector(
                 onTap: _openSettings,
-              child: Container(
+                child: SizedBox(
                   width: 48,
                   height: 48,
-                  decoration: BoxDecoration(
-                    color: translucentWhite,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.settings,
-                    color: contentGray,
-                    size: 24,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: translucentWhite,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.settings,
+                      color: contentGray,
+                      size: 24,
+                    ),
                   ),
                 ),
               ),
@@ -656,24 +648,19 @@ class _MapWidgetState extends State<MapWidget> {
               hiddenOffset: const Offset(-0.06, 0),
               child: GestureDetector(
                 onTap: _onProfileTap,
-                child: Container(
+                child: SizedBox(
                   width: 48,
                   height: 48,
-                  decoration: BoxDecoration(
-                    color: white,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.person,
-                    color: contentGray,
-                    size: 24,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.person,
+                      color: contentGray,
+                      size: 24,
+                    ),
                   ),
                 ),
               ),
@@ -689,24 +676,19 @@ class _MapWidgetState extends State<MapWidget> {
               hiddenOffset: const Offset(0.06, 0),
               child: GestureDetector(
                 onTap: _openSettings,
-                child: Container(
+                child: SizedBox(
                   width: 48,
                   height: 48,
-                  decoration: BoxDecoration(
-                    color: translucentWhite,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.settings,
-                    color: contentGray,
-                    size: 24,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: translucentWhite,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.settings,
+                      color: contentGray,
+                      size: 24,
+                    ),
                   ),
                 ),
               ),
@@ -766,16 +748,15 @@ class _MapWidgetState extends State<MapWidget> {
     required VoidCallback onPressed,
     required bool isTop,
   }) {
-    return Container(
-      margin: EdgeInsets.only(
-        bottom: isTop ? 8 : 0,
-      ),
+    return SizedBox(
+      width: 48,
+      height: 48,
       child: FloatingActionButton(
         mini: true,
         onPressed: onPressed,
         backgroundColor: translucentWhite,
         foregroundColor: contentGray,
-        elevation: 4,
+        elevation: 0,
         shape: const CircleBorder(),
         child: Icon(icon, size: 20),
       ),
@@ -791,13 +772,31 @@ class _MapWidgetState extends State<MapWidget> {
       ignoring: !visible,
       child: AnimatedOpacity(
         opacity: visible ? 1 : 0,
-        duration: const Duration(milliseconds: 80),
+        duration: const Duration(milliseconds: 50),
         curve: Curves.linear,
         child: AnimatedSlide(
           offset: visible ? Offset.zero : hiddenOffset,
-          duration: const Duration(milliseconds: 80),
+          duration: const Duration(milliseconds: 50),
           curve: Curves.linear,
           child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _HazardMarkerWidget extends StatelessWidget {
+  const _HazardMarkerWidget();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppPalette.dangerRed,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.white,
+          width: 0.8,
         ),
       ),
     );
@@ -815,29 +814,23 @@ class _NumberedMapMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: isSelected ? AppPalette.dangerRed : AppPalette.primaryBlue,
         shape: BoxShape.circle,
         border: Border.all(
           color: Colors.white,
-          width: isSelected ? 3 : 2,
+          width: isSelected ? 2 : 1.5,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Center(
         child: Text(
           '$number',
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            height: 1.0,
           ),
         ),
       ),
