@@ -8,6 +8,7 @@ import 'dart:ui' as ui;
 
 import '../models/hazard_report_record.dart';
 import '../models/colored_route_segment.dart';
+import '../models/hazard_avoidance_point.dart';
 import '../theme/app_palette.dart';
 
 class MapWidget extends StatefulWidget {
@@ -23,7 +24,9 @@ class MapWidget extends StatefulWidget {
   final Widget? panelOverlay;
   final List<LatLng> routePoints;
   final List<LatLng> routePolylinePoints;
+  final List<LatLng> optimizedRoutePolyline; // Ruta optimizada evitando peligros
   final List<dynamic> coloredRouteSegments;
+  final List<HazardAvoidancePoint> avoidancePoints; // Puntos auxiliares de desviación
   final int? selectedRoutePointIndex;
   final void Function(int index)? onRoutePointPointerDown;
   final void Function(int index)? onRoutePointTap;
@@ -56,7 +59,9 @@ class MapWidget extends StatefulWidget {
     this.panelOverlay,
     this.routePoints = const [],
     this.routePolylinePoints = const [],
+    this.optimizedRoutePolyline = const [],
     this.coloredRouteSegments = const [],
+    this.avoidancePoints = const [],
     this.selectedRoutePointIndex,
     this.onRoutePointPointerDown,
     this.onRoutePointTap,
@@ -421,6 +426,12 @@ class _MapWidgetState extends State<MapWidget> {
               RepaintBoundary(
                 child: PolylineLayer(
                   polylines: _buildRoutePolylines(),
+                ),
+              ),
+            if (widget.avoidancePoints.isNotEmpty)
+              RepaintBoundary(
+                child: MarkerLayer(
+                  markers: _buildAvoidancePointMarkers(),
                 ),
               ),
             if (widget.routePoints.isNotEmpty)
@@ -878,8 +889,13 @@ class _MapWidgetState extends State<MapWidget> {
     );
   }
 
-  /// Construye las polylines para la ruta, considerando segmentos coloreados si existen
+  /// Construye las polylines para la ruta, considerando segmentos coloreados y ruta optimizada
   List<Polyline> _buildRoutePolylines() {
+    // Determinar qué ruta usar: optimizada si existe, sino la original
+    final List<LatLng> displayRoute = widget.optimizedRoutePolyline.isNotEmpty
+        ? widget.optimizedRoutePolyline
+        : widget.routePolylinePoints;
+
     if (widget.coloredRouteSegments.isNotEmpty) {
       // Si hay segmentos coloreados, renderizar cada uno con su color
       return (widget.coloredRouteSegments as List<ColoredRouteSegment>)
@@ -891,15 +907,50 @@ class _MapWidgetState extends State<MapWidget> {
               ))
           .toList();
     } else {
-      // Si no hay segmentos coloreados, renderizar la ruta normal (azul)
+      // Si no hay segmentos coloreados, renderizar la ruta (azul)
       return [
         Polyline(
-          points: widget.routePolylinePoints,
+          points: displayRoute,
           color: AppPalette.primaryBlue,
           strokeWidth: 2.0,
         ),
       ];
     }
+  }
+
+  /// Construye marcadores para los puntos auxiliares de desviación
+  List<Marker> _buildAvoidancePointMarkers() {
+    if (widget.avoidancePoints.isEmpty) {
+      return <Marker>[];
+    }
+
+    return widget.avoidancePoints.map((HazardAvoidancePoint point) {
+      return Marker(
+        point: point.point,
+        width: 16,
+        height: 16,
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppPalette.primaryBlue,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white,
+              width: 1.5,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              point.direction,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 8,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      );
+    }).toList();
   }
 }
 
