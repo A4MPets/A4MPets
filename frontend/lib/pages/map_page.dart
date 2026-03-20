@@ -1224,7 +1224,6 @@ class _MapPageState extends ConsumerState<MapPage> {
     }
 
     if (_draftRoutePolyline.length < 2 || _draftRoutePoints.length < 2) {
-      _optimizedRoutePolyline = List<LatLng>.from(_draftRoutePolyline);
       _avoidancePoints = <HazardAvoidancePoint>[];
       return;
     }
@@ -1237,21 +1236,19 @@ class _MapPageState extends ConsumerState<MapPage> {
     );
 
     if (interceptingHazards.isEmpty) {
-      // Sin peligros interceptando - no hacer nada
-      _optimizedRoutePolyline = List<LatLng>.from(_draftRoutePolyline);
+      // Sin peligros interceptando
       _avoidancePoints = <HazardAvoidancePoint>[];
       return;
     }
 
     try {
-      // Calcular puntos auxiliares (N, S, E, O) solo para visualización
+      // Calcular puntos auxiliares (N, S, E, O)
       final List<HazardAvoidancePoint> allAvoidancePoints =
           <HazardAvoidancePoint>[];
       
       List<LatLng> modifiedControlPoints = List<LatLng>.from(_draftRoutePoints);
-      bool routeWasModified = false;
 
-      // Para cada peligro interceptado, intentar insertar punto de desviación
+      // Para cada peligro interceptado, insertar el mejor punto de desviación
       for (final HazardReportRecord hazard in interceptingHazards) {
         final List<HazardAvoidancePoint> hazardPoints =
             RouteAvoidanceService.calculateAvoidancePoints(
@@ -1310,85 +1307,23 @@ class _MapPageState extends ConsumerState<MapPage> {
           }
         }
 
-        // Insertar el mejor punto de desviación SOLO si encontramos uno válido
+        // Insertar el mejor punto de desviación en los puntos de control
         if (bestDetourPoint != null) {
           modifiedControlPoints.insert(insertIndex + 1, bestDetourPoint);
-          routeWasModified = true;
         }
       }
 
-      // SOLO actualizar si la ruta fue realmente modificada
-      if (routeWasModified && modifiedControlPoints.length >= 2) {
-        final List<LatLng> newPolyline =
-            await _routingService.buildRoadRoute(waypoints: modifiedControlPoints);
+      // Actualizar puntos de control si fueron modificados
+      if (!mounted) return;
 
-        if (!mounted) return;
-
-        setState(() {
-          _draftRoutePoints = modifiedControlPoints;
-          _draftRoutePolyline = newPolyline;
-          _optimizedRoutePolyline = newPolyline;
-          _avoidancePoints = allAvoidancePoints;
-        });
-
-        // Guardar ruta modificada en BD
-        await _saveRouteToDatabase(
-          routeId: _editingRouteId!,
-          routeName: _editingRouteName!,
-          controlPoints: modifiedControlPoints,
-        );
-      } else {
-        // Si no fue modificada, solo mostrar los puntos auxiliares para visualización
-        setState(() {
-          _avoidancePoints = allAvoidancePoints;
-        });
-      }
+      setState(() {
+        _draftRoutePoints = modifiedControlPoints;
+        _avoidancePoints = allAvoidancePoints;
+      });
     } catch (e) {
-      // Si hay error, mantener ruta original
-      _optimizedRoutePolyline = List<LatLng>.from(_draftRoutePolyline);
+      // Si hay error, limpiar puntos auxiliares
       _avoidancePoints = <HazardAvoidancePoint>[];
     }
-  }
-
-  /// Guarda la ruta actualizada en la base de datos
-  Future<void> _saveRouteToDatabase({
-    required int routeId,
-    required String routeName,
-    required List<LatLng> controlPoints,
-  }) async {
-    try {
-      final routesController = ref.read(routesControllerProvider.notifier);
-
-      // Convertir LatLng a RoutePoint
-      final List<RoutePoint> routePoints = controlPoints
-          .map((LatLng point) =>
-              RoutePoint(latitude: point.latitude, longitude: point.longitude))
-          .toList();
-
-      // Actualizar ruta en BD
-      await routesController.updateRoute(
-        routeId: routeId,
-        name: routeName,
-        points: routePoints,
-      );
-    } catch (e) {
-      // Ignorar error de guardado
-    }
-  }
-
-  /// Verifica si una ruta tiene zonas en rojo (intersecciones con peligros)
-  bool _routeHasRedZones(
-    List<LatLng> route,
-    List<HazardReportRecord> hazards,
-  ) {
-    final List<ColoredRouteSegment> segments =
-        RouteHazardVisualizerService.analyzeRouteHazards(
-      routePolyline: route,
-      hazards: hazards,
-    );
-
-    // Si algún segmento tiene hazard=true, hay zona roja
-    return segments.any((seg) => seg.hasHazard);
   }
 
   /// Obtiene los hazards filtrados según los controles de visibilidad
