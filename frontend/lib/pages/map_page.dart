@@ -1218,6 +1218,11 @@ class _MapPageState extends ConsumerState<MapPage> {
   Future<void> _calculateOptimizedRoute(
     List<HazardReportRecord> allHazards,
   ) async {
+    // SOLO procesar si estamos editando una ruta
+    if (_editingRouteId == null || _editingRouteName == null) {
+      return;
+    }
+
     if (_draftRoutePolyline.length < 2 || _draftRoutePoints.length < 2) {
       _optimizedRoutePolyline = List<LatLng>.from(_draftRoutePolyline);
       _avoidancePoints = <HazardAvoidancePoint>[];
@@ -1232,20 +1237,21 @@ class _MapPageState extends ConsumerState<MapPage> {
     );
 
     if (interceptingHazards.isEmpty) {
-      // Sin peligros interceptando
+      // Sin peligros interceptando - no hacer nada
       _optimizedRoutePolyline = List<LatLng>.from(_draftRoutePolyline);
       _avoidancePoints = <HazardAvoidancePoint>[];
       return;
     }
 
     try {
-      // Calcular puntos auxiliares (N, S, E, O)
+      // Calcular puntos auxiliares (N, S, E, O) solo para visualización
       final List<HazardAvoidancePoint> allAvoidancePoints =
           <HazardAvoidancePoint>[];
       
       List<LatLng> modifiedControlPoints = List<LatLng>.from(_draftRoutePoints);
+      bool routeWasModified = false;
 
-      // Para cada peligro interceptado
+      // Para cada peligro interceptado, intentar insertar punto de desviación
       for (final HazardReportRecord hazard in interceptingHazards) {
         final List<HazardAvoidancePoint> hazardPoints =
             RouteAvoidanceService.calculateAvoidancePoints(
@@ -1276,7 +1282,7 @@ class _MapPageState extends ConsumerState<MapPage> {
           }
         }
 
-        // Probar cada dirección (N, S, E, O) y elegir la más corta sin rojos
+        // Probar cada dirección (N, S, E, O) y elegir la más corta
         LatLng? bestDetourPoint;
         double bestDetourDistance = double.infinity;
 
@@ -1294,24 +1300,25 @@ class _MapPageState extends ConsumerState<MapPage> {
             final double distance =
                 RouteAvoidanceService.calculateRouteDistance(alternativeSegment);
 
-            // Preferir la más corta
+            // Elegir la más corta
             if (distance < bestDetourDistance) {
               bestDetourPoint = avoidPoint.point;
               bestDetourDistance = distance;
             }
           } catch (_) {
-            // Ignorar errores
+            // Ignorar errores de cálculo
           }
         }
 
-        // Insertar el mejor punto de desviación en control points
+        // Insertar el mejor punto de desviación SOLO si encontramos uno válido
         if (bestDetourPoint != null) {
           modifiedControlPoints.insert(insertIndex + 1, bestDetourPoint);
+          routeWasModified = true;
         }
       }
 
-      // Recalcular polyline con los nuevos puntos de control
-      if (modifiedControlPoints.length >= 2) {
+      // SOLO actualizar si la ruta fue realmente modificada
+      if (routeWasModified && modifiedControlPoints.length >= 2) {
         final List<LatLng> newPolyline =
             await _routingService.buildRoadRoute(waypoints: modifiedControlPoints);
 
@@ -1324,14 +1331,17 @@ class _MapPageState extends ConsumerState<MapPage> {
           _avoidancePoints = allAvoidancePoints;
         });
 
-        // Guardar ruta actualizada en BD
-        if (_editingRouteId != null && _editingRouteName != null) {
-          await _saveRouteToDatabase(
-            routeId: _editingRouteId!,
-            routeName: _editingRouteName!,
-            controlPoints: modifiedControlPoints,
-          );
-        }
+        // Guardar ruta modificada en BD
+        await _saveRouteToDatabase(
+          routeId: _editingRouteId!,
+          routeName: _editingRouteName!,
+          controlPoints: modifiedControlPoints,
+        );
+      } else {
+        // Si no fue modificada, solo mostrar los puntos auxiliares para visualización
+        setState(() {
+          _avoidancePoints = allAvoidancePoints;
+        });
       }
     } catch (e) {
       // Si hay error, mantener ruta original
