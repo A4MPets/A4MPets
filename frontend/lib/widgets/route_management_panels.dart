@@ -570,7 +570,7 @@ class _AddRoutePanelContentState extends ConsumerState<AddRoutePanelContent> {
           onAddByLocation: widget.onRequestCurrentLocation,
         ),
 
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         Divider(
             height: 1,
             color: AppPalette.border(widget.isDarkMode)

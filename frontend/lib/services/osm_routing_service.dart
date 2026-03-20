@@ -6,6 +6,8 @@ import 'package:latlong2/latlong.dart';
 class OsmRoutingService {
   static const String _baseUrl = 'https://router.project-osrm.org';
 
+  OsmRoutingService();
+
   Future<List<LatLng>> buildRoadRoute({
     required List<LatLng> waypoints,
   }) async {

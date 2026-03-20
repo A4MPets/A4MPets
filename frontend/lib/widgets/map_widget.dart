@@ -7,6 +7,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import '../models/hazard_report_record.dart';
+import '../models/colored_route_segment.dart';
 import '../theme/app_palette.dart';
 
 class MapWidget extends StatefulWidget {
@@ -22,6 +23,7 @@ class MapWidget extends StatefulWidget {
   final Widget? panelOverlay;
   final List<LatLng> routePoints;
   final List<LatLng> routePolylinePoints;
+  final List<dynamic> coloredRouteSegments;
   final int? selectedRoutePointIndex;
   final void Function(int index)? onRoutePointPointerDown;
   final void Function(int index)? onRoutePointTap;
@@ -54,6 +56,7 @@ class MapWidget extends StatefulWidget {
     this.panelOverlay,
     this.routePoints = const [],
     this.routePolylinePoints = const [],
+    this.coloredRouteSegments = const [],
     this.selectedRoutePointIndex,
     this.onRoutePointPointerDown,
     this.onRoutePointTap,
@@ -417,13 +420,7 @@ class _MapWidgetState extends State<MapWidget> {
             if (widget.routePolylinePoints.length >= 2)
               RepaintBoundary(
                 child: PolylineLayer(
-                  polylines: [
-                    Polyline(
-                      points: widget.routePolylinePoints,
-                      color: AppPalette.primaryBlue,
-                      strokeWidth: 2.0,
-                    ),
-                  ],
+                  polylines: _buildRoutePolylines(),
                 ),
               ),
             if (widget.routePoints.isNotEmpty)
@@ -879,6 +876,30 @@ class _MapWidgetState extends State<MapWidget> {
         ),
       ),
     );
+  }
+
+  /// Construye las polylines para la ruta, considerando segmentos coloreados si existen
+  List<Polyline> _buildRoutePolylines() {
+    if (widget.coloredRouteSegments.isNotEmpty) {
+      // Si hay segmentos coloreados, renderizar cada uno con su color
+      return (widget.coloredRouteSegments as List<ColoredRouteSegment>)
+          .where((ColoredRouteSegment segment) => segment.points.length >= 2)
+          .map((ColoredRouteSegment segment) => Polyline(
+                points: segment.points,
+                color: segment.color,
+                strokeWidth: 2.0,
+              ))
+          .toList();
+    } else {
+      // Si no hay segmentos coloreados, renderizar la ruta normal (azul)
+      return [
+        Polyline(
+          points: widget.routePolylinePoints,
+          color: AppPalette.primaryBlue,
+          strokeWidth: 2.0,
+        ),
+      ];
+    }
   }
 }
 

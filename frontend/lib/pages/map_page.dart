@@ -6,9 +6,11 @@ import 'package:latlong2/latlong.dart';
 import '../models/pet_record.dart';
 import '../models/hazard_report_record.dart';
 import '../models/route_record.dart';
+import '../models/colored_route_segment.dart';
 import '../providers/local_data_providers.dart';
 import '../providers/theme_provider.dart';
 import '../services/osm_routing_service.dart';
+import '../services/route_hazard_visualizer_service.dart';
 import '../theme/app_palette.dart';
 import '../widgets/auth_panels.dart';
 import '../widgets/map_widget.dart';
@@ -40,6 +42,7 @@ class _MapPageState extends ConsumerState<MapPage> {
 
   List<LatLng> _draftRoutePoints = <LatLng>[];
   List<LatLng> _draftRoutePolyline = <LatLng>[];
+  List<dynamic> _hazardColoredRouteSegments = <dynamic>[];
   _RouteMapTool _activeRouteTool = _RouteMapTool.addPoint;
   int? _selectedPointIndexForEdit;
   int? _selectedRouteId;
@@ -973,6 +976,7 @@ class _MapPageState extends ConsumerState<MapPage> {
   void _clearDraftRouteVisuals() {
     _draftRoutePoints = <LatLng>[];
     _draftRoutePolyline = <LatLng>[];
+    _hazardColoredRouteSegments = <dynamic>[];
     _activeRouteTool = _RouteMapTool.addPoint;
     _selectedPointIndexForEdit = null;
     _selectedRouteId = null;
@@ -1164,6 +1168,8 @@ class _MapPageState extends ConsumerState<MapPage> {
       if (!mounted) return;
       setState(() {
         _draftRoutePolyline = polyline;
+        // Analizar peligros en la ruta por defecto
+        _analyzeRouteForHazards();
       });
     } catch (_) {
       if (!mounted) return;
@@ -1171,6 +1177,42 @@ class _MapPageState extends ConsumerState<MapPage> {
         _draftRoutePolyline = List<LatLng>.from(waypoints);
       });
     }
+  }
+
+  /// Analiza la ruta actual contra los hazards y genera segmentos coloreados
+  /// Solo pinta, sin modificar la ruta
+  void _analyzeRouteForHazards() {
+    if (_draftRoutePolyline.length < 2) {
+      _hazardColoredRouteSegments = <dynamic>[];
+      return;
+    }
+
+    // Obtener hazards visibles (según los filtros de riesgo)
+    final List<HazardReportRecord> visibleHazards = _filteredHazards;
+
+    // Analizar la ruta
+    final List<ColoredRouteSegment> segments =
+        RouteHazardVisualizerService.analyzeRouteHazards(
+      routePolyline: _draftRoutePolyline,
+      hazards: visibleHazards,
+    );
+
+    _hazardColoredRouteSegments = segments;
+  }
+
+  /// Obtiene los hazards filtrados según los controles de visibilidad
+  List<HazardReportRecord> get _filteredHazards {
+    return ref.watch(hazardReportsControllerProvider).whenData((hazards) {
+      return hazards.where((HazardReportRecord h) {
+        if (h.riskLevelCode == 'low' && !_showLowRiskHazardCircles) return false;
+        if (h.riskLevelCode == 'medium' && !_showMediumRiskHazardCircles) return false;
+        if (h.riskLevelCode == 'high' && !_showHighRiskHazardCircles) return false;
+        return true;
+      }).toList();
+    }).maybeWhen(
+      data: (hazards) => hazards,
+      orElse: () => <HazardReportRecord>[],
+    );
   }
 
   Future<void> _addCurrentLocationPoint() async {
@@ -1478,6 +1520,7 @@ class _MapPageState extends ConsumerState<MapPage> {
         panelOverlay: _buildPanelOverlay(isDarkMode),
         routePoints: _draftRoutePoints,
         routePolylinePoints: _draftRoutePolyline,
+        coloredRouteSegments: _hazardColoredRouteSegments,
         selectedRoutePointIndex: _selectedPointIndexForEdit,
         onRoutePointPointerDown: (int index) {
           if (_activeRouteTool != _RouteMapTool.editPoint) {

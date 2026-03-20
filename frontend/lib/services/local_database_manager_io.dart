@@ -56,7 +56,7 @@ class LocalDatabaseManager {
 
     return openDatabase(
       databasePath,
-      version: 4,
+      version: 5,
       onCreate: (Database db, int version) async {
         await db.execute('''
           CREATE TABLE $_userTable (
@@ -109,6 +109,17 @@ class LocalDatabaseManager {
             needs_sync INTEGER NOT NULL DEFAULT 1
           )
         ''');
+
+        await db.execute('''
+          CREATE TABLE route_cache (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            waypoints_hash TEXT NOT NULL UNIQUE,
+            polyline_json TEXT NOT NULL,
+            distance_meters REAL NOT NULL,
+            duration_seconds REAL NOT NULL,
+            cached_at INTEGER NOT NULL
+          )
+        ''');
       },
       onUpgrade: (Database db, int oldVersion, int newVersion) async {
         if (oldVersion < 2) {
@@ -153,6 +164,19 @@ class LocalDatabaseManager {
           await db.execute(
             'ALTER TABLE $_hazardsTable ADD COLUMN comments_json TEXT NOT NULL DEFAULT "[]"',
           );
+        }
+
+        if (oldVersion < 5) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS route_cache (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              waypoints_hash TEXT NOT NULL UNIQUE,
+              polyline_json TEXT NOT NULL,
+              distance_meters REAL NOT NULL,
+              duration_seconds REAL NOT NULL,
+              cached_at INTEGER NOT NULL
+            )
+          ''');
         }
       },
     );
