@@ -7,12 +7,10 @@ import '../models/pet_record.dart';
 import '../models/hazard_report_record.dart';
 import '../models/route_record.dart';
 import '../models/colored_route_segment.dart';
-import '../models/hazard_avoidance_point.dart';
 import '../providers/local_data_providers.dart';
 import '../providers/theme_provider.dart';
 import '../services/osm_routing_service.dart';
 import '../services/route_hazard_visualizer_service.dart';
-import '../services/route_avoidance_service.dart';
 import '../theme/app_palette.dart';
 import '../widgets/auth_panels.dart';
 import '../widgets/map_widget.dart';
@@ -44,9 +42,7 @@ class _MapPageState extends ConsumerState<MapPage> {
 
   List<LatLng> _draftRoutePoints = <LatLng>[];
   List<LatLng> _draftRoutePolyline = <LatLng>[];
-  List<LatLng> _optimizedRoutePolyline = <LatLng>[]; // Ruta evitando peligros
   List<dynamic> _hazardColoredRouteSegments = <dynamic>[];
-  List<HazardAvoidancePoint> _avoidancePoints = <HazardAvoidancePoint>[]; // Puntos auxiliares visuales
   _RouteMapTool _activeRouteTool = _RouteMapTool.addPoint;
   int? _selectedPointIndexForEdit;
   int? _selectedRouteId;
@@ -980,9 +976,7 @@ class _MapPageState extends ConsumerState<MapPage> {
   void _clearDraftRouteVisuals() {
     _draftRoutePoints = <LatLng>[];
     _draftRoutePolyline = <LatLng>[];
-    _optimizedRoutePolyline = <LatLng>[];
     _hazardColoredRouteSegments = <dynamic>[];
-    _avoidancePoints = <HazardAvoidancePoint>[];
     _activeRouteTool = _RouteMapTool.addPoint;
     _selectedPointIndexForEdit = null;
     _selectedRouteId = null;
@@ -1186,12 +1180,10 @@ class _MapPageState extends ConsumerState<MapPage> {
   }
 
   /// Analiza la ruta actual contra los hazards y genera segmentos coloreados
-  /// También calcula ruta optimizada evitando peligros
+  /// Solo pinta, sin modificar la ruta
   void _analyzeRouteForHazards() {
     if (_draftRoutePolyline.length < 2) {
       _hazardColoredRouteSegments = <dynamic>[];
-      _optimizedRoutePolyline = <LatLng>[];
-      _avoidancePoints = <HazardAvoidancePoint>[];
       return;
     }
 
@@ -1205,125 +1197,7 @@ class _MapPageState extends ConsumerState<MapPage> {
       hazards: visibleHazards,
     );
 
-    // Calcular ruta optimizada evitando peligros
-    _calculateOptimizedRoute(visibleHazards);
-
-    setState(() {
-      _hazardColoredRouteSegments = segments;
-    });
-  }
-
-  /// Calcula la ruta optimizada que evita peligros
-  /// Genera puntos auxiliares y selecciona la mejor ruta alternativa
-  Future<void> _calculateOptimizedRoute(
-    List<HazardReportRecord> allHazards,
-  ) async {
-    // SOLO procesar si estamos editando una ruta
-    if (_editingRouteId == null || _editingRouteName == null) {
-      return;
-    }
-
-    if (_draftRoutePolyline.length < 2 || _draftRoutePoints.length < 2) {
-      _avoidancePoints = <HazardAvoidancePoint>[];
-      return;
-    }
-
-    // Obtener peligros que interceptan la ruta
-    final List<HazardReportRecord> interceptingHazards =
-        RouteAvoidanceService.getInterceptingHazards(
-      routePolyline: _draftRoutePolyline,
-      allHazards: allHazards,
-    );
-
-    if (interceptingHazards.isEmpty) {
-      // Sin peligros interceptando
-      _avoidancePoints = <HazardAvoidancePoint>[];
-      return;
-    }
-
-    try {
-      // Calcular puntos auxiliares (N, S, E, O)
-      final List<HazardAvoidancePoint> allAvoidancePoints =
-          <HazardAvoidancePoint>[];
-      
-      List<LatLng> modifiedControlPoints = List<LatLng>.from(_draftRoutePoints);
-
-      // Para cada peligro interceptado, insertar el mejor punto de desviación
-      for (final HazardReportRecord hazard in interceptingHazards) {
-        final List<HazardAvoidancePoint> hazardPoints =
-            RouteAvoidanceService.calculateAvoidancePoints(
-          hazardCenter: LatLng(
-            hazard.incidentLatitude.toDouble(),
-            hazard.incidentLongitude.toDouble(),
-          ),
-          hazardRadiusMeters: hazard.impactRadiusMeters.toDouble(),
-          hazardId: hazard.id.toDouble(),
-        );
-        allAvoidancePoints.addAll(hazardPoints);
-
-        // Encontrar el segmento de control points más cercano al peligro
-        int insertIndex = 0;
-        double closestDistance = double.infinity;
-
-        for (int i = 0; i < modifiedControlPoints.length - 1; i++) {
-          final distance = RouteHazardVisualizerService.distancePointToLineSegment(
-            point: LatLng(hazard.incidentLatitude.toDouble(), 
-                         hazard.incidentLongitude.toDouble()),
-            lineStart: modifiedControlPoints[i],
-            lineEnd: modifiedControlPoints[i + 1],
-          );
-
-          if (distance < closestDistance) {
-            closestDistance = distance;
-            insertIndex = i;
-          }
-        }
-
-        // Probar cada dirección (N, S, E, O) y elegir la más corta
-        LatLng? bestDetourPoint;
-        double bestDetourDistance = double.infinity;
-
-        for (final HazardAvoidancePoint avoidPoint in hazardPoints) {
-          try {
-            final LatLng pointA = modifiedControlPoints[insertIndex];
-            final LatLng pointB = modifiedControlPoints[insertIndex + 1];
-
-            // Calcular ruta: A -> desviación -> B
-            final List<LatLng> alternativeSegment =
-                await _routingService.buildRoadRoute(
-              waypoints: <LatLng>[pointA, avoidPoint.point, pointB],
-            );
-
-            final double distance =
-                RouteAvoidanceService.calculateRouteDistance(alternativeSegment);
-
-            // Elegir la más corta
-            if (distance < bestDetourDistance) {
-              bestDetourPoint = avoidPoint.point;
-              bestDetourDistance = distance;
-            }
-          } catch (_) {
-            // Ignorar errores de cálculo
-          }
-        }
-
-        // Insertar el mejor punto de desviación en los puntos de control
-        if (bestDetourPoint != null) {
-          modifiedControlPoints.insert(insertIndex + 1, bestDetourPoint);
-        }
-      }
-
-      // Actualizar puntos de control si fueron modificados
-      if (!mounted) return;
-
-      setState(() {
-        _draftRoutePoints = modifiedControlPoints;
-        _avoidancePoints = allAvoidancePoints;
-      });
-    } catch (e) {
-      // Si hay error, limpiar puntos auxiliares
-      _avoidancePoints = <HazardAvoidancePoint>[];
-    }
+    _hazardColoredRouteSegments = segments;
   }
 
   /// Obtiene los hazards filtrados según los controles de visibilidad
@@ -1333,6 +1207,7 @@ class _MapPageState extends ConsumerState<MapPage> {
         if (h.riskLevelCode == 'low' && !_showLowRiskHazardCircles) return false;
         if (h.riskLevelCode == 'medium' && !_showMediumRiskHazardCircles) return false;
         if (h.riskLevelCode == 'high' && !_showHighRiskHazardCircles) return false;
+        if (h.riskLevelCode == 'undefined' && !_showHighRiskHazardCircles) return false;
         return true;
       }).toList();
     }).maybeWhen(
@@ -1646,9 +1521,7 @@ class _MapPageState extends ConsumerState<MapPage> {
         panelOverlay: _buildPanelOverlay(isDarkMode),
         routePoints: _draftRoutePoints,
         routePolylinePoints: _draftRoutePolyline,
-        optimizedRoutePolyline: _optimizedRoutePolyline,
         coloredRouteSegments: _hazardColoredRouteSegments,
-        avoidancePoints: _avoidancePoints,
         selectedRoutePointIndex: _selectedPointIndexForEdit,
         onRoutePointPointerDown: (int index) {
           if (_activeRouteTool != _RouteMapTool.editPoint) {

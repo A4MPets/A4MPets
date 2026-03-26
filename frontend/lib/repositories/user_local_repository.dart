@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../models/local_user_profile.dart';
 import '../models/hazard_report_record.dart';
 import '../models/pet_record.dart';
@@ -9,7 +11,7 @@ class UserLocalRepository {
   final LocalDatabaseManager databaseManager;
   final UserDataSyncCoordinator syncCoordinator;
 
-  const UserLocalRepository({
+  UserLocalRepository({
     required this.databaseManager,
     required this.syncCoordinator,
   });
@@ -32,7 +34,7 @@ class UserLocalRepository {
   }) async {
     await databaseManager.addPet(name: name, photoPath: photoPath);
     await databaseManager.markUserDataForFutureSync();
-    await syncCoordinator.scheduleSync();
+    unawaited(syncCoordinator.scheduleSync());
   }
 
   Future<void> updatePet({
@@ -42,13 +44,13 @@ class UserLocalRepository {
   }) async {
     await databaseManager.updatePet(petId: petId, name: name, photoPath: photoPath);
     await databaseManager.markUserDataForFutureSync();
-    await syncCoordinator.scheduleSync();
+    unawaited(syncCoordinator.scheduleSync());
   }
 
   Future<void> deletePet({required int petId}) async {
     await databaseManager.deletePet(petId: petId);
     await databaseManager.markUserDataForFutureSync();
-    await syncCoordinator.scheduleSync();
+    unawaited(syncCoordinator.scheduleSync());
   }
 
   Future<List<RouteRecord>> getRoutes() {
@@ -65,13 +67,13 @@ class UserLocalRepository {
   }) async {
     await databaseManager.addRoute(name: name, points: points);
     await databaseManager.markUserDataForFutureSync();
-    await syncCoordinator.scheduleSync();
+    unawaited(syncCoordinator.scheduleSync());
   }
 
   Future<void> deleteRoute({required int routeId}) async {
     await databaseManager.deleteRoute(routeId: routeId);
     await databaseManager.markUserDataForFutureSync();
-    await syncCoordinator.scheduleSync();
+    unawaited(syncCoordinator.scheduleSync());
   }
 
   Future<void> updateRoute({
@@ -81,7 +83,7 @@ class UserLocalRepository {
   }) async {
     await databaseManager.updateRoute(routeId: routeId, name: name, points: points);
     await databaseManager.markUserDataForFutureSync();
-    await syncCoordinator.scheduleSync();
+    unawaited(syncCoordinator.scheduleSync());
   }
 
   Future<List<HazardReportRecord>> getHazardReports() {
@@ -113,7 +115,7 @@ class UserLocalRepository {
       reportedByUsername: reportedByUsername,
     );
     await databaseManager.markUserDataForFutureSync();
-    await syncCoordinator.scheduleSync();
+    unawaited(syncCoordinator.scheduleSync());
   }
 
   Future<void> addCommentToHazard({
@@ -125,6 +127,10 @@ class UserLocalRepository {
       comment: comment,
     );
     await databaseManager.markUserDataForFutureSync();
-    await syncCoordinator.scheduleSync();
+    unawaited(syncCoordinator.scheduleSync());
+  }
+
+  Future<void> syncHazardsNow() {
+    return syncCoordinator.syncNow();
   }
 }

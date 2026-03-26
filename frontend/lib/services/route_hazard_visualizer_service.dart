@@ -67,7 +67,7 @@ class RouteHazardVisualizerService {
       );
 
       // Calcular distancia del hazard al segmento de línea
-      final double distanceToSegment = distancePointToLineSegment(
+      final double distanceToSegment = _distancePointToLineSegment(
         point: hazardPoint,
         lineStart: start,
         lineEnd: end,
@@ -83,7 +83,7 @@ class RouteHazardVisualizerService {
 
   /// Calcula la distancia mínima entre un punto y un segmento de línea
   /// Usando la fórmula de distancia de punto a línea
-  static double distancePointToLineSegment({
+  static double _distancePointToLineSegment({
     required LatLng point,
     required LatLng lineStart,
     required LatLng lineEnd,

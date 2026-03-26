@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/hazard_report_record.dart';
@@ -18,7 +20,14 @@ final localMediaStorageServiceProvider = Provider<LocalMediaStorageService>((ref
 });
 
 final userDataSyncCoordinatorProvider = Provider<UserDataSyncCoordinator>((ref) {
-  return const UserDataSyncCoordinator();
+  final UserDataSyncCoordinator coordinator = UserDataSyncCoordinator(
+    databaseManager: ref.watch(localDatabaseManagerProvider),
+  );
+
+  coordinator.startAutoSync();
+  ref.onDispose(coordinator.stopAutoSync);
+
+  return coordinator;
 });
 
 final userLocalRepositoryProvider = Provider<UserLocalRepository>((ref) {
@@ -127,9 +136,36 @@ final hazardReportsControllerProvider =
 
 class HazardReportsController extends AsyncNotifier<List<HazardReportRecord>> {
   UserLocalRepository get _repository => ref.read(userLocalRepositoryProvider);
+  Timer? _refreshTimer;
+  bool _isDisposed = false;
+
+  void _ensureAutoRefresh() {
+    _refreshTimer ??= Timer.periodic(const Duration(seconds: 3), (_) async {
+      if (_isDisposed) {
+        return;
+      }
+
+      try {
+        final List<HazardReportRecord> latest = await _repository.getHazardReports();
+        state = AsyncData<List<HazardReportRecord>>(latest);
+      } catch (_) {
+        // Evitar ruido en UI: el siguiente tick volverá a intentar.
+      }
+    });
+
+    ref.onDispose(() {
+      _isDisposed = true;
+      _refreshTimer?.cancel();
+      _refreshTimer = null;
+    });
+  }
 
   @override
-  Future<List<HazardReportRecord>> build() {
+  Future<List<HazardReportRecord>> build() async {
+    _ensureAutoRefresh();
+
+    // Disparar sincronización en segundo plano sin bloquear la carga local.
+    unawaited(_repository.syncHazardsNow());
     return _repository.getHazardReports();
   }
 
@@ -162,7 +198,11 @@ class HazardReportsController extends AsyncNotifier<List<HazardReportRecord>> {
       evidencePhotoUrl: evidencePhotoUrl,
       reportedByUsername: reportedByUsername,
     );
-    await reload();
+    try {
+      await reload();
+    } catch (_) {
+      // El guardado local ya ocurrió; no bloquear UX por refresco/sync.
+    }
   }
 
   Future<void> addCommentToHazard({
@@ -173,6 +213,11 @@ class HazardReportsController extends AsyncNotifier<List<HazardReportRecord>> {
       hazardId: hazardId,
       comment: comment,
     );
+    await reload();
+  }
+
+  Future<void> syncWithBackend() async {
+    await _repository.syncHazardsNow();
     await reload();
   }
 }

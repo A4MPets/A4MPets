@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -255,6 +256,10 @@ class LocalDatabaseManager {
 
     final HazardReportRecord newReport = HazardReportRecord(
       id: nextId,
+      localUuid: _generateLocalUuid(),
+      remoteId: null,
+      syncStatus: 'created',
+      lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
       incidentLatitude: incidentLatitude,
       incidentLongitude: incidentLongitude,
       impactRadiusMeters: impactRadiusMeters,
@@ -298,6 +303,10 @@ class LocalDatabaseManager {
 
           return HazardReportRecord(
             id: report.id,
+            localUuid: report.localUuid,
+            remoteId: report.remoteId,
+            syncStatus: report.syncStatus,
+            lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
             incidentLatitude: report.incidentLatitude,
             incidentLongitude: report.incidentLongitude,
             impactRadiusMeters: report.impactRadiusMeters,
@@ -320,4 +329,152 @@ class LocalDatabaseManager {
   }
 
   Future<void> markUserDataForFutureSync() async {}
+
+  Future<List<HazardReportRecord>> getHazardReportsNeedingSync() async {
+    final List<HazardReportRecord> hazards = await getHazardReports();
+    return hazards.where((HazardReportRecord h) => h.needsSync).toList(growable: false);
+  }
+
+  Future<void> markHazardAsSynced({
+    required String localUuid,
+    String? remoteId,
+    String syncStatus = 'synced',
+    DateTime? lastModifiedAt,
+  }) async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final List<HazardReportRecord> current = await getHazardReports();
+
+    final List<Map<String, Object?>> encoded = current.map((HazardReportRecord report) {
+      if (report.localUuid != localUuid) {
+        return report.toMap();
+      }
+      return HazardReportRecord(
+        id: report.id,
+        localUuid: report.localUuid,
+        remoteId: remoteId ?? report.remoteId,
+        syncStatus: syncStatus,
+        lastModifiedAt: lastModifiedAt ?? DateTime.now(),
+        incidentLatitude: report.incidentLatitude,
+        incidentLongitude: report.incidentLongitude,
+        impactRadiusMeters: report.impactRadiusMeters,
+        categoryCode: report.categoryCode,
+        narrativeDescription: report.narrativeDescription,
+        reportedAt: report.reportedAt,
+        estimatedDurationCode: report.estimatedDurationCode,
+        riskLevelCode: report.riskLevelCode,
+        evidencePhotoUrl: report.evidencePhotoUrl,
+        reportedByUsername: report.reportedByUsername,
+        comments: report.comments,
+        createdAt: report.createdAt,
+        updatedAt: DateTime.now(),
+        needsSync: false,
+      ).toMap();
+    }).toList(growable: false);
+
+    await prefs.setString(_hazardsKey, jsonEncode(encoded));
+  }
+
+  Future<void> upsertHazardFromRemote({
+    required String localUuid,
+    required String? remoteId,
+    required String syncStatus,
+    required DateTime remoteLastModifiedAt,
+    required double incidentLatitude,
+    required double incidentLongitude,
+    required int impactRadiusMeters,
+    required String categoryCode,
+    required String riskLevelCode,
+    required String narrativeDescription,
+    required String estimatedDurationCode,
+    required DateTime reportedAt,
+    required String? evidencePhotoUrl,
+    required String reportedByUsername,
+  }) async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final List<HazardReportRecord> current = await getHazardReports();
+
+    HazardReportRecord? existing;
+    for (final HazardReportRecord report in current) {
+      if (report.localUuid == localUuid || (remoteId != null && report.remoteId == remoteId)) {
+        existing = report;
+        break;
+      }
+    }
+
+    final int nextId = current.isEmpty
+        ? 1
+        : current.map((HazardReportRecord report) => report.id).reduce((int a, int b) => a > b ? a : b) + 1;
+
+    if (existing == null) {
+      final HazardReportRecord inserted = HazardReportRecord(
+        id: nextId,
+        localUuid: localUuid,
+        remoteId: remoteId,
+        syncStatus: syncStatus,
+        lastModifiedAt: remoteLastModifiedAt,
+        incidentLatitude: incidentLatitude,
+        incidentLongitude: incidentLongitude,
+        impactRadiusMeters: impactRadiusMeters,
+        categoryCode: categoryCode,
+        narrativeDescription: narrativeDescription,
+        reportedAt: reportedAt,
+        estimatedDurationCode: estimatedDurationCode,
+        riskLevelCode: riskLevelCode,
+        evidencePhotoUrl: evidencePhotoUrl,
+        reportedByUsername: reportedByUsername,
+        comments: const <HazardCommentRecord>[],
+        createdAt: remoteLastModifiedAt,
+        updatedAt: remoteLastModifiedAt,
+        needsSync: false,
+      );
+
+      final List<Map<String, Object?>> encoded = <Map<String, Object?>>[
+        ...current.map((HazardReportRecord report) => report.toMap()),
+        inserted.toMap(),
+      ];
+      await prefs.setString(_hazardsKey, jsonEncode(encoded));
+      return;
+    }
+
+    if (existing.needsSync && existing.lastModifiedAt.isAfter(remoteLastModifiedAt)) {
+      return;
+    }
+
+    final List<Map<String, Object?>> encoded = current.map((HazardReportRecord report) {
+      if (report.id != existing!.id) {
+        return report.toMap();
+      }
+      return HazardReportRecord(
+        id: report.id,
+        localUuid: localUuid,
+        remoteId: remoteId ?? report.remoteId,
+        syncStatus: syncStatus,
+        lastModifiedAt: remoteLastModifiedAt,
+        incidentLatitude: incidentLatitude,
+        incidentLongitude: incidentLongitude,
+        impactRadiusMeters: impactRadiusMeters,
+        categoryCode: categoryCode,
+        narrativeDescription: narrativeDescription,
+        reportedAt: reportedAt,
+        estimatedDurationCode: estimatedDurationCode,
+        riskLevelCode: riskLevelCode,
+        evidencePhotoUrl: evidencePhotoUrl,
+        reportedByUsername: reportedByUsername,
+        comments: report.comments,
+        createdAt: report.createdAt,
+        updatedAt: DateTime.now(),
+        needsSync: false,
+      ).toMap();
+    }).toList(growable: false);
+
+    await prefs.setString(_hazardsKey, jsonEncode(encoded));
+  }
+
+  String _generateLocalUuid() {
+    final int now = DateTime.now().microsecondsSinceEpoch;
+    final int randomPart = (Random().nextDouble() * 0xFFFFFFFF).floor();
+    return 'hz-$now-${randomPart.toRadixString(16)}';
+  }
 }

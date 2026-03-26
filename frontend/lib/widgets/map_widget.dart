@@ -8,7 +8,6 @@ import 'dart:ui' as ui;
 
 import '../models/hazard_report_record.dart';
 import '../models/colored_route_segment.dart';
-import '../models/hazard_avoidance_point.dart';
 import '../theme/app_palette.dart';
 
 class MapWidget extends StatefulWidget {
@@ -24,9 +23,7 @@ class MapWidget extends StatefulWidget {
   final Widget? panelOverlay;
   final List<LatLng> routePoints;
   final List<LatLng> routePolylinePoints;
-  final List<LatLng> optimizedRoutePolyline; // Ruta optimizada evitando peligros
   final List<dynamic> coloredRouteSegments;
-  final List<HazardAvoidancePoint> avoidancePoints; // Puntos auxiliares de desviación
   final int? selectedRoutePointIndex;
   final void Function(int index)? onRoutePointPointerDown;
   final void Function(int index)? onRoutePointTap;
@@ -59,9 +56,7 @@ class MapWidget extends StatefulWidget {
     this.panelOverlay,
     this.routePoints = const [],
     this.routePolylinePoints = const [],
-    this.optimizedRoutePolyline = const [],
     this.coloredRouteSegments = const [],
-    this.avoidancePoints = const [],
     this.selectedRoutePointIndex,
     this.onRoutePointPointerDown,
     this.onRoutePointTap,
@@ -87,6 +82,7 @@ class MapWidget extends StatefulWidget {
 
 class _MapWidgetState extends State<MapWidget> {
   late MapController mapController;
+  bool _isMapReady = false;
   bool _isDraggingRoutePoint = false;
   int? _draggingRoutePointIndex;
   LatLng? _draggingPoint;
@@ -113,7 +109,6 @@ class _MapWidgetState extends State<MapWidget> {
     super.initState();
     mapController = MapController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _prewarmTileCache();
       _requestLocationPermission();
     });
   }
@@ -183,14 +178,9 @@ class _MapWidgetState extends State<MapWidget> {
   }
 
   Future<void> _prewarmTileCache() async {
-    const LatLng caliCenter = LatLng(3.4372, -76.5197);
-    // Faster pre-warming: reduce intervals and cycles
-    await Future<void>.delayed(const Duration(milliseconds: 50));
-    for (double zoom = 12.0; zoom <= 15.0; zoom += 1.0) {
-      mapController.move(caliCenter, zoom);
-      await Future<void>.delayed(const Duration(milliseconds: 30));
-    }
-    mapController.move(widget.center, widget.zoom);
+    // Desactivado: en web puede ejecutar move() antes de que flutter_map
+    // termine su inicialización interna, provocando LateInitializationError
+    // en _interactiveViewerState y errores de layout en cascada.
   }
 
   @override
@@ -204,23 +194,41 @@ class _MapWidgetState extends State<MapWidget> {
   void didUpdateWidget(covariant MapWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (widget.cameraFocusTarget != null &&
+    if (_isMapReady &&
+        widget.cameraFocusTarget != null &&
         widget.cameraFocusRevision != oldWidget.cameraFocusRevision) {
+      final LatLng focusTarget = widget.cameraFocusTarget!;
       final double nextZoom = widget.cameraFocusZoom ?? mapController.camera.zoom;
-      mapController.move(widget.cameraFocusTarget!, nextZoom);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _safeMove(focusTarget, nextZoom);
+      });
+    }
+  }
+
+  void _safeMove(LatLng center, double zoom) {
+    if (!_isMapReady || !mounted) {
+      return;
+    }
+
+    try {
+      mapController.move(center, zoom);
+    } catch (error) {
+      debugPrint('Map move skipped due to runtime state: $error');
     }
   }
 
   // Zoom In
   void _zoomIn() {
+    if (!_isMapReady) return;
     final double nextZoom = (mapController.camera.zoom + 1).clamp(11.0, 22.0);
-    mapController.move(mapController.camera.center, nextZoom);
+    _safeMove(mapController.camera.center, nextZoom);
   }
 
   // Zoom Out
   void _zoomOut() {
+    if (!_isMapReady) return;
     final double nextZoom = (mapController.camera.zoom - 1).clamp(11.0, 22.0);
-    mapController.move(mapController.camera.center, nextZoom);
+    _safeMove(mapController.camera.center, nextZoom);
   }
 
   // Report Danger - Ready to add functionality
@@ -316,16 +324,17 @@ class _MapWidgetState extends State<MapWidget> {
           options: MapOptions(
             initialCenter: widget.center,
             initialZoom: widget.zoom,
+            onMapReady: () {
+              if (_isMapReady || !mounted) {
+                return;
+              }
+              _isMapReady = true;
+              _prewarmTileCache();
+            },
             minZoom: 11,
             maxZoom: 22,
             backgroundColor: mapBackgroundColor,
             keepAlive: true,
-            cameraConstraint: CameraConstraint.contain(
-              bounds: LatLngBounds(
-                const LatLng(3.3, -76.65),
-                const LatLng(3.55, -76.45),
-              ),
-            ),
             interactionOptions: InteractionOptions(
               flags:
                   _isDraggingRoutePoint ? InteractiveFlag.none : InteractiveFlag.all,
@@ -426,12 +435,6 @@ class _MapWidgetState extends State<MapWidget> {
               RepaintBoundary(
                 child: PolylineLayer(
                   polylines: _buildRoutePolylines(),
-                ),
-              ),
-            if (widget.avoidancePoints.isNotEmpty)
-              RepaintBoundary(
-                child: MarkerLayer(
-                  markers: _buildAvoidancePointMarkers(),
                 ),
               ),
             if (widget.routePoints.isNotEmpty)
@@ -889,13 +892,8 @@ class _MapWidgetState extends State<MapWidget> {
     );
   }
 
-  /// Construye las polylines para la ruta, considerando segmentos coloreados y ruta optimizada
+  /// Construye las polylines para la ruta, considerando segmentos coloreados si existen
   List<Polyline> _buildRoutePolylines() {
-    // Determinar qué ruta usar: optimizada si existe, sino la original
-    final List<LatLng> displayRoute = widget.optimizedRoutePolyline.isNotEmpty
-        ? widget.optimizedRoutePolyline
-        : widget.routePolylinePoints;
-
     if (widget.coloredRouteSegments.isNotEmpty) {
       // Si hay segmentos coloreados, renderizar cada uno con su color
       return (widget.coloredRouteSegments as List<ColoredRouteSegment>)
@@ -907,50 +905,15 @@ class _MapWidgetState extends State<MapWidget> {
               ))
           .toList();
     } else {
-      // Si no hay segmentos coloreados, renderizar la ruta (azul)
+      // Si no hay segmentos coloreados, renderizar la ruta normal (azul)
       return [
         Polyline(
-          points: displayRoute,
+          points: widget.routePolylinePoints,
           color: AppPalette.primaryBlue,
           strokeWidth: 2.0,
         ),
       ];
     }
-  }
-
-  /// Construye marcadores para los puntos auxiliares de desviación
-  List<Marker> _buildAvoidancePointMarkers() {
-    if (widget.avoidancePoints.isEmpty) {
-      return <Marker>[];
-    }
-
-    return widget.avoidancePoints.map((HazardAvoidancePoint point) {
-      return Marker(
-        point: point.point,
-        width: 16,
-        height: 16,
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppPalette.primaryBlue,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: Colors.white,
-              width: 1.5,
-            ),
-          ),
-          child: Center(
-            child: Text(
-              point.direction,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 8,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-      );
-    }).toList();
   }
 }
 

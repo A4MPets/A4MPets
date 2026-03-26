@@ -40,6 +40,10 @@ class HazardCommentRecord {
 
 class HazardReportRecord {
   final int id;
+  final String localUuid;
+  final String? remoteId;
+  final String syncStatus;
+  final DateTime lastModifiedAt;
   final double incidentLatitude;
   final double incidentLongitude;
   final int impactRadiusMeters;
@@ -57,6 +61,10 @@ class HazardReportRecord {
 
   const HazardReportRecord({
     required this.id,
+    required this.localUuid,
+    required this.remoteId,
+    required this.syncStatus,
+    required this.lastModifiedAt,
     required this.incidentLatitude,
     required this.incidentLongitude,
     required this.impactRadiusMeters,
@@ -76,15 +84,27 @@ class HazardReportRecord {
   factory HazardReportRecord.fromMap(Map<String, Object?> map) {
     final String commentsJson = map['comments_json'] as String? ?? '[]';
     final List<dynamic> rawComments = jsonDecode(commentsJson) as List<dynamic>;
+    final int nowMs = DateTime.now().millisecondsSinceEpoch;
+    final int idValue = (map['id'] as num?)?.toInt() ?? 0;
+    final int createdAtMs = (map['created_at'] as num?)?.toInt() ?? nowMs;
+    final int updatedAtMs = (map['updated_at'] as num?)?.toInt() ?? createdAtMs;
+    final int reportedAtMs = (map['reported_at'] as num?)?.toInt() ?? updatedAtMs;
+    final int lastModifiedMs =
+        (map['last_modified_at'] as num?)?.toInt() ?? updatedAtMs;
+    final String fallbackLocalUuid = 'legacy-${map['id'] ?? nowMs}';
 
     return HazardReportRecord(
-      id: map['id'] as int,
+      id: idValue,
+      localUuid: map['local_uuid'] as String? ?? fallbackLocalUuid,
+      remoteId: map['remote_id']?.toString(),
+      syncStatus: map['sync_status'] as String? ?? 'created',
+      lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(lastModifiedMs),
       incidentLatitude: (map['incident_latitude'] as num).toDouble(),
       incidentLongitude: (map['incident_longitude'] as num).toDouble(),
-      impactRadiusMeters: map['impact_radius_meters'] as int,
+      impactRadiusMeters: (map['impact_radius_meters'] as num).toInt(),
       categoryCode: map['category_code'] as String,
       narrativeDescription: map['narrative_description'] as String,
-      reportedAt: DateTime.fromMillisecondsSinceEpoch(map['reported_at'] as int),
+      reportedAt: DateTime.fromMillisecondsSinceEpoch(reportedAtMs),
       estimatedDurationCode: map['estimated_duration_code'] as String,
       riskLevelCode: map['risk_level_code'] as String,
       evidencePhotoUrl: map['evidence_photo_url'] as String?,
@@ -93,8 +113,8 @@ class HazardReportRecord {
           .map((dynamic item) =>
             HazardCommentRecord.fromMap(item as Map<String, dynamic>))
           .toList(growable: false),
-      createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
-      updatedAt: DateTime.fromMillisecondsSinceEpoch(map['updated_at'] as int),
+      createdAt: DateTime.fromMillisecondsSinceEpoch(createdAtMs),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(updatedAtMs),
       needsSync: (map['needs_sync'] as int? ?? 0) == 1,
     );
   }
@@ -102,6 +122,10 @@ class HazardReportRecord {
   Map<String, Object?> toMap() {
     return <String, Object?>{
       'id': id,
+      'local_uuid': localUuid,
+      'remote_id': remoteId,
+      'sync_status': syncStatus,
+      'last_modified_at': lastModifiedAt.millisecondsSinceEpoch,
       'incident_latitude': incidentLatitude,
       'incident_longitude': incidentLongitude,
       'impact_radius_meters': impactRadiusMeters,
@@ -131,6 +155,7 @@ class HazardReportRecord {
         return 'Acumulación de residuos';
       case 'aggressive_animals':
         return 'Animales agresivos';
+      case 'undefined':
       case 'unspecified':
       default:
         return 'No lo sé';
@@ -155,6 +180,7 @@ class HazardReportRecord {
         return '6 meses';
       case '1_year':
         return '1 año';
+      case 'undefined':
       case 'unknown':
       default:
         return 'No lo sé';
@@ -169,6 +195,7 @@ class HazardReportRecord {
         return 'Medio';
       case 'high':
         return 'Alto';
+      case 'undefined':
       case 'unknown':
       default:
         return 'No lo sé';

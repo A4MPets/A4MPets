@@ -38,11 +38,11 @@ class _ReportHazardPanelContentState
     _SelectionOption('stagnant_water', 'Aguas estancadas'),
     _SelectionOption('waste_accumulation', 'Acumulación de residuos'),
     _SelectionOption('aggressive_animals', 'Animales agresivos'),
-    _SelectionOption('unspecified', 'No lo sé'),
+    _SelectionOption('undefined', 'No lo sé'),
   ];
 
   static const List<_SelectionOption> _durationOptions = <_SelectionOption>[
-    _SelectionOption('unknown', 'No lo sé'),
+    _SelectionOption('undefined', 'No lo sé'),
     _SelectionOption('1_day', '1 Día'),
     _SelectionOption('3_days', '3 Días'),
     _SelectionOption('1_week', '1 semana'),
@@ -57,15 +57,15 @@ class _ReportHazardPanelContentState
     _SelectionOption('low', 'Bajo'),
     _SelectionOption('medium', 'Medio'),
     _SelectionOption('high', 'Alto'),
-    _SelectionOption('unknown', 'No lo sé'),
+    _SelectionOption('undefined', 'No lo sé'),
   ];
 
   late final TextEditingController _descriptionController;
 
   LatLng? _currentLocation;
-  String _selectedCategoryCode = 'unspecified';
-  String _selectedDurationCode = 'unknown';
-  String _selectedRiskLevelCode = 'unknown';
+  String _selectedCategoryCode = 'undefined';
+  String _selectedDurationCode = 'undefined';
+  String _selectedRiskLevelCode = 'undefined';
   int _selectedImpactRadiusMeters = 10;
   String? _storedEvidencePhotoUrl;
 
@@ -228,6 +228,7 @@ class _ReportHazardPanelContentState
 
       widget.onReported();
     } catch (error) {
+      debugPrint('Error guardando hazard report: $error');
       if (!mounted) {
         return;
       }

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -56,7 +57,7 @@ class LocalDatabaseManager {
 
     return openDatabase(
       databasePath,
-      version: 5,
+      version: 6,
       onCreate: (Database db, int version) async {
         await db.execute('''
           CREATE TABLE $_userTable (
@@ -93,6 +94,10 @@ class LocalDatabaseManager {
         await db.execute('''
           CREATE TABLE $_hazardsTable (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            local_uuid TEXT NOT NULL UNIQUE,
+            remote_id TEXT,
+            sync_status TEXT NOT NULL DEFAULT 'created',
+            last_modified_at INTEGER NOT NULL,
             incident_latitude REAL NOT NULL,
             incident_longitude REAL NOT NULL,
             impact_radius_meters INTEGER NOT NULL,
@@ -139,6 +144,10 @@ class LocalDatabaseManager {
           await db.execute('''
             CREATE TABLE IF NOT EXISTS $_hazardsTable (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
+              local_uuid TEXT NOT NULL UNIQUE,
+              remote_id TEXT,
+              sync_status TEXT NOT NULL DEFAULT 'created',
+              last_modified_at INTEGER NOT NULL,
               incident_latitude REAL NOT NULL,
               incident_longitude REAL NOT NULL,
               impact_radius_meters INTEGER NOT NULL,
@@ -177,6 +186,33 @@ class LocalDatabaseManager {
               cached_at INTEGER NOT NULL
             )
           ''');
+        }
+
+        if (oldVersion < 6) {
+          await db.execute(
+            'ALTER TABLE $_hazardsTable ADD COLUMN local_uuid TEXT',
+          );
+          await db.execute(
+            'ALTER TABLE $_hazardsTable ADD COLUMN remote_id TEXT',
+          );
+          await db.execute(
+            'ALTER TABLE $_hazardsTable ADD COLUMN sync_status TEXT NOT NULL DEFAULT "created"',
+          );
+          await db.execute(
+            'ALTER TABLE $_hazardsTable ADD COLUMN last_modified_at INTEGER',
+          );
+          await db.execute(
+            'UPDATE $_hazardsTable SET local_uuid = COALESCE(local_uuid, "legacy-" || id)',
+          );
+          await db.execute(
+            'UPDATE $_hazardsTable SET last_modified_at = COALESCE(last_modified_at, updated_at, created_at)',
+          );
+          await db.execute(
+            'CREATE UNIQUE INDEX IF NOT EXISTS idx_hazards_local_uuid ON $_hazardsTable(local_uuid)',
+          );
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_hazards_remote_id ON $_hazardsTable(remote_id)',
+          );
         }
       },
     );
@@ -376,9 +412,14 @@ class LocalDatabaseManager {
   }) async {
     final Database db = await database;
     final int now = DateTime.now().millisecondsSinceEpoch;
+    final String localUuid = _generateLocalUuid();
 
     final HazardReportRecord draft = HazardReportRecord(
       id: 0,
+      localUuid: localUuid,
+      remoteId: null,
+      syncStatus: 'created',
+      lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
       incidentLatitude: incidentLatitude,
       incidentLongitude: incidentLongitude,
       impactRadiusMeters: impactRadiusMeters,
@@ -429,11 +470,136 @@ class LocalDatabaseManager {
           updatedComments.map((HazardCommentRecord c) => c.toMap()).toList(),
         ),
         'updated_at': now,
+        'last_modified_at': now,
         'needs_sync': 1,
       },
       where: 'id = ?',
       whereArgs: <Object?>[hazardId],
     );
+  }
+
+  Future<List<HazardReportRecord>> getHazardReportsNeedingSync() async {
+    final Database db = await database;
+    final List<Map<String, Object?>> rows = await db.query(
+      _hazardsTable,
+      where: 'needs_sync = ?',
+      whereArgs: <Object?>[1],
+      orderBy: 'last_modified_at ASC',
+    );
+    return rows.map(HazardReportRecord.fromMap).toList(growable: false);
+  }
+
+  Future<void> markHazardAsSynced({
+    required String localUuid,
+    String? remoteId,
+    String syncStatus = 'synced',
+    DateTime? lastModifiedAt,
+  }) async {
+    final Database db = await database;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    await db.update(
+      _hazardsTable,
+      <String, Object?>{
+        'needs_sync': 0,
+        'remote_id': remoteId,
+        'sync_status': syncStatus,
+        'last_modified_at': (lastModifiedAt ?? DateTime.now()).millisecondsSinceEpoch,
+        'updated_at': now,
+      },
+      where: 'local_uuid = ?',
+      whereArgs: <Object?>[localUuid],
+    );
+  }
+
+  Future<void> upsertHazardFromRemote({
+    required String localUuid,
+    required String? remoteId,
+    required String syncStatus,
+    required DateTime remoteLastModifiedAt,
+    required double incidentLatitude,
+    required double incidentLongitude,
+    required int impactRadiusMeters,
+    required String categoryCode,
+    required String riskLevelCode,
+    required String narrativeDescription,
+    required String estimatedDurationCode,
+    required DateTime reportedAt,
+    required String? evidencePhotoUrl,
+    required String reportedByUsername,
+  }) async {
+    final Database db = await database;
+    final List<Map<String, Object?>> rows = await db.query(
+      _hazardsTable,
+      where: 'local_uuid = ? OR remote_id = ?',
+      whereArgs: <Object?>[localUuid, remoteId],
+      limit: 1,
+    );
+
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    final int remoteMs = remoteLastModifiedAt.millisecondsSinceEpoch;
+
+    if (rows.isEmpty) {
+      await db.insert(
+        _hazardsTable,
+        <String, Object?>{
+          'local_uuid': localUuid,
+          'remote_id': remoteId,
+          'sync_status': syncStatus,
+          'last_modified_at': remoteMs,
+          'incident_latitude': incidentLatitude,
+          'incident_longitude': incidentLongitude,
+          'impact_radius_meters': impactRadiusMeters,
+          'category_code': categoryCode,
+          'narrative_description': narrativeDescription,
+          'reported_at': reportedAt.millisecondsSinceEpoch,
+          'estimated_duration_code': estimatedDurationCode,
+          'risk_level_code': riskLevelCode,
+          'evidence_photo_url': evidencePhotoUrl,
+          'reported_by_username': reportedByUsername,
+          'comments_json': '[]',
+          'created_at': remoteMs,
+          'updated_at': remoteMs,
+          'needs_sync': 0,
+        },
+      );
+      return;
+    }
+
+    final HazardReportRecord local = HazardReportRecord.fromMap(rows.first);
+
+    if (local.needsSync && local.lastModifiedAt.isAfter(remoteLastModifiedAt)) {
+      return;
+    }
+
+    await db.update(
+      _hazardsTable,
+      <String, Object?>{
+        'local_uuid': localUuid,
+        'remote_id': remoteId,
+        'sync_status': syncStatus,
+        'last_modified_at': remoteMs,
+        'incident_latitude': incidentLatitude,
+        'incident_longitude': incidentLongitude,
+        'impact_radius_meters': impactRadiusMeters,
+        'category_code': categoryCode,
+        'narrative_description': narrativeDescription,
+        'reported_at': reportedAt.millisecondsSinceEpoch,
+        'estimated_duration_code': estimatedDurationCode,
+        'risk_level_code': riskLevelCode,
+        'evidence_photo_url': evidencePhotoUrl,
+        'reported_by_username': reportedByUsername,
+        'updated_at': now,
+        'needs_sync': 0,
+      },
+      where: 'id = ?',
+      whereArgs: <Object?>[local.id],
+    );
+  }
+
+  String _generateLocalUuid() {
+    final int now = DateTime.now().microsecondsSinceEpoch;
+    final int randomPart = (Random().nextDouble() * 0xFFFFFFFF).floor();
+    return 'hz-$now-${randomPart.toRadixString(16)}';
   }
 
   Future<void> markUserDataForFutureSync() async {
