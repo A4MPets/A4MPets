@@ -179,3 +179,58 @@ php artisan migrate
 
     -   Una para `php artisan serve`
     -   Otra para `flutter run -d chrome`
+
+------------------------------------------------------------------------
+
+## 6. GraphHopper Self-Hosted (Docker)
+
+Para evitar límites de APIs externas, este proyecto puede rutear usando una
+instancia local de GraphHopper.
+
+### 6.1. Requisitos
+
+-   Docker Desktop instalado y corriendo.
+
+### 6.2. Preparar datos de mapa
+
+1. Descargar un `.osm.pbf` (por ejemplo de Geofabrik).
+2. Guardarlo como:
+
+```text
+backend/graphhopper/data/map.osm.pbf
+```
+
+### 6.3. Levantar GraphHopper
+
+Desde la raíz del repo:
+
+```bash
+docker compose -f docker-compose.graphhopper.yml up -d
+```
+
+La primera vez puede tardar varios minutos porque GraphHopper importa el mapa
+y construye el grafo en `backend/graphhopper/data/graph-cache`.
+
+### 6.4. Verificar servicio
+
+```bash
+curl http://127.0.0.1:8989/health
+```
+
+### 6.5. Configurar backend Laravel
+
+En `backend/.env`:
+
+```env
+GRAPHHOPPER_BASE_URL=http://127.0.0.1:8989
+GRAPHHOPPER_API_KEY=
+```
+
+Luego limpiar config cache:
+
+```bash
+cd backend
+php artisan config:clear
+```
+
+Con eso, `/api/routes/plan` usará GraphHopper local sin API key.

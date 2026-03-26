@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\HazardReportController;
+use App\Http\Controllers\RoutePlanningController;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,6 +27,9 @@ Route::get('/hazards/unsynced', [HazardReportController::class, 'getUnsynced']);
 
 // Sincronizar peligros locales con BD global
 Route::post('/hazards/sync', [HazardReportController::class, 'sync']);
+
+// Planificar ruta usando GraphHopper desde backend
+Route::post('/routes/plan', [RoutePlanningController::class, 'plan']);
 
 // Obtener un peligro específico
 Route::get('/hazards/{hazardReport}', [HazardReportController::class, 'show']);

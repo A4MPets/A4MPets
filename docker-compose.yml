@@ -1,0 +1,19 @@
+services:
+  graphhopper:
+    image: israelhikingmap/graphhopper:latest
+    container_name: a4mpets-graphhopper
+    restart: unless-stopped
+    ports:
+      - "8989:8989"
+      - "8990:8990"
+    volumes:
+      - ./backend/graphhopper/data:/data
+      - ./backend/graphhopper/config.yml:/config/config.yml:ro
+    entrypoint: ["./graphhopper.sh"]
+    command:
+      - --config
+      - /config/config.yml
+      - --input
+      - /data/map.osm.pbf
+      - --graph-cache
+      - /data/graph-cache

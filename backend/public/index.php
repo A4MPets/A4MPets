@@ -1,5 +1,10 @@
 <?php
 
+if (PHP_SAPI === 'cli-server') {
+    @set_time_limit(0);
+    @ini_set('max_execution_time', '0');
+}
+
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 

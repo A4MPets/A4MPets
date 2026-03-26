@@ -58,6 +58,7 @@ class _MapPageState extends ConsumerState<MapPage> {
 
   final Set<int> _selectedTripPetIds = <int>{};
   _TripTransportMethod _selectedTripTransport = _TripTransportMethod.walking;
+  bool _shouldAvoidHazardsInRouting = true;
   RouteRecord? _selectedTripRoute;
   bool _isTripActive = false;
   bool _tripArrivalHandled = false;
@@ -252,6 +253,7 @@ class _MapPageState extends ConsumerState<MapPage> {
       _selectedTripRoute = null;
       _selectedTripPetIds.clear();
       _selectedTripTransport = _TripTransportMethod.walking;
+      _shouldAvoidHazardsInRouting = true;
       _clearDraftRouteVisuals();
       _panelStack.removeWhere(
         (_PanelRoute route) =>
@@ -274,6 +276,7 @@ class _MapPageState extends ConsumerState<MapPage> {
       _selectedTripRoute = null;
       _selectedTripPetIds.clear();
       _selectedTripTransport = _TripTransportMethod.walking;
+      _shouldAvoidHazardsInRouting = true;
       _clearDraftRouteVisuals();
       _panelStack.clear();
     });
@@ -291,6 +294,7 @@ class _MapPageState extends ConsumerState<MapPage> {
       _selectedTripRoute = null;
       _selectedTripPetIds.clear();
       _selectedTripTransport = _TripTransportMethod.walking;
+      _shouldAvoidHazardsInRouting = true;
       _clearDraftRouteVisuals();
       _panelStack.clear();
     });
@@ -326,6 +330,7 @@ class _MapPageState extends ConsumerState<MapPage> {
     _selectedTripRoute = null;
     _selectedTripPetIds.clear();
     _selectedTripTransport = _TripTransportMethod.walking;
+    _shouldAvoidHazardsInRouting = true;
     _clearDraftRouteVisuals();
   }
 
@@ -671,6 +676,7 @@ class _MapPageState extends ConsumerState<MapPage> {
         return _TripStartPanelContent(
           isDarkMode: isDarkMode,
           selectedTransport: _selectedTripTransport,
+          avoidHazards: _shouldAvoidHazardsInRouting,
           selectedPetsCount: _selectedTripPetIds.length,
           selectedRouteName: _selectedTripRoute?.name,
           onSelectPets: () => _openTripPetSelectorPanel(isDarkMode),
@@ -678,6 +684,11 @@ class _MapPageState extends ConsumerState<MapPage> {
           onTransportChanged: (_TripTransportMethod method) {
             setState(() {
               _selectedTripTransport = method;
+            });
+          },
+          onAvoidHazardsChanged: (bool value) {
+            setState(() {
+              _shouldAvoidHazardsInRouting = value;
             });
           },
           onStartTrip: () => _startTrip(isDarkMode),
@@ -1164,7 +1175,18 @@ class _MapPageState extends ConsumerState<MapPage> {
 
     try {
       final List<LatLng> polyline =
-          await _routingService.buildRoadRoute(waypoints: waypoints);
+          await _routingService.buildRoadRoute(
+        waypoints: waypoints,
+        avoidHazards: _shouldAvoidHazardsInRouting,
+        travelMode: _selectedTripTransport == _TripTransportMethod.vehicle
+            ? 'vehicle'
+            : 'walking',
+        tripConfig: <String, Object?>{
+          'selected_pet_ids': _selectedTripPetIds.toList(growable: false),
+          'selected_route_id': _selectedTripRoute?.id,
+          'transport_method': _selectedTripTransport.name,
+        },
+      );
       if (!mounted) return;
       setState(() {
         _draftRoutePolyline = polyline;
@@ -1627,21 +1649,25 @@ class _PanelRoute {
 class _TripStartPanelContent extends StatelessWidget {
   final bool isDarkMode;
   final _TripTransportMethod selectedTransport;
+  final bool avoidHazards;
   final int selectedPetsCount;
   final String? selectedRouteName;
   final VoidCallback onSelectPets;
   final VoidCallback onSelectRoute;
   final ValueChanged<_TripTransportMethod> onTransportChanged;
+  final ValueChanged<bool> onAvoidHazardsChanged;
   final VoidCallback onStartTrip;
 
   const _TripStartPanelContent({
     required this.isDarkMode,
     required this.selectedTransport,
+    required this.avoidHazards,
     required this.selectedPetsCount,
     required this.selectedRouteName,
     required this.onSelectPets,
     required this.onSelectRoute,
     required this.onTransportChanged,
+    required this.onAvoidHazardsChanged,
     required this.onStartTrip,
   });
 
@@ -1704,6 +1730,36 @@ class _TripStartPanelContent extends StatelessWidget {
                 },
               ),
             ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        _TripFieldTitle(label: 'Estrategia de ruta', color: titleColor),
+        const SizedBox(height: 6),
+        Container(
+          height: 46,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: grayButton,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Evitar peligros',
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Switch(
+                value: avoidHazards,
+                onChanged: onAvoidHazardsChanged,
+                activeThumbColor: AppPalette.primaryBlue,
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 10),
