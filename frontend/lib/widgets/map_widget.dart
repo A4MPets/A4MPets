@@ -16,6 +16,7 @@ class MapWidget extends StatefulWidget {
   final double zoom;
   final VoidCallback? onSettingsTap;
   final VoidCallback? onReportDangerTap;
+  final VoidCallback? onModifyLocationTap;
   final VoidCallback? onStartTrip;
   final VoidCallback? onProfileTap;
   final bool hideDefaultControls;
@@ -41,6 +42,8 @@ class MapWidget extends StatefulWidget {
   final double? cameraFocusZoom;
   final int cameraFocusRevision;
   final void Function(LatLng location)? onUserLocationChanged;
+  final LatLng? developerLocationMarker;
+  final bool isDeveloperModifyingLocation;
 
   const MapWidget({
     super.key,
@@ -49,6 +52,7 @@ class MapWidget extends StatefulWidget {
     this.zoom = 13,
     this.onSettingsTap,
     this.onReportDangerTap,
+    this.onModifyLocationTap,
     this.onStartTrip,
     this.onProfileTap,
     this.hideDefaultControls = false,
@@ -74,6 +78,8 @@ class MapWidget extends StatefulWidget {
     this.cameraFocusZoom,
     this.cameraFocusRevision = 0,
     this.onUserLocationChanged,
+    this.developerLocationMarker,
+    this.isDeveloperModifyingLocation = false,
   });
 
   @override
@@ -86,13 +92,13 @@ class _MapWidgetState extends State<MapWidget> {
   bool _isDraggingRoutePoint = false;
   int? _draggingRoutePointIndex;
   LatLng? _draggingPoint;
-  
+
   // Location tracking
   LatLng? _userLocation;
   double _userHeading = 0.0;
   bool _hasLocationPermission = false;
   StreamSubscription<Position>? _positionStreamSub;
-  
+
   // Color cache for hazard rendering (avoid recalculation every frame)
   final Map<String, Color> _borderColorCache = {};
   final Map<String, Color> _fillColorCache = {};
@@ -121,7 +127,8 @@ class _MapWidgetState extends State<MapWidget> {
         return;
       }
 
-      final LocationPermission permission = await Geolocator.requestPermission();
+      final LocationPermission permission =
+          await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
         setState(() => _hasLocationPermission = false);
       } else if (permission == LocationPermission.deniedForever) {
@@ -139,9 +146,11 @@ class _MapWidgetState extends State<MapWidget> {
   Future<void> _getCurrentLocationAndHeading() async {
     try {
       final Position position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
-      
+
       if (mounted) {
         setState(() {
           _userLocation = LatLng(position.latitude, position.longitude);
@@ -156,25 +165,31 @@ class _MapWidgetState extends State<MapWidget> {
 
   void _startLocationTracking() {
     if (!_hasLocationPermission) return;
-    
+
     final LocationSettings locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
       distanceFilter: 5, // Update every 5 meters
     );
 
     _positionStreamSub?.cancel();
-    _positionStreamSub = Geolocator.getPositionStream(
-      locationSettings: locationSettings,
-    ).listen((Position position) {
-      if (mounted) {
-        final LatLng nextLocation = LatLng(position.latitude, position.longitude);
-        setState(() {
-          _userLocation = nextLocation;
-          _userHeading = position.heading.isNaN ? _userHeading : position.heading;
-        });
-        widget.onUserLocationChanged?.call(nextLocation);
-      }
-    });
+    _positionStreamSub =
+        Geolocator.getPositionStream(locationSettings: locationSettings).listen(
+          (Position position) {
+            if (mounted) {
+              final LatLng nextLocation = LatLng(
+                position.latitude,
+                position.longitude,
+              );
+              setState(() {
+                _userLocation = nextLocation;
+                _userHeading = position.heading.isNaN
+                    ? _userHeading
+                    : position.heading;
+              });
+              widget.onUserLocationChanged?.call(nextLocation);
+            }
+          },
+        );
   }
 
   Future<void> _prewarmTileCache() async {
@@ -198,7 +213,8 @@ class _MapWidgetState extends State<MapWidget> {
         widget.cameraFocusTarget != null &&
         widget.cameraFocusRevision != oldWidget.cameraFocusRevision) {
       final LatLng focusTarget = widget.cameraFocusTarget!;
-      final double nextZoom = widget.cameraFocusZoom ?? mapController.camera.zoom;
+      final double nextZoom =
+          widget.cameraFocusZoom ?? mapController.camera.zoom;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _safeMove(focusTarget, nextZoom);
       });
@@ -252,6 +268,11 @@ class _MapWidgetState extends State<MapWidget> {
     widget.onSettingsTap?.call();
   }
 
+  // Open modify location panel (dev)
+  void _openModifyLocation() {
+    widget.onModifyLocationTap?.call();
+  }
+
   Color _hazardBorderColor(HazardReportRecord report) {
     final String key = '${report.riskLevelCode}_border';
     return _borderColorCache.putIfAbsent(key, () {
@@ -296,10 +317,7 @@ class _MapWidgetState extends State<MapWidget> {
     final double deltaLat = deltaMetersNorth / 111320.0;
     final double deltaLng = deltaMetersEast / (111320.0 * cosLat);
 
-    return LatLng(
-      source.latitude + deltaLat,
-      source.longitude + deltaLng,
-    );
+    return LatLng(source.latitude + deltaLat, source.longitude + deltaLng);
   }
 
   @override
@@ -314,7 +332,8 @@ class _MapWidgetState extends State<MapWidget> {
 
     final bool isWeb = MediaQuery.of(context).size.width > 900;
     final bool controlsVisible = !widget.hideDefaultControls;
-    final bool reportDangerVisible = controlsVisible || widget.keepReportDangerVisible;
+    final bool reportDangerVisible =
+        controlsVisible || widget.keepReportDangerVisible;
 
     return Stack(
       children: [
@@ -336,8 +355,9 @@ class _MapWidgetState extends State<MapWidget> {
             backgroundColor: mapBackgroundColor,
             keepAlive: true,
             interactionOptions: InteractionOptions(
-              flags:
-                  _isDraggingRoutePoint ? InteractiveFlag.none : InteractiveFlag.all,
+              flags: _isDraggingRoutePoint
+                  ? InteractiveFlag.none
+                  : InteractiveFlag.all,
             ),
             onTap: (TapPosition tapPosition, LatLng point) {
               widget.onMapTap?.call(point);
@@ -355,8 +375,9 @@ class _MapWidgetState extends State<MapWidget> {
               keepBuffer: 6,
               panBuffer: 3,
               tileDisplay: const TileDisplay.instantaneous(opacity: 1.0),
-              tileUpdateTransformer:
-                  TileUpdateTransformers.throttle(const Duration(milliseconds: 90)),
+              tileUpdateTransformer: TileUpdateTransformers.throttle(
+                const Duration(milliseconds: 90),
+              ),
             ),
             // User location marker
             if (_hasLocationPermission && _userLocation != null)
@@ -372,6 +393,21 @@ class _MapWidgetState extends State<MapWidget> {
                   ],
                 ),
               ),
+            // Developer location marker
+            if (widget.isDeveloperModifyingLocation &&
+                widget.developerLocationMarker != null)
+              RepaintBoundary(
+                child: MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: widget.developerLocationMarker!,
+                      width: 50,
+                      height: 50,
+                      child: const _DeveloperLocationMarker(),
+                    ),
+                  ],
+                ),
+              ),
             if (widget.highlightedHazard != null)
               RepaintBoundary(
                 child: CircleLayer(
@@ -382,11 +418,13 @@ class _MapWidgetState extends State<MapWidget> {
                         widget.highlightedHazard!.incidentLongitude,
                       ),
                       color: _hazardFillColor(widget.highlightedHazard!),
-                      borderColor: _hazardBorderColor(widget.highlightedHazard!),
+                      borderColor: _hazardBorderColor(
+                        widget.highlightedHazard!,
+                      ),
                       borderStrokeWidth: 1.5,
                       useRadiusInMeter: true,
-                      radius:
-                          widget.highlightedHazard!.impactRadiusMeters.toDouble(),
+                      radius: widget.highlightedHazard!.impactRadiusMeters
+                          .toDouble(),
                     ),
                   ],
                 ),
@@ -415,27 +453,27 @@ class _MapWidgetState extends State<MapWidget> {
             if (widget.hazardReports.isNotEmpty)
               RepaintBoundary(
                 child: MarkerLayer(
-                  markers: widget.hazardReports.map((HazardReportRecord report) {
-                    return Marker(
-                      point: LatLng(
-                        report.incidentLatitude,
-                        report.incidentLongitude,
-                      ),
-                      width: 16,
-                      height: 16,
-                      child: GestureDetector(
-                        onTap: () => widget.onHazardTap?.call(report),
-                        child: const _HazardMarkerWidget(),
-                      ),
-                    );
-                  }).toList(growable: false),
+                  markers: widget.hazardReports
+                      .map((HazardReportRecord report) {
+                        return Marker(
+                          point: LatLng(
+                            report.incidentLatitude,
+                            report.incidentLongitude,
+                          ),
+                          width: 16,
+                          height: 16,
+                          child: GestureDetector(
+                            onTap: () => widget.onHazardTap?.call(report),
+                            child: const _HazardMarkerWidget(),
+                          ),
+                        );
+                      })
+                      .toList(growable: false),
                 ),
               ),
             if (widget.routePolylinePoints.length >= 2)
               RepaintBoundary(
-                child: PolylineLayer(
-                  polylines: _buildRoutePolylines(),
-                ),
+                child: PolylineLayer(polylines: _buildRoutePolylines()),
               ),
             if (widget.routePoints.isNotEmpty)
               RepaintBoundary(
@@ -448,7 +486,8 @@ class _MapWidgetState extends State<MapWidget> {
                       height: 28,
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
-                        onTapDown: (_) => widget.onRoutePointPointerDown?.call(index),
+                        onTapDown: (_) =>
+                            widget.onRoutePointPointerDown?.call(index),
                         onTap: () => widget.onRoutePointTap?.call(index),
                         onPanStart: widget.canDragRoutePoints
                             ? (_) {
@@ -472,7 +511,10 @@ class _MapWidgetState extends State<MapWidget> {
                                   delta: details.delta,
                                 );
                                 _draggingPoint = next;
-                                widget.onRoutePointDragUpdate?.call(index, next);
+                                widget.onRoutePointDragUpdate?.call(
+                                  index,
+                                  next,
+                                );
                               }
                             : null,
                         onPanEnd: widget.canDragRoutePoints
@@ -484,7 +526,10 @@ class _MapWidgetState extends State<MapWidget> {
                                   _draggingPoint = null;
                                 });
                                 if (finalPoint != null) {
-                                  widget.onRoutePointDragEnd?.call(index, finalPoint);
+                                  widget.onRoutePointDragEnd?.call(
+                                    index,
+                                    finalPoint,
+                                  );
                                 }
                               }
                             : null,
@@ -802,6 +847,34 @@ class _MapWidgetState extends State<MapWidget> {
               ),
             ),
           ),
+
+          // Modify location button - Web (dev tool, below settings)
+          Positioned(
+            top: 72,
+            right: 16,
+            child: _buildAnimatedControl(
+              visible: controlsVisible,
+              hiddenOffset: const Offset(0.06, 0),
+              child: GestureDetector(
+                onTap: _openModifyLocation,
+                child: SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: translucentWhite,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.location_on,
+                      color: contentGray,
+                      size: 24,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
 
         if (widget.isSelectingRoutePoint)
@@ -812,7 +885,9 @@ class _MapWidgetState extends State<MapWidget> {
             child: Center(
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 8),
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: AppPalette.primaryBlue,
                   borderRadius: BorderRadius.circular(20),
@@ -843,9 +918,7 @@ class _MapWidgetState extends State<MapWidget> {
             ),
           ),
         if (widget.panelOverlay != null)
-          Positioned.fill(
-            child: widget.panelOverlay!,
-          ),
+          Positioned.fill(child: widget.panelOverlay!),
       ],
     );
   }
@@ -898,11 +971,13 @@ class _MapWidgetState extends State<MapWidget> {
       // Si hay segmentos coloreados, renderizar cada uno con su color
       return (widget.coloredRouteSegments as List<ColoredRouteSegment>)
           .where((ColoredRouteSegment segment) => segment.points.length >= 2)
-          .map((ColoredRouteSegment segment) => Polyline(
-                points: segment.points,
-                color: segment.color,
-                strokeWidth: 2.0,
-              ))
+          .map(
+            (ColoredRouteSegment segment) => Polyline(
+              points: segment.points,
+              color: segment.color,
+              strokeWidth: 2.0,
+            ),
+          )
           .toList();
     } else {
       // Si no hay segmentos coloreados, renderizar la ruta normal (azul)
@@ -926,10 +1001,7 @@ class _HazardMarkerWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppPalette.dangerRed,
         shape: BoxShape.circle,
-        border: Border.all(
-          color: Colors.white,
-          width: 0.8,
-        ),
+        border: Border.all(color: Colors.white, width: 0.8),
       ),
     );
   }
@@ -939,10 +1011,7 @@ class _NumberedMapMarker extends StatelessWidget {
   final int number;
   final bool isSelected;
 
-  const _NumberedMapMarker({
-    required this.number,
-    this.isSelected = false,
-  });
+  const _NumberedMapMarker({required this.number, this.isSelected = false});
 
   @override
   Widget build(BuildContext context) {
@@ -950,10 +1019,7 @@ class _NumberedMapMarker extends StatelessWidget {
       decoration: BoxDecoration(
         color: isSelected ? AppPalette.dangerRed : AppPalette.primaryBlue,
         shape: BoxShape.circle,
-        border: Border.all(
-          color: Colors.white,
-          width: isSelected ? 2 : 1.5,
-        ),
+        border: Border.all(color: Colors.white, width: isSelected ? 2 : 1.5),
       ),
       child: Center(
         child: Text(
@@ -1001,10 +1067,7 @@ class _CurrentLocationMarker extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppPalette.primaryBlue,
-                  width: 2,
-                ),
+                border: Border.all(color: AppPalette.primaryBlue, width: 2),
               ),
             ),
           ),
@@ -1018,6 +1081,56 @@ class _CurrentLocationMarker extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _DeveloperLocationMarker extends StatelessWidget {
+  const _DeveloperLocationMarker();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        // Outer pulsing circle
+        ScaleTransition(
+          scale: AlwaysStoppedAnimation(1.0),
+          child: SizedBox(
+            width: 50,
+            height: 50,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: const Color(0xFF5984BC).withOpacity(0.3),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+        ),
+        // Inner circle
+        SizedBox(
+          width: 30,
+          height: 30,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: const Color(0xFF5984BC).withOpacity(0.7),
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFF5984BC), width: 2),
+            ),
+          ),
+        ),
+        // Center dot
+        SizedBox(
+          width: 10,
+          height: 10,
+          child: DecoratedBox(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

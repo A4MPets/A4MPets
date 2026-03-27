@@ -139,6 +139,32 @@ cd A4MPets/frontend
 flutter run -d chrome
 ```
 
+### 3.3. Levantar todo con Docker Compose (frontend + backend + graphhopper)
+
+Desde la raíz del repo:
+
+```bash
+docker compose up --build
+```
+
+Servicios disponibles:
+
+- Frontend Flutter web: `http://localhost:8080`
+- Backend Laravel API: `http://localhost:8000`
+- GraphHopper: `http://localhost:8989`
+
+Si quieres parar todo:
+
+```bash
+docker compose down
+```
+
+Si prefieres seguir ejecutando frontend y backend en local, pero usar solo GraphHopper en contenedor:
+
+```bash
+docker compose up graphhopper
+```
+
 ------------------------------------------------------------------------
 
 ## 4. Comandos útiles
@@ -184,8 +210,8 @@ php artisan migrate
 
 ## 6. GraphHopper Self-Hosted (Docker)
 
-Para evitar límites de APIs externas, este proyecto puede rutear usando una
-instancia local de GraphHopper.
+Para evitar límites de APIs externas, este proyecto usa GraphHopper local como
+parte del mismo `docker-compose.yml`.
 
 ### 6.1. Requisitos
 
@@ -200,12 +226,12 @@ instancia local de GraphHopper.
 backend/graphhopper/data/map.osm.pbf
 ```
 
-### 6.3. Levantar GraphHopper
+### 6.3. Levantar solo GraphHopper
 
 Desde la raíz del repo:
 
 ```bash
-docker compose -f docker-compose.graphhopper.yml up -d
+docker compose up -d graphhopper
 ```
 
 La primera vez puede tardar varios minutos porque GraphHopper importa el mapa
@@ -217,7 +243,7 @@ y construye el grafo en `backend/graphhopper/data/graph-cache`.
 curl http://127.0.0.1:8989/health
 ```
 
-### 6.5. Configurar backend Laravel
+### 6.5. Configurar backend Laravel local
 
 En `backend/.env`:
 
