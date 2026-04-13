@@ -9,7 +9,7 @@ graphhopper:
   profiles_ch:
     - profile: car
 
-  graph.encoded_values: car_access, car_average_speed, road_access
+  graph.encoded_values: car_access, car_average_speed, road_access, road_environment, ferry_speed, max_speed
   import.osm.ignored_highways: footway,construction,cycleway,path,steps
 
 server:
