@@ -6,69 +6,118 @@ use App\Models\HazardReport;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
+use Throwable;
 
 class GraphHopperRoutingService
 {
     public function planRoute(array $points, bool $avoidHazards, string $travelMode): array
     {
-        $baseUrl = rtrim((string) config('services.graphhopper.base_url'), '/');
+        $baseUrls = $this->resolveBaseUrls();
         $apiKey = (string) config('services.graphhopper.api_key');
 
-        if ($baseUrl === '') {
+        if (count($baseUrls) === 0) {
             throw new RuntimeException('GraphHopper no está configurado en services.graphhopper.base_url.');
         }
 
-        $profile = $this->mapTravelModeToProfile($travelMode);
-        $routeRequest = $this->buildPayload($points, $profile, $avoidHazards);
-        $payload = $routeRequest['payload'];
-        $hazardsConsidered = $routeRequest['hazards_considered'];
+        $profiles = $this->mapTravelModeToProfiles($travelMode);
+        $attempts = [];
 
-        $query = [];
-        if ($avoidHazards) {
-            // custom_model no es compatible con speed mode (CH).
-            $query[] = 'ch.disable=true';
+        foreach ($profiles as $profile) {
+            $routeRequest = $this->buildPayload($points, $profile, $avoidHazards);
+            $payload = $routeRequest['payload'];
+            $hazardsConsidered = $routeRequest['hazards_considered'];
+
+            $query = [];
+            if ($avoidHazards) {
+                // custom_model no es compatible con speed mode (CH).
+                $query[] = 'ch.disable=true';
+            }
+            if ($apiKey !== '') {
+                $query[] = 'key=' . urlencode($apiKey);
+            }
+
+            foreach ($baseUrls as $baseUrl) {
+                $requestUrl = $baseUrl . '/route';
+                if (!empty($query)) {
+                    $requestUrl .= '?' . implode('&', $query);
+                }
+
+                try {
+                    $response = Http::timeout(20)
+                        ->acceptJson()
+                        ->post($requestUrl, $payload);
+                } catch (Throwable $e) {
+                    $attempts[] = $profile . '@' . $baseUrl . ': ' . $e->getMessage();
+                    Log::warning('GraphHopper connection attempt failed', [
+                        'url' => $requestUrl,
+                        'profile' => $profile,
+                        'message' => $e->getMessage(),
+                    ]);
+                    continue;
+                }
+
+                if (!$response->successful()) {
+                    $attempts[] = $profile . '@' . $baseUrl . ': HTTP ' . $response->status();
+                    Log::warning('GraphHopper request failed', [
+                        'url' => $requestUrl,
+                        'profile' => $profile,
+                        'status' => $response->status(),
+                        'body' => $response->body(),
+                    ]);
+                    continue;
+                }
+
+                $body = $response->json();
+                $firstPath = $body['paths'][0] ?? null;
+
+                if ($firstPath === null) {
+                    $attempts[] = $profile . '@' . $baseUrl . ': sin paths';
+                    continue;
+                }
+
+                $coordinates = $firstPath['points']['coordinates'] ?? [];
+                if (!is_array($coordinates) || count($coordinates) === 0) {
+                    $attempts[] = $profile . '@' . $baseUrl . ': geometria vacia';
+                    continue;
+                }
+
+                return [
+                    'coordinates' => $coordinates,
+                    'distance_meters' => (float) ($firstPath['distance'] ?? 0.0),
+                    'duration_seconds' => ((float) ($firstPath['time'] ?? 0.0)) / 1000.0,
+                    'profile' => $profile,
+                    'hazards_considered' => $hazardsConsidered,
+                ];
+            }
         }
-        if ($apiKey !== '') {
-            $query[] = 'key=' . urlencode($apiKey);
-        }
 
-        $requestUrl = $baseUrl . '/route';
-        if (!empty($query)) {
-            $requestUrl .= '?' . implode('&', $query);
-        }
+        throw new RuntimeException(
+            'No se pudo calcular la ruta con GraphHopper. Intentos: ' . implode(' | ', $attempts)
+        );
+    }
 
-        $response = Http::timeout(20)
-            ->acceptJson()
-            ->post($requestUrl, $payload);
-
-        if (!$response->successful()) {
-            Log::warning('GraphHopper request failed', [
-                'status' => $response->status(),
-                'body' => $response->body(),
-            ]);
-
-            throw new RuntimeException('GraphHopper respondió con error ' . $response->status() . '.');
-        }
-
-        $body = $response->json();
-        $firstPath = $body['paths'][0] ?? null;
-
-        if ($firstPath === null) {
-            throw new RuntimeException('GraphHopper no devolvió rutas para esos puntos.');
-        }
-
-        $coordinates = $firstPath['points']['coordinates'] ?? [];
-        if (!is_array($coordinates) || count($coordinates) === 0) {
-            throw new RuntimeException('La geometría de GraphHopper llegó vacía.');
-        }
-
-        return [
-            'coordinates' => $coordinates,
-            'distance_meters' => (float) ($firstPath['distance'] ?? 0.0),
-            'duration_seconds' => ((float) ($firstPath['time'] ?? 0.0)) / 1000.0,
-            'profile' => $profile,
-            'hazards_considered' => $hazardsConsidered,
+    private function resolveBaseUrls(): array
+    {
+        $configured = trim((string) config('services.graphhopper.base_url'));
+        $urls = [
+            $configured,
+            'http://graphhopper:8989',
+            'http://127.0.0.1:8989',
         ];
+
+        $normalized = [];
+        foreach ($urls as $url) {
+            if ($url === '') {
+                continue;
+            }
+
+            $clean = rtrim($url, '/');
+            if (!in_array($clean, $normalized, true)) {
+                $normalized[] = $clean;
+            }
+        }
+
+        return $normalized;
     }
 
     private function buildPayload(array $points, string $profile, bool $avoidHazards): array
@@ -154,11 +203,19 @@ class GraphHopperRoutingService
         ];
     }
 
-    private function mapTravelModeToProfile(string $travelMode): string
+    private function mapTravelModeToProfiles(string $travelMode): array
     {
-        // Por ahora solo usamos un perfil operativo (car) y dejamos el parámetro
-        // travel_mode para compatibilidad futura.
-        return 'car';
+        $mode = strtolower(trim($travelMode));
+
+        if (in_array($mode, ['walking', 'walk', 'on_foot', 'foot'], true)) {
+            return ['foot', 'car'];
+        }
+
+        if (in_array($mode, ['vehicle', 'driving', 'car'], true)) {
+            return ['car'];
+        }
+
+        return ['car', 'foot'];
     }
 
     private function buildCirclePolygon(float $lat, float $lng, float $radiusMeters, int $segments): array
