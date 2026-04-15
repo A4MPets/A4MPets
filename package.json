@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "scripts": {
+    "frontend": "cd frontend && flutter run -d chrome",
+    "backend": "cd backend && php artisan serve",
+    "graphhopper": "docker compose up -d graphhopper",
+    "dev": "docker compose up -d --build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}

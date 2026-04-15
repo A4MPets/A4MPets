@@ -1,0 +1,67 @@
+name: a4mpets
+
+services:
+  graphhopper:
+    image: israelhikingmap/graphhopper:latest
+    container_name: a4mpets-graphhopper
+    restart: unless-stopped
+    ports:
+      - "8989:8989"
+      - "8990:8990"
+    volumes:
+      - ./backend/graphhopper/data/map.osm.pbf:/data/map.osm.pbf:ro
+      - graphhopper_cache:/data/graph-cache
+      - ./backend/graphhopper/config.yml:/config/config.yml:ro
+    entrypoint: ["./graphhopper.sh"]
+    command:
+      - --config
+      - /config/config.yml
+      - --input
+      - /data/map.osm.pbf
+      - --graph-cache
+      - /data/graph-cache
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: a4mpets-backend
+    restart: unless-stopped
+    depends_on:
+      graphhopper:
+        condition: service_started
+    environment:
+      APP_NAME: A4M Pets
+      APP_ENV: local
+      APP_KEY: base64:wQoPdz7KfnHMZbLyL+2sb0l0mE6EdxpmXiYSK6bhL2Q=
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /data/database.sqlite
+      SESSION_DRIVER: database
+      CACHE_STORE: database
+      QUEUE_CONNECTION: database
+      GRAPHHOPPER_BASE_URL: http://graphhopper:8989
+      GRAPHHOPPER_API_KEY: ""
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend_sqlite_data:/data
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        API_BASE_URL: http://localhost:8000/api
+    container_name: a4mpets-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "8080:80"
+
+volumes:
+  backend_sqlite_data:
+  graphhopper_cache:

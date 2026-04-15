@@ -1,0 +1,5 @@
+/node_modules/
+
+# GraphHopper local artifacts
+backend/graphhopper/data/graph-cache/
+backend/config/map.osm.pbf

@@ -20,9 +20,11 @@ class AppModalPanel extends StatelessWidget {
   final bool expandVertical;
   final bool adaptHeightToContent;
   final double? maxHeight;
+  final double? maxHeightFactor;
   final BorderRadius borderRadius;
   final VoidCallback onClosePressed;
   final bool showBackButton;
+  final bool scrollContent;
   final Duration animationDuration;
   final Curve animationCurve;
 
@@ -39,8 +41,10 @@ class AppModalPanel extends StatelessWidget {
     this.expandVertical = false,
     this.adaptHeightToContent = false,
     this.maxHeight,
+    this.maxHeightFactor,
     this.borderRadius = const BorderRadius.all(Radius.circular(20)),
     this.showBackButton = false,
+    this.scrollContent = true,
     this.animationDuration = const Duration(milliseconds: 260),
     this.animationCurve = Curves.easeOutCubic,
   });
@@ -70,16 +74,17 @@ class AppModalPanel extends StatelessWidget {
             ? availableWidth
             : math.min(width ?? 380, availableWidth);
 
+        final double requestedMaxHeight = maxHeightFactor != null
+            ? availableHeight * maxHeightFactor!
+            : (maxHeight ?? height ?? availableHeight * 0.62);
+
         final double resolvedMaxHeight = expandVertical
-          ? availableHeight
-          : math.min(
-            maxHeight ?? height ?? availableHeight * 0.62,
-            availableHeight,
-            );
+            ? availableHeight
+            : math.min(requestedMaxHeight, availableHeight);
 
         final double resolvedFixedHeight = expandVertical
-          ? availableHeight
-          : math.min(height ?? availableHeight * 0.62, availableHeight);
+            ? availableHeight
+            : math.min(height ?? resolvedMaxHeight, resolvedMaxHeight);
 
         final Widget panelBody = Padding(
           padding: const EdgeInsets.all(_margin),
@@ -101,18 +106,31 @@ class AppModalPanel extends StatelessWidget {
                 ),
                 child: Stack(
                   children: [
-                    if (adaptHeightToContent)
-                      _PanelScrollableBody(
-                        topPadding: hasTitle ? 56 : 12,
-                        child: child,
-                        adaptHeightToContent: true,
-                      )
+                    if (scrollContent)
+                      if (adaptHeightToContent)
+                        _PanelScrollableBody(
+                          topPadding: hasTitle ? 56 : 12,
+                          adaptHeightToContent: true,
+                          child: child,
+                        )
+                      else
+                        Positioned.fill(
+                          child: _PanelScrollableBody(
+                            topPadding: hasTitle ? 56 : 12,
+                            adaptHeightToContent: false,
+                            child: child,
+                          ),
+                        )
                     else
                       Positioned.fill(
-                        child: _PanelScrollableBody(
-                          topPadding: hasTitle ? 56 : 12,
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            16,
+                            hasTitle ? 56 : 12,
+                            16,
+                            18,
+                          ),
                           child: child,
-                          adaptHeightToContent: false,
                         ),
                       ),
                     if (hasTitle)
