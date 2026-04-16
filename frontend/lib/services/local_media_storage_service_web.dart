@@ -49,6 +49,8 @@ class LocalMediaStorageService {
     return 'data:$mimeType;base64,$base64Value';
   }
 
+  Future<void> clearStoredMedia() async {}
+
   String _safeFileExtension(String? extension) {
     if (extension == null || extension.isEmpty) {
       return 'png';

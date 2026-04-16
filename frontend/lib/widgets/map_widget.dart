@@ -21,6 +21,7 @@ class MapWidget extends StatefulWidget {
   final VoidCallback? onProfileTap;
   final bool hideDefaultControls;
   final bool keepReportDangerVisible;
+  final bool keepModifyLocationVisible;
   final Widget? panelOverlay;
   final List<LatLng> routePoints;
   final List<LatLng> routePolylinePoints;
@@ -57,6 +58,7 @@ class MapWidget extends StatefulWidget {
     this.onProfileTap,
     this.hideDefaultControls = false,
     this.keepReportDangerVisible = false,
+    this.keepModifyLocationVisible = false,
     this.panelOverlay,
     this.routePoints = const [],
     this.routePolylinePoints = const [],
@@ -97,6 +99,8 @@ class _MapWidgetState extends State<MapWidget> {
   LatLng? _userLocation;
   double _userHeading = 0.0;
   bool _hasLocationPermission = false;
+  bool _isCustomPositionMode = false;
+  LatLng? _customUserLocation;
   StreamSubscription<Position>? _positionStreamSub;
 
   // Color cache for hazard rendering (avoid recalculation every frame)
@@ -109,6 +113,10 @@ class _MapWidgetState extends State<MapWidget> {
   static const Color white = AppPalette.white;
   static const Color contentGray = AppPalette.charcoal;
   static const Color translucentWhite = Color(0xCCFFFFFF);
+
+  LatLng? get _effectiveUserLocation {
+    return _isCustomPositionMode ? _customUserLocation : _userLocation;
+  }
 
   @override
   void initState() {
@@ -156,7 +164,10 @@ class _MapWidgetState extends State<MapWidget> {
           _userLocation = LatLng(position.latitude, position.longitude);
           _userHeading = position.heading.isNaN ? 0.0 : position.heading;
         });
-        widget.onUserLocationChanged?.call(_userLocation!);
+        final LatLng? locationToEmit = _effectiveUserLocation;
+        if (locationToEmit != null) {
+          widget.onUserLocationChanged?.call(locationToEmit);
+        }
       }
     } catch (e) {
       debugPrint('Error getting current location: $e');
@@ -186,10 +197,65 @@ class _MapWidgetState extends State<MapWidget> {
                     ? _userHeading
                     : position.heading;
               });
-              widget.onUserLocationChanged?.call(nextLocation);
+              if (!_isCustomPositionMode) {
+                widget.onUserLocationChanged?.call(nextLocation);
+              }
             }
           },
         );
+  }
+
+  Future<void> _toggleCustomPositionMode() async {
+    if (_isCustomPositionMode) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isCustomPositionMode = false;
+      });
+
+      final LatLng? locationToEmit = _effectiveUserLocation;
+      if (locationToEmit != null) {
+        widget.onUserLocationChanged?.call(locationToEmit);
+      }
+      widget.onModifyLocationTap?.call();
+      return;
+    }
+
+    LatLng? seedLocation = _userLocation;
+    if (seedLocation == null) {
+      try {
+        final Position position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+          ),
+        );
+        seedLocation = LatLng(position.latitude, position.longitude);
+        if (mounted) {
+          setState(() {
+            _userLocation = seedLocation;
+            _userHeading = position.heading.isNaN ? _userHeading : position.heading;
+          });
+        }
+      } catch (e) {
+        debugPrint('Error activating custom position mode: $e');
+      }
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isCustomPositionMode = true;
+      _customUserLocation = seedLocation;
+    });
+
+    final LatLng? locationToEmit = _effectiveUserLocation;
+    if (locationToEmit != null) {
+      widget.onUserLocationChanged?.call(locationToEmit);
+    }
+    widget.onModifyLocationTap?.call();
   }
 
   Future<void> _prewarmTileCache() async {
@@ -268,11 +334,6 @@ class _MapWidgetState extends State<MapWidget> {
     widget.onSettingsTap?.call();
   }
 
-  // Open modify location panel (dev)
-  void _openModifyLocation() {
-    widget.onModifyLocationTap?.call();
-  }
-
   Color _hazardBorderColor(HazardReportRecord report) {
     final String key = '${report.riskLevelCode}_border';
     return _borderColorCache.putIfAbsent(key, () {
@@ -334,6 +395,8 @@ class _MapWidgetState extends State<MapWidget> {
     final bool controlsVisible = !widget.hideDefaultControls;
     final bool reportDangerVisible =
         controlsVisible || widget.keepReportDangerVisible;
+    final bool modifyLocationVisible =
+      controlsVisible || widget.keepModifyLocationVisible;
 
     return Stack(
       children: [
@@ -360,6 +423,13 @@ class _MapWidgetState extends State<MapWidget> {
                   : InteractiveFlag.all,
             ),
             onTap: (TapPosition tapPosition, LatLng point) {
+              if (_isCustomPositionMode) {
+                setState(() {
+                  _customUserLocation = point;
+                });
+                widget.onUserLocationChanged?.call(point);
+                return;
+              }
               widget.onMapTap?.call(point);
             },
           ),
@@ -380,12 +450,13 @@ class _MapWidgetState extends State<MapWidget> {
               ),
             ),
             // User location marker
-            if (_hasLocationPermission && _userLocation != null)
+            if (_effectiveUserLocation != null &&
+                (_hasLocationPermission || _isCustomPositionMode))
               RepaintBoundary(
                 child: MarkerLayer(
                   markers: [
                     Marker(
-                      point: _userLocation!,
+                      point: _effectiveUserLocation!,
                       width: 40,
                       height: 40,
                       child: _CurrentLocationMarker(heading: _userHeading),
@@ -853,21 +924,23 @@ class _MapWidgetState extends State<MapWidget> {
             top: 72,
             right: 16,
             child: _buildAnimatedControl(
-              visible: controlsVisible,
+              visible: modifyLocationVisible,
               hiddenOffset: const Offset(0.06, 0),
               child: GestureDetector(
-                onTap: _openModifyLocation,
+                onTap: _toggleCustomPositionMode,
                 child: SizedBox(
                   width: 48,
                   height: 48,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: translucentWhite,
+                      color: _isCustomPositionMode
+                          ? AppPalette.primaryBlue.withValues(alpha: 0.92)
+                          : translucentWhite,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.location_on,
-                      color: contentGray,
+                      color: _isCustomPositionMode ? white : contentGray,
                       size: 24,
                     ),
                   ),
@@ -875,6 +948,7 @@ class _MapWidgetState extends State<MapWidget> {
               ),
             ),
           ),
+
         ],
 
         if (widget.isSelectingRoutePoint)

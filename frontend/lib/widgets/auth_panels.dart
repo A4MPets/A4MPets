@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-class LoginPanelContent extends StatelessWidget {
+class LoginPanelContent extends StatefulWidget {
   final bool isDarkMode;
   final VoidCallback onSwitchToRegister;
-  final VoidCallback? onSubmit;
+  final Future<void> Function(String login, String password)? onSubmit;
 
   const LoginPanelContent({
     super.key,
@@ -13,8 +13,64 @@ class LoginPanelContent extends StatelessWidget {
   });
 
   @override
+  State<LoginPanelContent> createState() => _LoginPanelContentState();
+}
+
+class _LoginPanelContentState extends State<LoginPanelContent> {
+  late final TextEditingController _loginController;
+  late final TextEditingController _passwordController;
+  bool _isSubmitting = false;
+  String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    _loginController = TextEditingController();
+    _passwordController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _loginController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final Future<void> Function(String login, String password)? onSubmit = widget.onSubmit;
+    if (onSubmit == null) {
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+      _errorText = null;
+    });
+
+    try {
+      await onSubmit(
+        _loginController.text.trim(),
+        _passwordController.text,
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _errorText = 'No se pudo iniciar sesión: $error';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final Color primaryText = isDarkMode
+    final Color primaryText = widget.isDarkMode
         ? const Color(0xFFAAAAAA)
         : const Color(0xFF404040);
 
@@ -22,14 +78,21 @@ class LoginPanelContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _AuthTextField(
-          isDarkMode: isDarkMode,
-          hintText: 'Nombre de Usuario',
+          isDarkMode: widget.isDarkMode,
+          controller: _loginController,
+          hintText: 'Usuario o correo',
+          autofillHints: const [AutofillHints.username],
+          textInputAction: TextInputAction.next,
         ),
         const SizedBox(height: 12),
         _AuthTextField(
-          isDarkMode: isDarkMode,
+          isDarkMode: widget.isDarkMode,
+          controller: _passwordController,
           hintText: 'Contraseña',
           obscureText: true,
+          autofillHints: const [AutofillHints.password],
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _submit(),
         ),
         const SizedBox(height: 16),
         Wrap(
@@ -46,24 +109,42 @@ class LoginPanelContent extends StatelessWidget {
             const SizedBox(width: 4),
             _InlineLinkText(
               text: 'Regístrate',
-              onTap: onSwitchToRegister,
+              onTap: widget.onSwitchToRegister,
             ),
           ],
         ),
         const SizedBox(height: 20),
         _PrimaryActionButton(
-          label: 'Iniciar Sesión',
-          onPressed: onSubmit,
+          label: _isSubmitting ? 'Ingresando...' : 'Iniciar Sesión',
+          onPressed: _isSubmitting ? null : _submit,
         ),
+        if (_errorText != null) ...[
+          const SizedBox(height: 8),
+          const _InlineErrorText(),
+          const SizedBox(height: 2),
+          Text(
+            _errorText!,
+            style: const TextStyle(
+              color: Color(0xFFD7263D),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ],
     );
   }
 }
 
-class RegisterPanelContent extends StatelessWidget {
+class RegisterPanelContent extends StatefulWidget {
   final bool isDarkMode;
   final VoidCallback onSwitchToLogin;
-  final VoidCallback? onSubmit;
+  final Future<void> Function(
+    String username,
+    String email,
+    String password,
+    String passwordConfirmation,
+  )? onSubmit;
 
   const RegisterPanelContent({
     super.key,
@@ -73,8 +154,78 @@ class RegisterPanelContent extends StatelessWidget {
   });
 
   @override
+  State<RegisterPanelContent> createState() => _RegisterPanelContentState();
+}
+
+class _RegisterPanelContentState extends State<RegisterPanelContent> {
+  late final TextEditingController _usernameController;
+  late final TextEditingController _emailController;
+  late final TextEditingController _passwordController;
+  late final TextEditingController _passwordConfirmationController;
+  bool _isSubmitting = false;
+  String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    _usernameController = TextEditingController();
+    _emailController = TextEditingController();
+    _passwordController = TextEditingController();
+    _passwordConfirmationController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _passwordConfirmationController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final Future<void> Function(
+      String username,
+      String email,
+      String password,
+      String passwordConfirmation,
+    )? onSubmit = widget.onSubmit;
+
+    if (onSubmit == null) {
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+      _errorText = null;
+    });
+
+    try {
+      await onSubmit(
+        _usernameController.text.trim(),
+        _emailController.text.trim(),
+        _passwordController.text,
+        _passwordConfirmationController.text,
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _errorText = 'No se pudo registrar la cuenta: $error';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final Color primaryText = isDarkMode
+    final Color primaryText = widget.isDarkMode
         ? const Color(0xFFAAAAAA)
         : const Color(0xFF404040);
 
@@ -82,26 +233,39 @@ class RegisterPanelContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _AuthTextField(
-          isDarkMode: isDarkMode,
+          isDarkMode: widget.isDarkMode,
+          controller: _usernameController,
           hintText: 'Nombre de Usuario',
+          autofillHints: const [AutofillHints.username],
+          textInputAction: TextInputAction.next,
         ),
         const SizedBox(height: 12),
         _AuthTextField(
-          isDarkMode: isDarkMode,
+          isDarkMode: widget.isDarkMode,
+          controller: _emailController,
           hintText: 'Correo electrónico',
           keyboardType: TextInputType.emailAddress,
+          autofillHints: const [AutofillHints.email],
+          textInputAction: TextInputAction.next,
         ),
         const SizedBox(height: 12),
         _AuthTextField(
-          isDarkMode: isDarkMode,
+          isDarkMode: widget.isDarkMode,
+          controller: _passwordController,
           hintText: 'Contraseña',
           obscureText: true,
+          autofillHints: const [AutofillHints.newPassword],
+          textInputAction: TextInputAction.next,
         ),
         const SizedBox(height: 12),
         _AuthTextField(
-          isDarkMode: isDarkMode,
+          isDarkMode: widget.isDarkMode,
+          controller: _passwordConfirmationController,
           hintText: 'Repetir Contraseña',
           obscureText: true,
+          autofillHints: const [AutofillHints.newPassword],
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _submit(),
         ),
         const SizedBox(height: 16),
         Wrap(
@@ -118,31 +282,68 @@ class RegisterPanelContent extends StatelessWidget {
             const SizedBox(width: 4),
             _InlineLinkText(
               text: 'Iniciar Sesión',
-              onTap: onSwitchToLogin,
+              onTap: widget.onSwitchToLogin,
             ),
           ],
         ),
         const SizedBox(height: 20),
         _PrimaryActionButton(
-          label: 'Registrarse',
-          onPressed: onSubmit,
+          label: _isSubmitting ? 'Registrando...' : 'Registrarse',
+          onPressed: _isSubmitting ? null : _submit,
         ),
+        if (_errorText != null) ...[
+          const SizedBox(height: 8),
+          const _InlineErrorText(),
+          const SizedBox(height: 2),
+          Text(
+            _errorText!,
+            style: const TextStyle(
+              color: Color(0xFFD7263D),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ],
+    );
+  }
+}
+
+class _InlineErrorText extends StatelessWidget {
+  const _InlineErrorText();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Text(
+      'Error',
+      style: TextStyle(
+        color: Color(0xFFD7263D),
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+      ),
     );
   }
 }
 
 class _AuthTextField extends StatelessWidget {
   final bool isDarkMode;
+  final TextEditingController controller;
   final String hintText;
   final bool obscureText;
   final TextInputType? keyboardType;
+  final List<String>? autofillHints;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
 
   const _AuthTextField({
     required this.isDarkMode,
+    required this.controller,
     required this.hintText,
     this.obscureText = false,
     this.keyboardType,
+    this.autofillHints,
+    this.textInputAction,
+    this.onSubmitted,
   });
 
   @override
@@ -156,8 +357,12 @@ class _AuthTextField extends StatelessWidget {
         : const Color(0xFF404040);
 
     return TextField(
+      controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
+      autofillHints: autofillHints,
+      textInputAction: textInputAction,
+      onSubmitted: onSubmitted,
       style: TextStyle(
         color: textColor,
         fontSize: 14,

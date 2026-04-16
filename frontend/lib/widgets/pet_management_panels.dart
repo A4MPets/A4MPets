@@ -308,6 +308,11 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
         _PetNameField(
           isDarkMode: widget.isDarkMode,
           controller: _nameController,
+          onSubmitted: (_) {
+            if (!_isSaving) {
+              _savePet();
+            }
+          },
         ),
         if (_errorText != null) ...[
           const SizedBox(height: 8),
@@ -537,10 +542,12 @@ class _PetPhotoEditor extends StatelessWidget {
 class _PetNameField extends StatelessWidget {
   final bool isDarkMode;
   final TextEditingController controller;
+  final ValueChanged<String>? onSubmitted;
 
   const _PetNameField({
     required this.isDarkMode,
     required this.controller,
+    this.onSubmitted,
   });
 
   @override
@@ -550,6 +557,8 @@ class _PetNameField extends StatelessWidget {
 
     return TextField(
       controller: controller,
+      textInputAction: TextInputAction.done,
+      onSubmitted: onSubmitted,
       style: TextStyle(
         color: textColor,
         fontSize: 14,
@@ -834,6 +843,11 @@ class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
         _PetNameField(
           isDarkMode: widget.isDarkMode,
           controller: _nameController,
+          onSubmitted: (_) {
+            if (!_isSaving && !_isDeleting) {
+              _updatePet();
+            }
+          },
         ),
         if (_errorText != null) ...[
           const SizedBox(height: 8),

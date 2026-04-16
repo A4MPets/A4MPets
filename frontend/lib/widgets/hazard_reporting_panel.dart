@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -324,6 +325,11 @@ class _ReportHazardPanelContentState
                     hintText: 'Describe lo que observas en el lugar',
                     maxLines: 4,
                     errorText: _descriptionErrorText,
+                    onSubmitted: (_) {
+                      if (!_isSaving) {
+                        _saveHazardReport();
+                      }
+                    },
                     onChanged: (String value) {
                       if (_descriptionErrorText != null &&
                           value.trim().isNotEmpty) {
@@ -420,15 +426,19 @@ class _ReportHazardPanelContentState
     int maxLines = 1,
     String? errorText,
     ValueChanged<String>? onChanged,
+    ValueChanged<String>? onSubmitted,
   }) {
     final Color textColor = AppPalette.textPrimary(widget.isDarkMode);
     final bool hasError = errorText != null;
 
-    return TextField(
+    final TextField textField = TextField(
       controller: controller,
       keyboardType: keyboardType,
       maxLines: maxLines,
       onChanged: onChanged,
+      textInputAction:
+          onSubmitted != null ? TextInputAction.done : TextInputAction.newline,
+      onSubmitted: onSubmitted,
       style: TextStyle(
         color: textColor,
         fontSize: 14,
@@ -469,6 +479,23 @@ class _ReportHazardPanelContentState
           fontWeight: FontWeight.w600,
         ),
       ),
+    );
+
+    if (onSubmitted == null) {
+      return textField;
+    }
+
+    return Focus(
+      onKeyEvent: (FocusNode node, KeyEvent event) {
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.enter &&
+            !HardwareKeyboard.instance.isShiftPressed) {
+          onSubmitted(controller.text);
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: textField,
     );
   }
 

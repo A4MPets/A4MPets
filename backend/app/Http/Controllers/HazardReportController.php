@@ -18,6 +18,7 @@ class HazardReportController extends Controller
     public function index(Request $request): JsonResponse
     {
         Log::info('Hazard API index request', [
+            'user_id' => $request->user()?->id,
             'include_archived' => $request->query('include_archived'),
             'risk_level' => $request->query('risk_level'),
             'latitude' => $request->query('latitude'),
@@ -27,6 +28,7 @@ class HazardReportController extends Controller
             'per_page' => $request->query('per_page', 50),
         ]);
 
+        // Los peligros son globales y deben ser visibles para todos.
         $query = HazardReport::query();
 
         // Filtro por ubicación (nearby)
@@ -78,6 +80,8 @@ class HazardReportController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $userId = $request->user()?->id;
+
         $validated = $request->validate([
             'incident_latitude' => 'required|numeric|between:-90,90',
             'incident_longitude' => 'required|numeric|between:-180,180',
@@ -98,12 +102,16 @@ class HazardReportController extends Controller
         $validated['estimated_duration_code'] = $this->normalizeDurationCode($validated['estimated_duration_code'] ?? null);
         $validated['narrative_description'] = $validated['narrative_description'] ?? ($validated['description'] ?? null);
         $validated['description'] = $validated['description'] ?? $validated['narrative_description'];
-        $validated['reported_by_username'] = $validated['reported_by_username'] ?? 'Anónimo';
+        $validated['reported_by_username'] = $validated['reported_by_username'] ?? $request->user()?->name ?? 'Anónimo';
 
         $validated['status'] = 'created';
         $validated['last_modified_at'] = now();
+        $validated['user_id'] = $userId;
 
         $hazard = HazardReport::create($validated);
+        $hazard->update([
+            'remote_id' => $hazard->remote_id ?? (string) $hazard->id,
+        ]);
 
         Log::info('Hazard API store created', [
             'id' => $hazard->id,
@@ -135,6 +143,15 @@ class HazardReportController extends Controller
      */
     public function update(Request $request, HazardReport $hazardReport): JsonResponse
     {
+        $userId = $request->user()?->id;
+
+        if ($userId && $hazardReport->user_id !== null && (int) $hazardReport->user_id !== (int) $userId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado',
+            ], 403);
+        }
+
         $validated = $request->validate([
             'incident_latitude' => 'numeric|between:-90,90',
             'incident_longitude' => 'numeric|between:-180,180',
@@ -195,6 +212,15 @@ class HazardReportController extends Controller
      */
     public function destroy(HazardReport $hazardReport): JsonResponse
     {
+        $userId = request()->user()?->id;
+
+        if ($userId && $hazardReport->user_id !== null && (int) $hazardReport->user_id !== (int) $userId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado',
+            ], 403);
+        }
+
         $hazardReport->update([
             'status' => 'archived',
             'last_modified_at' => now(),
@@ -212,6 +238,8 @@ class HazardReportController extends Controller
      */
     public function sync(Request $request): JsonResponse
     {
+        $userId = $request->user()?->id;
+
         try {
             $validated = $request->validate([
                 'hazards' => 'required|array',
@@ -251,6 +279,7 @@ class HazardReportController extends Controller
                 fn ($hazard) => $hazard['local_id'] ?? 'unknown',
                 $validated['hazards']
             ),
+                'user_id' => $userId,
         ]);
 
         foreach ($validated['hazards'] as $hazardData) {
@@ -263,7 +292,9 @@ class HazardReportController extends Controller
                 $hazardData['reported_by_username'] = $hazardData['reported_by_username'] ?? 'Anónimo';
 
                 // Buscar si ya existe este peligro localmente
-                $existing = HazardReport::where('local_id', $hazardData['local_id'])->first();
+                $existing = HazardReport::query()
+                    ->where('local_id', $hazardData['local_id'])
+                    ->first();
                 $remoteTimestamp = Carbon::parse($hazardData['last_modified_at']);
 
                 if ($existing) {
@@ -276,6 +307,7 @@ class HazardReportController extends Controller
                                 'status' => 'synced',
                                 'remote_id' => $hazardData['remote_id'] ?? $existing->remote_id,
                                 'synced_at' => now(),
+                                'user_id' => $existing->user_id ?? $userId,
                             ]
                         ));
                         $syncResults['synced']++;
@@ -308,8 +340,12 @@ class HazardReportController extends Controller
                             'status' => 'synced',
                             'remote_id' => $hazardData['remote_id'] ?? null,
                             'synced_at' => now(),
+                            'user_id' => $userId,
                         ]
                     ));
+                    $created->update([
+                        'remote_id' => $created->remote_id ?? (string) $created->id,
+                    ]);
                     $syncResults['synced']++;
 
                     Log::info('Hazard API sync created new', [
@@ -357,7 +393,9 @@ class HazardReportController extends Controller
      */
     public function getUnsynced(): JsonResponse
     {
-        $unsynced = HazardReport::unsynced()->get();
+        $unsynced = HazardReport::query()
+            ->unsynced()
+            ->get();
 
         return response()->json([
             'success' => true,

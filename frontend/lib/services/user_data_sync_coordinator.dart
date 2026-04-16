@@ -5,6 +5,10 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/hazard_report_record.dart';
+import '../models/local_user_profile.dart';
+import '../models/pet_record.dart';
+import '../models/route_record.dart';
+import 'backend_api_client.dart';
 import 'local_database_manager.dart';
 
 class UserDataSyncCoordinator {
@@ -12,15 +16,10 @@ class UserDataSyncCoordinator {
     required LocalDatabaseManager databaseManager,
     http.Client? httpClient,
   })  : _databaseManager = databaseManager,
-        _httpClient = httpClient ?? http.Client();
-
-  static const String _configuredApiBaseUrl = String.fromEnvironment(
-    'A4M_API_BASE_URL',
-    defaultValue: 'http://localhost:8000/api',
-  );
+        _apiClient = BackendApiClient(httpClient: httpClient ?? http.Client());
 
   final LocalDatabaseManager _databaseManager;
-  final http.Client _httpClient;
+  final BackendApiClient _apiClient;
 
   bool _syncInProgress = false;
   bool _syncQueued = false;
@@ -57,14 +56,16 @@ class UserDataSyncCoordinator {
   }
 
   List<String> get _apiBaseUrls {
-    final List<String> urls = <String>[
-      _configuredApiBaseUrl,
-      'http://127.0.0.1:8000/api',
-      if (!kIsWeb) 'http://10.0.2.2:8000/api',
-    ];
+    return _apiClient.baseUrls;
+  }
 
-    final Set<String> seen = <String>{};
-    return urls.where((String url) => seen.add(url)).toList(growable: false);
+  Future<String?> _currentAccessToken() async {
+    try {
+      final LocalUserProfile profile = await _databaseManager.getLocalUserProfile();
+      return profile.accessToken;
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> scheduleSync() async {
@@ -98,7 +99,11 @@ class UserDataSyncCoordinator {
         _syncQueued = false;
         _log('sync cycle start: push local + pull remoto. URLs: ${_apiBaseUrls.join(', ')}');
         try {
+          await _pushLocalPets();
+          await _pushLocalRoutes();
           await _pushLocalHazards();
+          await _pullRemotePets();
+          await _pullRemoteRoutes();
           await _pullRemoteHazards();
           _log('sync cycle end: completado.');
         } catch (error) {
@@ -149,7 +154,8 @@ class UserDataSyncCoordinator {
 
     final http.Response? response = await _postWithFallback(
       path: '/hazards/sync',
-      body: jsonEncode(payload),
+      body: payload,
+      bearerToken: await _currentAccessToken(),
     );
 
     if (response == null) {
@@ -202,6 +208,7 @@ class UserDataSyncCoordinator {
     while (true) {
       final http.Response? response = await _getWithFallback(
         path: '/hazards?include_archived=1&per_page=100&page=$page',
+        bearerToken: await _currentAccessToken(),
       );
 
       if (response == null) {
@@ -271,6 +278,182 @@ class UserDataSyncCoordinator {
         break;
       }
 
+      page += 1;
+    }
+  }
+
+  Future<void> _pushLocalPets() async {
+    final List<PetRecord> pending = await _databaseManager.getPetsNeedingSync();
+    _log('push pets: pendientes=${pending.length}');
+
+    if (pending.isEmpty) {
+      return;
+    }
+
+    final http.Response? response = await _postWithFallback(
+      path: '/pets/sync',
+      body: <String, Object?>{
+        'pets': pending
+            .map((PetRecord pet) => <String, Object?>{
+                  'local_id': pet.id.toString(),
+                  'remote_id': pet.remoteId,
+                  'name': pet.name,
+                  'photo_path': pet.photoPath,
+                  'sync_status': pet.syncStatus,
+                  'last_modified_at': _toBackendDateTime(pet.lastModifiedAt),
+                })
+            .toList(growable: false),
+      },
+      bearerToken: await _currentAccessToken(),
+    );
+
+    if (response == null || response.statusCode < 200 || response.statusCode >= 300) {
+      _log('push pets: backend inalcanzable o error.');
+      return;
+    }
+
+    for (final PetRecord pet in pending) {
+      await _databaseManager.markPetAsSynced(
+        petId: pet.id,
+        remoteId: pet.remoteId,
+        syncStatus: pet.syncStatus,
+        lastModifiedAt: pet.lastModifiedAt,
+      );
+    }
+  }
+
+  Future<void> _pushLocalRoutes() async {
+    final List<RouteRecord> pending = await _databaseManager.getRoutesNeedingSync();
+    _log('push routes: pendientes=${pending.length}');
+
+    if (pending.isEmpty) {
+      return;
+    }
+
+    final http.Response? response = await _postWithFallback(
+      path: '/routes/sync',
+      body: <String, Object?>{
+        'routes': pending
+            .map((RouteRecord route) => <String, Object?>{
+                  'local_id': route.id.toString(),
+                  'remote_id': route.remoteId,
+                  'name': route.name,
+                  'points_json': jsonEncode(route.points.map((RoutePoint p) => p.toMap()).toList()),
+                  'sync_status': route.syncStatus,
+                  'last_modified_at': _toBackendDateTime(route.lastModifiedAt),
+                })
+            .toList(growable: false),
+      },
+      bearerToken: await _currentAccessToken(),
+    );
+
+    if (response == null || response.statusCode < 200 || response.statusCode >= 300) {
+      _log('push routes: backend inalcanzable o error.');
+      return;
+    }
+
+    for (final RouteRecord route in pending) {
+      await _databaseManager.markRouteAsSynced(
+        routeId: route.id,
+        remoteId: route.remoteId,
+        syncStatus: route.syncStatus,
+        lastModifiedAt: route.lastModifiedAt,
+      );
+    }
+  }
+
+  Future<void> _pullRemotePets() async {
+    int page = 1;
+
+    while (true) {
+      final http.Response? response = await _getWithFallback(
+        path: '/pets?per_page=100&page=$page',
+        bearerToken: await _currentAccessToken(),
+      );
+
+      if (response == null) {
+        _log('pull pets: backend inalcanzable.');
+        return;
+      }
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        _log('pull pets failed [${response.statusCode}], body=${response.body}');
+        return;
+      }
+
+      final Map<String, dynamic> payload = jsonDecode(response.body) as Map<String, dynamic>;
+      final List<dynamic> data = (payload['data'] as List<dynamic>? ?? <dynamic>[]);
+
+      for (final dynamic item in data) {
+        final Map<String, dynamic> pet = item as Map<String, dynamic>;
+        await _databaseManager.upsertPetFromRemote(
+          localId: int.tryParse(pet['local_id']?.toString() ?? '') ?? (pet['id'] as num?)?.toInt() ?? 0,
+          remoteId: pet['remote_id']?.toString() ?? pet['id']?.toString(),
+          syncStatus: pet['sync_status']?.toString() ?? 'synced',
+          remoteLastModifiedAt: _parseBackendDateTime(pet['last_modified_at']),
+          name: pet['name']?.toString() ?? '',
+          photoPath: pet['photo_path']?.toString(),
+        );
+      }
+
+      final Map<String, dynamic> pagination =
+          (payload['pagination'] as Map<String, dynamic>?) ?? <String, dynamic>{};
+      final int currentPage = (pagination['current_page'] as num?)?.toInt() ?? page;
+      final int lastPage = (pagination['last_page'] as num?)?.toInt() ?? currentPage;
+      if (currentPage >= lastPage) {
+        break;
+      }
+      page += 1;
+    }
+  }
+
+  Future<void> _pullRemoteRoutes() async {
+    int page = 1;
+
+    while (true) {
+      final http.Response? response = await _getWithFallback(
+        path: '/routes?per_page=100&page=$page',
+        bearerToken: await _currentAccessToken(),
+      );
+
+      if (response == null) {
+        _log('pull routes: backend inalcanzable.');
+        return;
+      }
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        _log('pull routes failed [${response.statusCode}], body=${response.body}');
+        return;
+      }
+
+      final Map<String, dynamic> payload = jsonDecode(response.body) as Map<String, dynamic>;
+      final List<dynamic> data = (payload['data'] as List<dynamic>? ?? <dynamic>[]);
+
+      for (final dynamic item in data) {
+        final Map<String, dynamic> route = item as Map<String, dynamic>;
+        final String pointsJson = route['points_json']?.toString() ?? '[]';
+        final List<dynamic> rawPoints = jsonDecode(pointsJson) as List<dynamic>;
+        final List<RoutePoint> points = rawPoints
+            .map((dynamic point) => RoutePoint.fromMap((point as Map<String, dynamic>)))
+            .toList(growable: false);
+
+        await _databaseManager.upsertRouteFromRemote(
+          localId: int.tryParse(route['local_id']?.toString() ?? '') ?? (route['id'] as num?)?.toInt() ?? 0,
+          remoteId: route['remote_id']?.toString() ?? route['id']?.toString(),
+          syncStatus: route['sync_status']?.toString() ?? 'synced',
+          remoteLastModifiedAt: _parseBackendDateTime(route['last_modified_at']),
+          name: route['name']?.toString() ?? '',
+          points: points,
+        );
+      }
+
+      final Map<String, dynamic> pagination =
+          (payload['pagination'] as Map<String, dynamic>?) ?? <String, dynamic>{};
+      final int currentPage = (pagination['current_page'] as num?)?.toInt() ?? page;
+      final int lastPage = (pagination['last_page'] as num?)?.toInt() ?? currentPage;
+      if (currentPage >= lastPage) {
+        break;
+      }
       page += 1;
     }
   }
@@ -353,46 +536,25 @@ class UserDataSyncCoordinator {
 
   Future<http.Response?> _postWithFallback({
     required String path,
-    required String body,
+    required Object body,
+    String? bearerToken,
   }) async {
-    for (final String baseUrl in _apiBaseUrls) {
-      try {
-        final http.Response response = await _httpClient
-            .post(
-              Uri.parse('$baseUrl$path'),
-              headers: <String, String>{'Content-Type': 'application/json'},
-              body: body,
-            )
-            .timeout(const Duration(seconds: 5));
-
-        if (response.statusCode < 500) {
-          return response;
-        }
-      } catch (error) {
-        _log('POST failed for $baseUrl$path: $error');
-      }
-    }
-
-    return null;
+    return _apiClient.postWithFallback(
+      path,
+      body: body,
+      bearerToken: bearerToken,
+      timeout: const Duration(seconds: 5),
+    );
   }
 
   Future<http.Response?> _getWithFallback({
     required String path,
+    String? bearerToken,
   }) async {
-    for (final String baseUrl in _apiBaseUrls) {
-      try {
-        final http.Response response = await _httpClient
-            .get(Uri.parse('$baseUrl$path'))
-            .timeout(const Duration(seconds: 5));
-
-        if (response.statusCode < 500) {
-          return response;
-        }
-      } catch (error) {
-        _log('GET failed for $baseUrl$path: $error');
-      }
-    }
-
-    return null;
+    return _apiClient.getWithFallback(
+      path,
+      bearerToken: bearerToken,
+      timeout: const Duration(seconds: 5),
+    );
   }
 }

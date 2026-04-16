@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/local_user_profile.dart';
 import '../providers/local_data_providers.dart';
+import '../theme/app_palette.dart';
 import 'shared/user_identity_header.dart';
 
-class ProfileMenuPanel extends ConsumerWidget {
+class ProfileMenuPanel extends ConsumerStatefulWidget {
   final bool isDarkMode;
   final VoidCallback? onLoginPressed;
   final VoidCallback? onRegisterPressed;
+  final Future<String?> Function()? onLogoutPressed;
   final VoidCallback? onManagePetsPressed;
   final VoidCallback? onManageRoutesPressed;
 
@@ -17,17 +19,41 @@ class ProfileMenuPanel extends ConsumerWidget {
     required this.isDarkMode,
     this.onLoginPressed,
     this.onRegisterPressed,
+    this.onLogoutPressed,
     this.onManagePetsPressed,
     this.onManageRoutesPressed,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final Color neutralButtonBackground = isDarkMode
+  ConsumerState<ProfileMenuPanel> createState() => _ProfileMenuPanelState();
+}
+
+class _ProfileMenuPanelState extends ConsumerState<ProfileMenuPanel> {
+  String? _actionErrorText;
+
+  Future<void> _handleLogoutPressed() async {
+    final Future<String?> Function()? callback = widget.onLogoutPressed;
+    if (callback == null) {
+      return;
+    }
+
+    final String? errorText = await callback();
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _actionErrorText = errorText;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Color neutralButtonBackground = widget.isDarkMode
         ? const Color(0xFF404040)
         : const Color(0xFFFFFFFF);
 
-    final Color neutralButtonText = isDarkMode
+    final Color neutralButtonText = widget.isDarkMode
         ? const Color(0xFFFFFFFF)
         : const Color(0xFF404040);
 
@@ -39,7 +65,7 @@ class ProfileMenuPanel extends ConsumerWidget {
         userProfile.when(
           data: (LocalUserProfile profile) {
             return UserIdentityHeader(
-              isDarkMode: isDarkMode,
+              isDarkMode: widget.isDarkMode,
               username: profile.username,
               avatarPath: profile.avatarPath,
             );
@@ -47,42 +73,80 @@ class ProfileMenuPanel extends ConsumerWidget {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (Object error, StackTrace stackTrace) {
             return UserIdentityHeader(
-              isDarkMode: isDarkMode,
+              isDarkMode: widget.isDarkMode,
               username: 'Usuario',
             );
           },
         ),
         const SizedBox(height: 22),
-        Row(
-          children: [
-            Expanded(
-              child: _ActionButton(
-                label: 'Iniciar Sesión',
-                height: 46,
-                background: const Color(0xFF5984BC),
-                foreground: const Color(0xFFFFFFFF),
-                onPressed: onLoginPressed,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _ActionButton(
-                label: 'Registrarse',
-                height: 46,
-                background: const Color(0xFF5984BC),
-                foreground: const Color(0xFFFFFFFF),
-                onPressed: onRegisterPressed,
-              ),
-            ),
-          ],
+        userProfile.when(
+          data: (LocalUserProfile profile) {
+            if (profile.isAuthenticated) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _ActionButton(
+                    label: 'Cerrar sesión',
+                    height: 46,
+                    background: AppPalette.primaryBlue,
+                    foreground: const Color(0xFFFFFFFF),
+                    onPressed: _handleLogoutPressed,
+                  ),
+                  if (_actionErrorText != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _actionErrorText!,
+                      style: const TextStyle(
+                        color: Color(0xFFD7263D),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+                ],
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ActionButton(
+                        label: 'Iniciar Sesión',
+                        height: 46,
+                        background: const Color(0xFF5984BC),
+                        foreground: const Color(0xFFFFFFFF),
+                        onPressed: widget.onLoginPressed,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _ActionButton(
+                        label: 'Registrarse',
+                        height: 46,
+                        background: const Color(0xFF5984BC),
+                        foreground: const Color(0xFFFFFFFF),
+                        onPressed: widget.onRegisterPressed,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+              ],
+            );
+          },
+          loading: () => const SizedBox(height: 14),
+          error: (Object error, StackTrace stackTrace) => const SizedBox(height: 14),
         ),
-        const SizedBox(height: 14),
         _ActionButton(
           label: 'Gestionar Mascotas',
           height: 48,
           background: neutralButtonBackground,
           foreground: neutralButtonText,
-          onPressed: onManagePetsPressed,
+          onPressed: widget.onManagePetsPressed,
         ),
         const SizedBox(height: 10),
         _ActionButton(
@@ -90,7 +154,7 @@ class ProfileMenuPanel extends ConsumerWidget {
           height: 48,
           background: neutralButtonBackground,
           foreground: neutralButtonText,
-          onPressed: onManageRoutesPressed,
+          onPressed: widget.onManageRoutesPressed,
         ),
       ],
     );

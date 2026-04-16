@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../models/pet_record.dart';
 import '../models/hazard_report_record.dart';
+import '../models/local_user_profile.dart';
 import '../models/route_record.dart';
 import '../models/colored_route_segment.dart';
 import '../providers/local_data_providers.dart';
@@ -64,8 +65,32 @@ class _MapPageState extends ConsumerState<MapPage> {
   bool _isTripActive = false;
   bool _tripArrivalHandled = false;
   int _routePolylineRequestVersion = 0;
+  String? _tripStartErrorText;
+  bool _isAuthRequestLoading = false;
+  LatLng? _latestUserLocation;
+  List<LatLng> _tripRemainingWaypoints = <LatLng>[];
+
+  static const double _tripWaypointArrivalMeters = 25;
 
   bool get _hasOpenPanels => _panelStack.isNotEmpty;
+
+  bool get _isTripNavigationContext {
+    if (_selectedTripRoute == null) {
+      return false;
+    }
+
+    if (_isTripActive) {
+      return true;
+    }
+
+    return _panelStack.any(
+      (_PanelRoute route) =>
+          route.isTripStartPanel ||
+          route.isTripPanel ||
+          route.isTripRouteSelectionPanel ||
+          route.isTripPetSelectionPanel,
+    );
+  }
 
   void _pushPanel(_PanelRoute route) {
     setState(() {
@@ -104,6 +129,120 @@ class _MapPageState extends ConsumerState<MapPage> {
 
   void _switchToRegisterPanel(bool isDarkMode) {
     _replaceTopPanel(_buildRegisterRoute(isDarkMode));
+  }
+
+  Future<void> _handleLogin(String login, String password) async {
+    if (mounted) {
+      setState(() {
+        _isAuthRequestLoading = true;
+      });
+    }
+
+    try {
+      await ref.read(userLocalRepositoryProvider).login(
+            login: login,
+            password: password,
+          );
+      await ref.read(localMediaStorageServiceProvider).clearStoredMedia();
+
+      ref.invalidate(localUserProfileProvider);
+      ref.invalidate(petsControllerProvider);
+      ref.invalidate(routesControllerProvider);
+      ref.invalidate(hazardReportsControllerProvider);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _panelStack.clear();
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAuthRequestLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleRegister(
+    String username,
+    String email,
+    String password,
+    String passwordConfirmation,
+  ) async {
+    if (mounted) {
+      setState(() {
+        _isAuthRequestLoading = true;
+      });
+    }
+
+    try {
+      await ref.read(userLocalRepositoryProvider).register(
+            username: username,
+            email: email,
+            password: password,
+            passwordConfirmation: passwordConfirmation,
+          );
+
+      ref.invalidate(localUserProfileProvider);
+      ref.invalidate(petsControllerProvider);
+      ref.invalidate(routesControllerProvider);
+      ref.invalidate(hazardReportsControllerProvider);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _panelStack.clear();
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAuthRequestLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<String?> _handleLogout() async {
+    if (mounted) {
+      setState(() {
+        _isAuthRequestLoading = true;
+      });
+    }
+
+    try {
+      await ref.read(userLocalRepositoryProvider).logout();
+      await ref.read(localMediaStorageServiceProvider).clearStoredMedia();
+
+      ref.invalidate(localUserProfileProvider);
+      ref.invalidate(petsControllerProvider);
+      ref.invalidate(routesControllerProvider);
+      ref.invalidate(hazardReportsControllerProvider);
+
+      if (!mounted) {
+        return null;
+      }
+
+      setState(() {
+        _panelStack.clear();
+        _clearDraftRouteVisuals();
+        _clearTripSetupState();
+        _selectedHazard = null;
+      });
+      return null;
+    } catch (error) {
+      return 'No se pudo cerrar sesión: $error';
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAuthRequestLoading = false;
+        });
+      }
+    }
   }
 
   void _openManagePetsPanel(bool isDarkMode) {
@@ -157,9 +296,15 @@ class _MapPageState extends ConsumerState<MapPage> {
   }
 
   void _selectTripRoute(bool isDarkMode, RouteRecord route) {
+    final List<LatLng> selectedRoutePoints = route.points
+        .map((RoutePoint p) => p.toLatLng())
+        .toList(growable: false);
+
     setState(() {
       _selectedTripRoute = route;
       _selectedRouteId = route.id;
+      _tripRemainingWaypoints = List<LatLng>.from(selectedRoutePoints);
+      _tripStartErrorText = null;
       if (_hasOpenPanels && _panelStack.last.isTripRouteSelectionPanel) {
         _panelStack.removeLast();
         if (!_hasOpenPanels || !_panelStack.last.isTripStartPanel) {
@@ -168,26 +313,53 @@ class _MapPageState extends ConsumerState<MapPage> {
       }
     });
     _showRouteOnMap(route);
+
+    final LatLng? origin = _latestUserLocation;
+    if (origin != null && selectedRoutePoints.isNotEmpty) {
+      _refreshDraftRoutePolyline(<LatLng>[origin, ...selectedRoutePoints]);
+    }
+  }
+
+  void _openEditSelectedTripRoutePanel(bool isDarkMode) {
+    final RouteRecord? selectedRoute = _selectedTripRoute;
+    if (selectedRoute == null) {
+      return;
+    }
+
+    _openEditRoutePanel(
+      isDarkMode,
+      selectedRoute,
+      anchor: PanelAnchor.bottomRight,
+    );
   }
 
   void _startTrip(bool isDarkMode) {
     if (_selectedTripRoute == null || _selectedTripRoute!.points.length < 2) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Selecciona una ruta válida para iniciar el viaje.'),
-        ),
-      );
+      setState(() {
+        _tripStartErrorText = 'Selecciona una ruta válida para iniciar el viaje.';
+      });
       return;
     }
 
+    final List<LatLng> routePoints = _selectedTripRoute!.points
+        .map((RoutePoint p) => p.toLatLng())
+        .toList(growable: false);
+
     setState(() {
+      _tripStartErrorText = null;
       _isTripActive = true;
       _tripArrivalHandled = false;
+      _tripRemainingWaypoints = List<LatLng>.from(routePoints);
       if (_hasOpenPanels) {
         _panelStack.removeLast();
       }
       _panelStack.add(_buildTripActiveRoute(isDarkMode));
     });
+
+    final LatLng? origin = _latestUserLocation;
+    if (origin != null && routePoints.isNotEmpty) {
+      _refreshDraftRoutePolyline(<LatLng>[origin, ...routePoints]);
+    }
   }
 
   Future<void> _finishTripManually() async {
@@ -247,6 +419,7 @@ class _MapPageState extends ConsumerState<MapPage> {
       _isTripActive = false;
       _tripArrivalHandled = false;
       _selectedTripRoute = null;
+      _tripRemainingWaypoints = <LatLng>[];
       _selectedTripPetIds.clear();
       _selectedTripTransport = _TripTransportMethod.walking;
       _shouldAvoidHazardsInRouting = true;
@@ -270,6 +443,7 @@ class _MapPageState extends ConsumerState<MapPage> {
       _tripArrivalHandled = true;
       _isTripActive = false;
       _selectedTripRoute = null;
+      _tripRemainingWaypoints = <LatLng>[];
       _selectedTripPetIds.clear();
       _selectedTripTransport = _TripTransportMethod.walking;
       _shouldAvoidHazardsInRouting = true;
@@ -288,6 +462,7 @@ class _MapPageState extends ConsumerState<MapPage> {
     setState(() {
       _tripArrivalHandled = false;
       _selectedTripRoute = null;
+      _tripRemainingWaypoints = <LatLng>[];
       _selectedTripPetIds.clear();
       _selectedTripTransport = _TripTransportMethod.walking;
       _shouldAvoidHazardsInRouting = true;
@@ -305,7 +480,6 @@ class _MapPageState extends ConsumerState<MapPage> {
           backgroundColor: AppPalette.dialogBackground(isDarkMode),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
-            side: BorderSide(color: AppPalette.border(isDarkMode)),
           ),
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -324,6 +498,7 @@ class _MapPageState extends ConsumerState<MapPage> {
 
   void _clearTripSetupState() {
     _selectedTripRoute = null;
+    _tripRemainingWaypoints = <LatLng>[];
     _selectedTripPetIds.clear();
     _selectedTripTransport = _TripTransportMethod.walking;
     _shouldAvoidHazardsInRouting = true;
@@ -365,9 +540,15 @@ class _MapPageState extends ConsumerState<MapPage> {
     setState(() {
       _selectedTripRoute = resolvedRoute;
       _selectedRouteId = resolvedRoute!.id;
+      _tripRemainingWaypoints = List<LatLng>.from(points);
       _draftRoutePoints = points;
       _draftRoutePolyline = List<LatLng>.from(points);
     });
+
+    if (_latestUserLocation != null && points.isNotEmpty) {
+      await _refreshDraftRoutePolyline(<LatLng>[_latestUserLocation!, ...points]);
+      return;
+    }
 
     await _refreshDraftRoutePolyline(points);
   }
@@ -385,23 +566,59 @@ class _MapPageState extends ConsumerState<MapPage> {
   }
 
   void _handleUserLocationChanged(LatLng location) {
-    if (!_isTripActive || _selectedTripRoute == null || _tripArrivalHandled) {
+    _latestUserLocation = location;
+
+    if (_tripArrivalHandled || _selectedTripRoute == null) {
       return;
     }
 
-    final List<RoutePoint> points = _selectedTripRoute!.points;
-    if (points.isEmpty) {
+    if (!_isTripActive) {
+      final List<LatLng> waypoints = _tripRemainingWaypoints.isNotEmpty
+          ? _tripRemainingWaypoints
+          : _selectedTripRoute!.points
+              .map((RoutePoint p) => p.toLatLng())
+              .toList(growable: false);
+
+      if (waypoints.isEmpty) {
+        return;
+      }
+
+      _refreshDraftRoutePolyline(<LatLng>[location, ...waypoints]);
       return;
     }
 
-    final LatLng destination = points.last.toLatLng();
-    final double distanceMeters = _distanceCalculator.distance(
-      location,
-      destination,
-    );
-    if (distanceMeters <= 25) {
+    if (_tripRemainingWaypoints.isEmpty) {
       _finishTripOnArrival();
+      return;
     }
+
+    List<LatLng> nextRemaining = List<LatLng>.from(_tripRemainingWaypoints);
+    bool changed = false;
+
+    while (nextRemaining.isNotEmpty) {
+      final double distanceToNext = _distanceCalculator.distance(
+        location,
+        nextRemaining.first,
+      );
+      if (distanceToNext > _tripWaypointArrivalMeters) {
+        break;
+      }
+      nextRemaining.removeAt(0);
+      changed = true;
+    }
+
+    if (changed) {
+      setState(() {
+        _tripRemainingWaypoints = nextRemaining;
+      });
+    }
+
+    if (nextRemaining.isEmpty) {
+      _finishTripOnArrival();
+      return;
+    }
+
+    _refreshDraftRoutePolyline(<LatLng>[location, ...nextRemaining]);
   }
 
   void _openReportHazardPanel(bool isDarkMode) {
@@ -623,12 +840,14 @@ class _MapPageState extends ConsumerState<MapPage> {
       adaptHeightToContent: true,
       expandHorizontal: false,
       expandVertical: false,
+      isProfilePanel: true,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
         return ProfileMenuPanel(
           isDarkMode: isDarkMode,
           onLoginPressed: () => _openLoginPanel(isDarkMode),
           onRegisterPressed: () => _openRegisterPanel(isDarkMode),
+          onLogoutPressed: _handleLogout,
           onManagePetsPressed: () => _openManagePetsPanel(isDarkMode),
           onManageRoutesPressed: () => _openManageRoutesPanel(isDarkMode),
         );
@@ -684,8 +903,12 @@ class _MapPageState extends ConsumerState<MapPage> {
           avoidHazards: _shouldAvoidHazardsInRouting,
           selectedPetsCount: _selectedTripPetIds.length,
           selectedRouteName: _selectedTripRoute?.name,
+          errorText: _tripStartErrorText,
           onSelectPets: () => _openTripPetSelectorPanel(isDarkMode),
           onSelectRoute: () => _openTripRouteSelectorPanel(isDarkMode),
+          onEditSelectedRoute: _selectedTripRoute == null
+              ? null
+              : () => _openEditSelectedTripRoutePanel(isDarkMode),
           onTransportChanged: (_TripTransportMethod method) {
             setState(() {
               _selectedTripTransport = method;
@@ -1246,14 +1469,18 @@ class _MapPageState extends ConsumerState<MapPage> {
         .watch(hazardReportsControllerProvider)
         .whenData((hazards) {
           return hazards.where((HazardReportRecord h) {
-            if (h.riskLevelCode == 'low' && !_showLowRiskHazardCircles)
+            if (h.riskLevelCode == 'low' && !_showLowRiskHazardCircles) {
               return false;
-            if (h.riskLevelCode == 'medium' && !_showMediumRiskHazardCircles)
+            }
+            if (h.riskLevelCode == 'medium' && !_showMediumRiskHazardCircles) {
               return false;
-            if (h.riskLevelCode == 'high' && !_showHighRiskHazardCircles)
+            }
+            if (h.riskLevelCode == 'high' && !_showHighRiskHazardCircles) {
               return false;
-            if (h.riskLevelCode == 'undefined' && !_showHighRiskHazardCircles)
+            }
+            if (h.riskLevelCode == 'undefined' && !_showHighRiskHazardCircles) {
               return false;
+            }
             return true;
           }).toList();
         })
@@ -1300,12 +1527,13 @@ class _MapPageState extends ConsumerState<MapPage> {
       adaptHeightToContent: true,
       expandHorizontal: false,
       expandVertical: false,
+      isLoginPanel: true,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
         return LoginPanelContent(
           isDarkMode: isDarkMode,
           onSwitchToRegister: () => _switchToRegisterPanel(isDarkMode),
-          onSubmit: () {},
+          onSubmit: _handleLogin,
         );
       },
     );
@@ -1323,6 +1551,7 @@ class _MapPageState extends ConsumerState<MapPage> {
       expandHorizontal: false,
       expandVertical: true,
       scrollContent: false,
+      isManagePetsPanel: true,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
         return ManagePetsPanelContent(
@@ -1394,12 +1623,13 @@ class _MapPageState extends ConsumerState<MapPage> {
       adaptHeightToContent: true,
       expandHorizontal: false,
       expandVertical: false,
+      isRegisterPanel: true,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
         return RegisterPanelContent(
           isDarkMode: isDarkMode,
           onSwitchToLogin: () => _switchToLoginPanel(isDarkMode),
-          onSubmit: () {},
+          onSubmit: _handleRegister,
         );
       },
     );
@@ -1504,6 +1734,7 @@ class _MapPageState extends ConsumerState<MapPage> {
 
   Widget _buildOpenedPanelOverlay(bool isDarkMode) {
     final _PanelRoute currentPanel = _panelStack.last;
+    final bool panelLoading = _isPanelLoading(currentPanel);
 
     return Stack(
       key: ValueKey<int>(currentPanel.transitionKey),
@@ -1527,11 +1758,38 @@ class _MapPageState extends ConsumerState<MapPage> {
               !currentPanel.isTripPanel &&
               !currentPanel.isTripPetSelectionPanel &&
               !currentPanel.isTripRouteSelectionPanel,
+          showLoadingIndicator: panelLoading,
           onClosePressed: _closeCurrentPanel,
           child: currentPanel.contentBuilder(context),
         ),
       ],
     );
+  }
+
+  bool _isPanelLoading(_PanelRoute panel) {
+    bool loading = false;
+
+    if (panel.isLoginPanel || panel.isRegisterPanel || panel.isProfilePanel) {
+      loading = loading || _isAuthRequestLoading;
+    }
+
+    if (panel.isManagePetsPanel || panel.isTripPetSelectionPanel) {
+      final AsyncValue<List<PetRecord>> petsValue = ref.watch(petsControllerProvider);
+      final AsyncValue<LocalUserProfile> profileValue = ref.watch(localUserProfileProvider);
+      loading = loading || petsValue.isLoading || profileValue.isLoading;
+    }
+
+    if (panel.isManageRoutesPanel || panel.isTripRouteSelectionPanel) {
+      final AsyncValue<List<RouteRecord>> routesValue = ref.watch(routesControllerProvider);
+      loading = loading || routesValue.isLoading;
+    }
+
+    if (panel.isHazardDetailsPanel || panel.isHazardCommentsPanel || panel.isHazardSettingsPanel) {
+      final AsyncValue<List<HazardReportRecord>> hazardsValue = ref.watch(hazardReportsControllerProvider);
+      loading = loading || hazardsValue.isLoading;
+    }
+
+    return loading;
   }
 
   @override
@@ -1555,6 +1813,17 @@ class _MapPageState extends ConsumerState<MapPage> {
         })
         .toList(growable: false);
 
+      final List<LatLng> renderedRoutePoints = _isTripNavigationContext
+        ? (_tripRemainingWaypoints.isNotEmpty
+          ? List<LatLng>.from(_tripRemainingWaypoints)
+          : List<LatLng>.from(_draftRoutePoints))
+        : List<LatLng>.from(_draftRoutePoints);
+
+      final List<LatLng> renderedRoutePolylinePoints =
+        _isTripNavigationContext && _latestUserLocation != null
+          ? <LatLng>[_latestUserLocation!, ...renderedRoutePoints]
+          : List<LatLng>.from(_draftRoutePolyline);
+
     return Scaffold(
       body: MapWidget(
         isDarkMode: isDarkMode,
@@ -1562,10 +1831,13 @@ class _MapPageState extends ConsumerState<MapPage> {
         zoom: 13,
         hideDefaultControls: _hasOpenPanels,
         keepReportDangerVisible: _hasOpenPanels && _panelStack.last.isTripPanel,
+        keepModifyLocationVisible:
+          _hasOpenPanels &&
+          (_panelStack.last.isTripStartPanel || _panelStack.last.isTripPanel),
         onProfileTap: () => _openProfilePanel(isDarkMode),
         panelOverlay: _buildPanelOverlay(isDarkMode),
-        routePoints: _draftRoutePoints,
-        routePolylinePoints: _draftRoutePolyline,
+        routePoints: renderedRoutePoints,
+        routePolylinePoints: renderedRoutePolylinePoints,
         coloredRouteSegments: _hazardColoredRouteSegments,
         selectedRoutePointIndex: _selectedPointIndexForEdit,
         onRoutePointPointerDown: (int index) {
@@ -1636,7 +1908,11 @@ class _PanelRoute {
   final bool isHazardDetailsPanel;
   final bool isHazardSettingsPanel;
   final bool isHazardCommentsPanel;
+  final bool isManagePetsPanel;
   final bool isManageRoutesPanel;
+  final bool isProfilePanel;
+  final bool isLoginPanel;
+  final bool isRegisterPanel;
   final bool isTripStartPanel;
   final bool isTripPanel;
   final bool isTripPetSelectionPanel;
@@ -1662,7 +1938,11 @@ class _PanelRoute {
     this.isHazardDetailsPanel = false,
     this.isHazardSettingsPanel = false,
     this.isHazardCommentsPanel = false,
+    this.isManagePetsPanel = false,
     this.isManageRoutesPanel = false,
+    this.isProfilePanel = false,
+    this.isLoginPanel = false,
+    this.isRegisterPanel = false,
     this.isTripStartPanel = false,
     this.isTripPanel = false,
     this.isTripPetSelectionPanel = false,
@@ -1677,8 +1957,10 @@ class _TripStartPanelContent extends StatelessWidget {
   final bool avoidHazards;
   final int selectedPetsCount;
   final String? selectedRouteName;
+  final String? errorText;
   final VoidCallback onSelectPets;
   final VoidCallback onSelectRoute;
+  final VoidCallback? onEditSelectedRoute;
   final ValueChanged<_TripTransportMethod> onTransportChanged;
   final ValueChanged<bool> onAvoidHazardsChanged;
   final VoidCallback onStartTrip;
@@ -1689,8 +1971,10 @@ class _TripStartPanelContent extends StatelessWidget {
     required this.avoidHazards,
     required this.selectedPetsCount,
     required this.selectedRouteName,
+    required this.errorText,
     required this.onSelectPets,
     required this.onSelectRoute,
+    this.onEditSelectedRoute,
     required this.onTransportChanged,
     required this.onAvoidHazardsChanged,
     required this.onStartTrip,
@@ -1799,6 +2083,27 @@ class _TripStartPanelContent extends StatelessWidget {
           textColor: textColor,
           onPressed: onSelectRoute,
         ),
+        if (selectedRouteName != null && onEditSelectedRoute != null) ...[
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 42,
+            child: OutlinedButton.icon(
+              onPressed: onEditSelectedRoute,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppPalette.primaryBlue,
+                side: const BorderSide(color: AppPalette.primaryBlue, width: 1),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              icon: const Icon(Icons.edit_rounded, size: 16),
+              label: const Text(
+                'Editar ruta seleccionada',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 14),
         SizedBox(
           height: 48,
@@ -1818,6 +2123,18 @@ class _TripStartPanelContent extends StatelessWidget {
             ),
           ),
         ),
+        if (errorText != null && errorText!.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            errorText!,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppPalette.dangerRed,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ],
     );
   }

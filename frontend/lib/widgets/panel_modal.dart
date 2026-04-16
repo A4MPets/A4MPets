@@ -27,6 +27,7 @@ class AppModalPanel extends StatelessWidget {
   final bool scrollContent;
   final Duration animationDuration;
   final Curve animationCurve;
+  final bool showLoadingIndicator;
 
   const AppModalPanel({
     super.key,
@@ -47,6 +48,7 @@ class AppModalPanel extends StatelessWidget {
     this.scrollContent = true,
     this.animationDuration = const Duration(milliseconds: 260),
     this.animationCurve = Curves.easeOutCubic,
+    this.showLoadingIndicator = false,
   });
 
   static const double _margin = 16;
@@ -147,6 +149,30 @@ class AppModalPanel extends StatelessWidget {
                             color: titleColor,
                             fontSize: 17,
                             fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    if (showLoadingIndicator)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          ignoring: true,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: isDarkMode
+                                  ? const Color(0x55201E1E)
+                                  : const Color(0x55E6E6E6),
+                              borderRadius: borderRadius,
+                            ),
+                            child: const Center(
+                              child: SizedBox(
+                                width: 28,
+                                height: 28,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Color(0xFF5984BC),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ),

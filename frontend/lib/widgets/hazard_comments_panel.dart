@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 
 import '../models/hazard_report_record.dart';
 import '../models/local_user_profile.dart';
@@ -134,50 +135,69 @@ class _HazardCommentsPanelContentState
           ),
         ),
         const SizedBox(height: 10),
-        TextField(
-          controller: _commentController,
-          onChanged: (_) {
-            if (_sendErrorText != null) {
-              setState(() {
-                _sendErrorText = null;
-              });
+        Focus(
+          onKeyEvent: (FocusNode node, KeyEvent event) {
+            if (event is KeyDownEvent &&
+                event.logicalKey == LogicalKeyboardKey.enter &&
+                !HardwareKeyboard.instance.isShiftPressed) {
+              if (!_isSending) {
+                _sendComment();
+              }
+              return KeyEventResult.handled;
             }
+            return KeyEventResult.ignored;
           },
-          maxLength: 140,
-          maxLines: 3,
-          minLines: 2,
-          style: TextStyle(
-            color: AppPalette.textPrimary(widget.isDarkMode),
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-          decoration: InputDecoration(
-            hintText: 'Escribe un comentario...',
-            hintStyle: const TextStyle(
-              color: AppPalette.textMutedDark,
+          child: TextField(
+            controller: _commentController,
+            onSubmitted: (_) {
+              if (!_isSending) {
+                _sendComment();
+              }
+            },
+            onChanged: (_) {
+              if (_sendErrorText != null) {
+                setState(() {
+                  _sendErrorText = null;
+                });
+              }
+            },
+            textInputAction: TextInputAction.send,
+            maxLength: 140,
+            maxLines: 3,
+            minLines: 2,
+            style: TextStyle(
+              color: AppPalette.textPrimary(widget.isDarkMode),
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
-            counterStyle: const TextStyle(
-              color: AppPalette.textMutedDark,
-              fontSize: 11,
-            ),
-            filled: true,
-            fillColor: AppPalette.fieldBackground(widget.isDarkMode),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: AppPalette.primaryBlue, width: 1),
+            decoration: InputDecoration(
+              hintText: 'Escribe un comentario...',
+              hintStyle: const TextStyle(
+                color: AppPalette.textMutedDark,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+              counterStyle: const TextStyle(
+                color: AppPalette.textMutedDark,
+                fontSize: 11,
+              ),
+              filled: true,
+              fillColor: AppPalette.fieldBackground(widget.isDarkMode),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide:
+                    const BorderSide(color: AppPalette.primaryBlue, width: 1),
+              ),
             ),
           ),
         ),

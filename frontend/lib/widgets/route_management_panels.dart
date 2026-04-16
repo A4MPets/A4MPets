@@ -434,6 +434,13 @@ class _AddRoutePanelContentState extends ConsumerState<AddRoutePanelContent> {
           content: TextField(
             controller: dialogController,
             autofocus: true,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) {
+              final String resolved = dialogController.text.trim().isEmpty
+                  ? _defaultRouteName
+                  : dialogController.text.trim();
+              Navigator.of(dialogContext).pop(resolved);
+            },
             style: TextStyle(color: AppPalette.textPrimary(widget.isDarkMode)),
             decoration: InputDecoration(
               hintText: _defaultRouteName,

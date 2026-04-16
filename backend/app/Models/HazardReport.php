@@ -90,8 +90,10 @@ class HazardReport extends Model
      */
     public function scopeUnsynced($query)
     {
-        return $query->where('status', '=', 'created')
-                     ->orWhereColumn('synced_at', '<', 'updated_at');
+        return $query->where(function ($builder): void {
+            $builder->where('status', '=', 'created')
+                ->orWhereColumn('synced_at', '<', 'updated_at');
+        });
     }
 
     /**

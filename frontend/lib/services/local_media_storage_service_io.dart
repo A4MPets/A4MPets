@@ -71,4 +71,15 @@ class LocalMediaStorageService {
     await File(selectedFile.path!).copy(targetPath);
     return targetPath;
   }
+
+  Future<void> clearStoredMedia() async {
+    final Directory appDirectory = await getApplicationDocumentsDirectory();
+    final Directory bucketDirectory = Directory(
+      p.join(appDirectory.path, 'local_bucket'),
+    );
+
+    if (bucketDirectory.existsSync()) {
+      await bucketDirectory.delete(recursive: true);
+    }
+  }
 }
