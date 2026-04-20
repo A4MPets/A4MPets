@@ -13,7 +13,7 @@ class TravelRouteController extends Controller
     {
         $userId = $request->user()?->id;
 
-        $query = TravelRoute::query()->where(function ($builder) use ($userId): void {
+        $query = TravelRoute::query()->with('routePoints')->where(function ($builder) use ($userId): void {
             if ($userId) {
                 $builder->where('user_id', $userId);
             } else {

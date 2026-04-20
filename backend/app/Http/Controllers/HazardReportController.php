@@ -30,7 +30,13 @@ class HazardReportController extends Controller
         ]);
 
         // Los peligros son globales y deben ser visibles para todos.
-        $query = HazardReport::with(['comments', 'comments.user']);
+        $query = HazardReport::with([
+            'comments',
+            'comments.user',
+            'riskLevel',
+            'category',
+            'estimatedDuration',
+        ]);
 
         // Filtro por ubicación (nearby)
         if ($request->has(['latitude', 'longitude'])) {
@@ -117,7 +123,7 @@ class HazardReportController extends Controller
         if ($request->has('comments')) {
             $this->syncHazardComments($hazard, (array) $request->input('comments', []));
         }
-        $hazard->load(['comments', 'comments.user']);
+        $hazard->load(['comments', 'comments.user', 'riskLevel', 'category', 'estimatedDuration']);
 
         Log::info('Hazard API store created', [
             'id' => $hazard->id,
@@ -138,7 +144,7 @@ class HazardReportController extends Controller
      */
     public function show(HazardReport $hazardReport): JsonResponse
     {
-        $hazardReport->load(['comments', 'comments.user']);
+        $hazardReport->load(['comments', 'comments.user', 'riskLevel', 'category', 'estimatedDuration']);
 
         return response()->json([
             'success' => true,
@@ -210,7 +216,7 @@ class HazardReportController extends Controller
         if ($request->has('comments')) {
             $this->syncHazardComments($hazardReport, (array) $request->input('comments', []));
         }
-        $hazardReport->load(['comments', 'comments.user']);
+        $hazardReport->load(['comments', 'comments.user', 'riskLevel', 'category', 'estimatedDuration']);
 
         return response()->json([
             'success' => true,
@@ -415,7 +421,7 @@ class HazardReportController extends Controller
 
     public function comments(HazardReport $hazardReport): JsonResponse
     {
-        $hazardReport->load(['comments', 'comments.user']);
+        $hazardReport->load(['comments', 'comments.user', 'riskLevel', 'category', 'estimatedDuration']);
 
         return response()->json([
             'success' => true,
