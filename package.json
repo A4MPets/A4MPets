@@ -1,7 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "frontend": "cd frontend && flutter run -d chrome",
+    "frontend": "cd frontend && flutter run -d chrome --web-hostname localhost --web-port 7357",
     "backend": "cd backend && php artisan serve",
     "graphhopper": "docker compose up -d graphhopper",
     "dev": "docker compose up -d --build"

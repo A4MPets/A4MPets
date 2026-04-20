@@ -20,7 +20,10 @@ class LocalDatabaseManager {
 
   Future<void> _ensureDefaultUser(SharedPreferences prefs) async {
     if (!prefs.containsKey(_userKey)) {
-      await prefs.setString(_userKey, jsonEncode(LocalUserProfile.guest().toMap()));
+      await prefs.setString(
+        _userKey,
+        jsonEncode(LocalUserProfile.guest().toMap()),
+      );
     }
 
     if (!prefs.containsKey(_petsKey)) {
@@ -29,7 +32,6 @@ class LocalDatabaseManager {
 
     if (!prefs.containsKey(_routesKey)) {
       await prefs.setString(_routesKey, jsonEncode(<Map<String, Object?>>[]));
-
     }
 
     if (!prefs.containsKey(_hazardsKey)) {
@@ -42,7 +44,8 @@ class LocalDatabaseManager {
     await _ensureDefaultUser(prefs);
 
     final String raw = prefs.getString(_userKey)!;
-    final Map<String, Object?> map = (jsonDecode(raw) as Map<String, dynamic>).cast<String, Object?>();
+    final Map<String, Object?> map = (jsonDecode(raw) as Map<String, dynamic>)
+        .cast<String, Object?>();
     return LocalUserProfile.fromMap(map);
   }
 
@@ -54,7 +57,10 @@ class LocalDatabaseManager {
 
   Future<void> clearUserSessionData() async {
     final SharedPreferences prefs = await _prefs;
-    await prefs.setString(_userKey, jsonEncode(LocalUserProfile.guest().toMap()));
+    await prefs.setString(
+      _userKey,
+      jsonEncode(LocalUserProfile.guest().toMap()),
+    );
     await prefs.setString(_petsKey, jsonEncode(<Map<String, Object?>>[]));
     await prefs.setString(_routesKey, jsonEncode(<Map<String, Object?>>[]));
   }
@@ -67,15 +73,19 @@ class LocalDatabaseManager {
     final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
 
     return decoded
-      .where((dynamic row) => (row as Map<String, dynamic>)['sync_status'] != 'deleted')
-      .map((dynamic row) => PetRecord.fromMap((row as Map<String, dynamic>).cast<String, Object?>()))
+        .where(
+          (dynamic row) =>
+              (row as Map<String, dynamic>)['sync_status'] != 'deleted',
+        )
+        .map(
+          (dynamic row) => PetRecord.fromMap(
+            (row as Map<String, dynamic>).cast<String, Object?>(),
+          ),
+        )
         .toList(growable: false);
   }
 
-  Future<int> addPet({
-    required String name,
-    String? photoPath,
-  }) async {
+  Future<int> addPet({required String name, String? photoPath}) async {
     final SharedPreferences prefs = await _prefs;
     await _ensureDefaultUser(prefs);
 
@@ -83,7 +93,10 @@ class LocalDatabaseManager {
     final int now = DateTime.now().millisecondsSinceEpoch;
     final int nextId = currentPets.isEmpty
         ? 1
-        : currentPets.map((PetRecord pet) => pet.id).reduce((int a, int b) => a > b ? a : b) + 1;
+        : currentPets
+                  .map((PetRecord pet) => pet.id)
+                  .reduce((int a, int b) => a > b ? a : b) +
+              1;
 
     final PetRecord newPet = PetRecord(
       id: nextId,
@@ -120,7 +133,9 @@ class LocalDatabaseManager {
     final List<PetRecord> currentPets = await getPets();
     final int now = DateTime.now().millisecondsSinceEpoch;
 
-    final List<Map<String, Object?>> encodedPets = currentPets.map((PetRecord pet) {
+    final List<Map<String, Object?>> encodedPets = currentPets.map((
+      PetRecord pet,
+    ) {
       if (pet.id == petId) {
         return PetRecord(
           id: pet.id,
@@ -145,23 +160,25 @@ class LocalDatabaseManager {
     final List<PetRecord> currentPets = await getPets();
     final int now = DateTime.now().millisecondsSinceEpoch;
 
-    final List<Map<String, Object?>> encodedPets = currentPets.map((PetRecord pet) {
-      if (pet.id != petId) {
-        return pet.toMap();
-      }
+    final List<Map<String, Object?>> encodedPets = currentPets
+        .map((PetRecord pet) {
+          if (pet.id != petId) {
+            return pet.toMap();
+          }
 
-      return PetRecord(
-        id: pet.id,
-        remoteId: pet.remoteId,
-        name: pet.name,
-        photoPath: pet.photoPath,
-        syncStatus: 'deleted',
-        lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
-        createdAt: pet.createdAt,
-        updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
-        needsSync: true,
-      ).toMap();
-    }).toList(growable: false);
+          return PetRecord(
+            id: pet.id,
+            remoteId: pet.remoteId,
+            name: pet.name,
+            photoPath: pet.photoPath,
+            syncStatus: 'deleted',
+            lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
+            createdAt: pet.createdAt,
+            updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+            needsSync: true,
+          ).toMap();
+        })
+        .toList(growable: false);
 
     await prefs.setString(_petsKey, jsonEncode(encodedPets));
   }
@@ -172,10 +189,15 @@ class LocalDatabaseManager {
     final String raw = prefs.getString(_routesKey)!;
     final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
     return decoded
-      .where((dynamic row) => (row as Map<String, dynamic>)['sync_status'] != 'deleted')
-        .map((dynamic row) => RouteRecord.fromMap(
-              (row as Map<String, dynamic>).cast<String, Object?>(),
-            ))
+        .where(
+          (dynamic row) =>
+              (row as Map<String, dynamic>)['sync_status'] != 'deleted',
+        )
+        .map(
+          (dynamic row) => RouteRecord.fromMap(
+            (row as Map<String, dynamic>).cast<String, Object?>(),
+          ),
+        )
         .toList(growable: false);
   }
 
@@ -189,7 +211,10 @@ class LocalDatabaseManager {
     final int now = DateTime.now().millisecondsSinceEpoch;
     final int nextId = current.isEmpty
         ? 1
-        : current.map((RouteRecord r) => r.id).reduce((int a, int b) => a > b ? a : b) + 1;
+        : current
+                  .map((RouteRecord r) => r.id)
+                  .reduce((int a, int b) => a > b ? a : b) +
+              1;
     final RouteRecord newRoute = RouteRecord(
       id: nextId,
       remoteId: null,
@@ -219,23 +244,25 @@ class LocalDatabaseManager {
     final List<RouteRecord> current = await getRoutes();
     final int now = DateTime.now().millisecondsSinceEpoch;
 
-    final List<Map<String, Object?>> encoded = current.map((RouteRecord route) {
-      if (route.id != routeId) {
-        return route.toMap();
-      }
+    final List<Map<String, Object?>> encoded = current
+        .map((RouteRecord route) {
+          if (route.id != routeId) {
+            return route.toMap();
+          }
 
-      return RouteRecord(
-        id: route.id,
-        remoteId: route.remoteId,
-        name: route.name,
-        points: route.points,
-        syncStatus: 'deleted',
-        lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
-        createdAt: route.createdAt,
-        updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
-        needsSync: true,
-      ).toMap();
-    }).toList(growable: false);
+          return RouteRecord(
+            id: route.id,
+            remoteId: route.remoteId,
+            name: route.name,
+            points: route.points,
+            syncStatus: 'deleted',
+            lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
+            createdAt: route.createdAt,
+            updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+            needsSync: true,
+          ).toMap();
+        })
+        .toList(growable: false);
 
     await prefs.setString(_routesKey, jsonEncode(encoded));
   }
@@ -275,9 +302,11 @@ class LocalDatabaseManager {
     final String raw = prefs.getString(_hazardsKey)!;
     final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
     return decoded
-        .map((dynamic row) => HazardReportRecord.fromMap(
-              (row as Map<String, dynamic>).cast<String, Object?>(),
-            ))
+        .map(
+          (dynamic row) => HazardReportRecord.fromMap(
+            (row as Map<String, dynamic>).cast<String, Object?>(),
+          ),
+        )
         .toList(growable: false);
   }
 
@@ -301,9 +330,9 @@ class LocalDatabaseManager {
     final int nextId = current.isEmpty
         ? 1
         : current
-                .map((HazardReportRecord report) => report.id)
-                .reduce((int a, int b) => a > b ? a : b) +
-            1;
+                  .map((HazardReportRecord report) => report.id)
+                  .reduce((int a, int b) => a > b ? a : b) +
+              1;
 
     final HazardReportRecord newReport = HazardReportRecord(
       id: nextId,
@@ -386,7 +415,11 @@ class LocalDatabaseManager {
     final String raw = prefs.getString(_petsKey)!;
     final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
     return decoded
-        .map((dynamic row) => PetRecord.fromMap((row as Map<String, dynamic>).cast<String, Object?>()))
+        .map(
+          (dynamic row) => PetRecord.fromMap(
+            (row as Map<String, dynamic>).cast<String, Object?>(),
+          ),
+        )
         .where((PetRecord pet) => pet.needsSync)
         .toList(growable: false);
   }
@@ -402,26 +435,32 @@ class LocalDatabaseManager {
     final String raw = prefs.getString(_petsKey)!;
     final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
     final List<PetRecord> current = decoded
-        .map((dynamic row) => PetRecord.fromMap((row as Map<String, dynamic>).cast<String, Object?>()))
+        .map(
+          (dynamic row) => PetRecord.fromMap(
+            (row as Map<String, dynamic>).cast<String, Object?>(),
+          ),
+        )
         .toList(growable: false);
 
-    final List<Map<String, Object?>> encoded = current.map((PetRecord pet) {
-      if (pet.id != petId) {
-        return pet.toMap();
-      }
+    final List<Map<String, Object?>> encoded = current
+        .map((PetRecord pet) {
+          if (pet.id != petId) {
+            return pet.toMap();
+          }
 
-      return PetRecord(
-        id: pet.id,
-        remoteId: remoteId ?? pet.remoteId,
-        name: pet.name,
-        photoPath: pet.photoPath,
-        syncStatus: syncStatus,
-        lastModifiedAt: lastModifiedAt ?? DateTime.now(),
-        createdAt: pet.createdAt,
-        updatedAt: DateTime.now(),
-        needsSync: false,
-      ).toMap();
-    }).toList(growable: false);
+          return PetRecord(
+            id: pet.id,
+            remoteId: remoteId ?? pet.remoteId,
+            name: pet.name,
+            photoPath: pet.photoPath,
+            syncStatus: syncStatus,
+            lastModifiedAt: lastModifiedAt ?? DateTime.now(),
+            createdAt: pet.createdAt,
+            updatedAt: DateTime.now(),
+            needsSync: false,
+          ).toMap();
+        })
+        .toList(growable: false);
 
     await prefs.setString(_petsKey, jsonEncode(encoded));
   }
@@ -447,7 +486,10 @@ class LocalDatabaseManager {
 
     final int nextId = current.isEmpty
         ? 1
-        : current.map((PetRecord pet) => pet.id).reduce((int a, int b) => a > b ? a : b) + 1;
+        : current
+                  .map((PetRecord pet) => pet.id)
+                  .reduce((int a, int b) => a > b ? a : b) +
+              1;
 
     if (existing == null) {
       final PetRecord inserted = PetRecord(
@@ -470,26 +512,29 @@ class LocalDatabaseManager {
       return;
     }
 
-    if (existing.needsSync && existing.lastModifiedAt.isAfter(remoteLastModifiedAt)) {
+    if (existing.needsSync &&
+        existing.lastModifiedAt.isAfter(remoteLastModifiedAt)) {
       return;
     }
 
-    final List<Map<String, Object?>> encoded = current.map((PetRecord pet) {
-      if (pet.id != existing!.id) {
-        return pet.toMap();
-      }
-      return PetRecord(
-        id: pet.id,
-        remoteId: remoteId ?? pet.remoteId,
-        name: name,
-        photoPath: photoPath,
-        syncStatus: syncStatus,
-        lastModifiedAt: remoteLastModifiedAt,
-        createdAt: pet.createdAt,
-        updatedAt: DateTime.now(),
-        needsSync: false,
-      ).toMap();
-    }).toList(growable: false);
+    final List<Map<String, Object?>> encoded = current
+        .map((PetRecord pet) {
+          if (pet.id != existing!.id) {
+            return pet.toMap();
+          }
+          return PetRecord(
+            id: pet.id,
+            remoteId: remoteId ?? pet.remoteId,
+            name: name,
+            photoPath: photoPath,
+            syncStatus: syncStatus,
+            lastModifiedAt: remoteLastModifiedAt,
+            createdAt: pet.createdAt,
+            updatedAt: DateTime.now(),
+            needsSync: false,
+          ).toMap();
+        })
+        .toList(growable: false);
 
     await prefs.setString(_petsKey, jsonEncode(encoded));
   }
@@ -501,7 +546,11 @@ class LocalDatabaseManager {
     final String raw = prefs.getString(_routesKey)!;
     final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
     return decoded
-        .map((dynamic row) => RouteRecord.fromMap((row as Map<String, dynamic>).cast<String, Object?>()))
+        .map(
+          (dynamic row) => RouteRecord.fromMap(
+            (row as Map<String, dynamic>).cast<String, Object?>(),
+          ),
+        )
         .where((RouteRecord route) => route.needsSync)
         .toList(growable: false);
   }
@@ -517,26 +566,32 @@ class LocalDatabaseManager {
     final String raw = prefs.getString(_routesKey)!;
     final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
     final List<RouteRecord> current = decoded
-        .map((dynamic row) => RouteRecord.fromMap((row as Map<String, dynamic>).cast<String, Object?>()))
+        .map(
+          (dynamic row) => RouteRecord.fromMap(
+            (row as Map<String, dynamic>).cast<String, Object?>(),
+          ),
+        )
         .toList(growable: false);
 
-    final List<Map<String, Object?>> encoded = current.map((RouteRecord route) {
-      if (route.id != routeId) {
-        return route.toMap();
-      }
+    final List<Map<String, Object?>> encoded = current
+        .map((RouteRecord route) {
+          if (route.id != routeId) {
+            return route.toMap();
+          }
 
-      return RouteRecord(
-        id: route.id,
-        remoteId: remoteId ?? route.remoteId,
-        name: route.name,
-        points: route.points,
-        syncStatus: syncStatus,
-        lastModifiedAt: lastModifiedAt ?? DateTime.now(),
-        createdAt: route.createdAt,
-        updatedAt: DateTime.now(),
-        needsSync: false,
-      ).toMap();
-    }).toList(growable: false);
+          return RouteRecord(
+            id: route.id,
+            remoteId: remoteId ?? route.remoteId,
+            name: route.name,
+            points: route.points,
+            syncStatus: syncStatus,
+            lastModifiedAt: lastModifiedAt ?? DateTime.now(),
+            createdAt: route.createdAt,
+            updatedAt: DateTime.now(),
+            needsSync: false,
+          ).toMap();
+        })
+        .toList(growable: false);
 
     await prefs.setString(_routesKey, jsonEncode(encoded));
   }
@@ -554,7 +609,8 @@ class LocalDatabaseManager {
 
     RouteRecord? existing;
     for (final RouteRecord route in current) {
-      if (route.id == localId || (remoteId != null && route.remoteId == remoteId)) {
+      if (route.id == localId ||
+          (remoteId != null && route.remoteId == remoteId)) {
         existing = route;
         break;
       }
@@ -562,7 +618,10 @@ class LocalDatabaseManager {
 
     final int nextId = current.isEmpty
         ? 1
-        : current.map((RouteRecord route) => route.id).reduce((int a, int b) => a > b ? a : b) + 1;
+        : current
+                  .map((RouteRecord route) => route.id)
+                  .reduce((int a, int b) => a > b ? a : b) +
+              1;
 
     if (existing == null) {
       final RouteRecord inserted = RouteRecord(
@@ -585,26 +644,29 @@ class LocalDatabaseManager {
       return;
     }
 
-    if (existing.needsSync && existing.lastModifiedAt.isAfter(remoteLastModifiedAt)) {
+    if (existing.needsSync &&
+        existing.lastModifiedAt.isAfter(remoteLastModifiedAt)) {
       return;
     }
 
-    final List<Map<String, Object?>> encoded = current.map((RouteRecord route) {
-      if (route.id != existing!.id) {
-        return route.toMap();
-      }
-      return RouteRecord(
-        id: route.id,
-        remoteId: remoteId ?? route.remoteId,
-        name: name,
-        points: points,
-        syncStatus: syncStatus,
-        lastModifiedAt: remoteLastModifiedAt,
-        createdAt: route.createdAt,
-        updatedAt: DateTime.now(),
-        needsSync: false,
-      ).toMap();
-    }).toList(growable: false);
+    final List<Map<String, Object?>> encoded = current
+        .map((RouteRecord route) {
+          if (route.id != existing!.id) {
+            return route.toMap();
+          }
+          return RouteRecord(
+            id: route.id,
+            remoteId: remoteId ?? route.remoteId,
+            name: name,
+            points: points,
+            syncStatus: syncStatus,
+            lastModifiedAt: remoteLastModifiedAt,
+            createdAt: route.createdAt,
+            updatedAt: DateTime.now(),
+            needsSync: false,
+          ).toMap();
+        })
+        .toList(growable: false);
 
     await prefs.setString(_routesKey, jsonEncode(encoded));
   }
@@ -613,7 +675,9 @@ class LocalDatabaseManager {
 
   Future<List<HazardReportRecord>> getHazardReportsNeedingSync() async {
     final List<HazardReportRecord> hazards = await getHazardReports();
-    return hazards.where((HazardReportRecord h) => h.needsSync).toList(growable: false);
+    return hazards
+        .where((HazardReportRecord h) => h.needsSync)
+        .toList(growable: false);
   }
 
   Future<void> markHazardAsSynced({
@@ -626,32 +690,34 @@ class LocalDatabaseManager {
     await _ensureDefaultUser(prefs);
     final List<HazardReportRecord> current = await getHazardReports();
 
-    final List<Map<String, Object?>> encoded = current.map((HazardReportRecord report) {
-      if (report.localUuid != localUuid) {
-        return report.toMap();
-      }
-      return HazardReportRecord(
-        id: report.id,
-        localUuid: report.localUuid,
-        remoteId: remoteId ?? report.remoteId,
-        syncStatus: syncStatus,
-        lastModifiedAt: lastModifiedAt ?? DateTime.now(),
-        incidentLatitude: report.incidentLatitude,
-        incidentLongitude: report.incidentLongitude,
-        impactRadiusMeters: report.impactRadiusMeters,
-        categoryCode: report.categoryCode,
-        narrativeDescription: report.narrativeDescription,
-        reportedAt: report.reportedAt,
-        estimatedDurationCode: report.estimatedDurationCode,
-        riskLevelCode: report.riskLevelCode,
-        evidencePhotoUrl: report.evidencePhotoUrl,
-        reportedByUsername: report.reportedByUsername,
-        comments: report.comments,
-        createdAt: report.createdAt,
-        updatedAt: DateTime.now(),
-        needsSync: false,
-      ).toMap();
-    }).toList(growable: false);
+    final List<Map<String, Object?>> encoded = current
+        .map((HazardReportRecord report) {
+          if (report.localUuid != localUuid) {
+            return report.toMap();
+          }
+          return HazardReportRecord(
+            id: report.id,
+            localUuid: report.localUuid,
+            remoteId: remoteId ?? report.remoteId,
+            syncStatus: syncStatus,
+            lastModifiedAt: lastModifiedAt ?? DateTime.now(),
+            incidentLatitude: report.incidentLatitude,
+            incidentLongitude: report.incidentLongitude,
+            impactRadiusMeters: report.impactRadiusMeters,
+            categoryCode: report.categoryCode,
+            narrativeDescription: report.narrativeDescription,
+            reportedAt: report.reportedAt,
+            estimatedDurationCode: report.estimatedDurationCode,
+            riskLevelCode: report.riskLevelCode,
+            evidencePhotoUrl: report.evidencePhotoUrl,
+            reportedByUsername: report.reportedByUsername,
+            comments: report.comments,
+            createdAt: report.createdAt,
+            updatedAt: DateTime.now(),
+            needsSync: false,
+          ).toMap();
+        })
+        .toList(growable: false);
 
     await prefs.setString(_hazardsKey, jsonEncode(encoded));
   }
@@ -671,6 +737,7 @@ class LocalDatabaseManager {
     required DateTime reportedAt,
     required String? evidencePhotoUrl,
     required String reportedByUsername,
+    String? commentsJson,
   }) async {
     final SharedPreferences prefs = await _prefs;
     await _ensureDefaultUser(prefs);
@@ -678,7 +745,8 @@ class LocalDatabaseManager {
 
     HazardReportRecord? existing;
     for (final HazardReportRecord report in current) {
-      if (report.localUuid == localUuid || (remoteId != null && report.remoteId == remoteId)) {
+      if (report.localUuid == localUuid ||
+          (remoteId != null && report.remoteId == remoteId)) {
         existing = report;
         break;
       }
@@ -686,9 +754,16 @@ class LocalDatabaseManager {
 
     final int nextId = current.isEmpty
         ? 1
-        : current.map((HazardReportRecord report) => report.id).reduce((int a, int b) => a > b ? a : b) + 1;
+        : current
+                  .map((HazardReportRecord report) => report.id)
+                  .reduce((int a, int b) => a > b ? a : b) +
+              1;
 
     if (existing == null) {
+      final List<HazardCommentRecord> parsedComments = commentsJson == null
+          ? const <HazardCommentRecord>[]
+          : _decodeHazardComments(commentsJson);
+
       final HazardReportRecord inserted = HazardReportRecord(
         id: nextId,
         localUuid: localUuid,
@@ -705,7 +780,7 @@ class LocalDatabaseManager {
         riskLevelCode: riskLevelCode,
         evidencePhotoUrl: evidencePhotoUrl,
         reportedByUsername: reportedByUsername,
-        comments: const <HazardCommentRecord>[],
+        comments: parsedComments,
         createdAt: remoteLastModifiedAt,
         updatedAt: remoteLastModifiedAt,
         needsSync: false,
@@ -719,38 +794,61 @@ class LocalDatabaseManager {
       return;
     }
 
-    if (existing.needsSync && existing.lastModifiedAt.isAfter(remoteLastModifiedAt)) {
+    if (existing.needsSync &&
+        existing.lastModifiedAt.isAfter(remoteLastModifiedAt)) {
       return;
     }
 
-    final List<Map<String, Object?>> encoded = current.map((HazardReportRecord report) {
-      if (report.id != existing!.id) {
-        return report.toMap();
-      }
-      return HazardReportRecord(
-        id: report.id,
-        localUuid: localUuid,
-        remoteId: remoteId ?? report.remoteId,
-        syncStatus: syncStatus,
-        lastModifiedAt: remoteLastModifiedAt,
-        incidentLatitude: incidentLatitude,
-        incidentLongitude: incidentLongitude,
-        impactRadiusMeters: impactRadiusMeters,
-        categoryCode: categoryCode,
-        narrativeDescription: narrativeDescription,
-        reportedAt: reportedAt,
-        estimatedDurationCode: estimatedDurationCode,
-        riskLevelCode: riskLevelCode,
-        evidencePhotoUrl: evidencePhotoUrl,
-        reportedByUsername: reportedByUsername,
-        comments: report.comments,
-        createdAt: report.createdAt,
-        updatedAt: DateTime.now(),
-        needsSync: false,
-      ).toMap();
-    }).toList(growable: false);
+    final List<Map<String, Object?>> encoded = current
+        .map((HazardReportRecord report) {
+          if (report.id != existing!.id) {
+            return report.toMap();
+          }
+
+          final List<HazardCommentRecord> resolvedComments =
+              commentsJson == null
+              ? report.comments
+              : _decodeHazardComments(commentsJson);
+
+          return HazardReportRecord(
+            id: report.id,
+            localUuid: localUuid,
+            remoteId: remoteId ?? report.remoteId,
+            syncStatus: syncStatus,
+            lastModifiedAt: remoteLastModifiedAt,
+            incidentLatitude: incidentLatitude,
+            incidentLongitude: incidentLongitude,
+            impactRadiusMeters: impactRadiusMeters,
+            categoryCode: categoryCode,
+            narrativeDescription: narrativeDescription,
+            reportedAt: reportedAt,
+            estimatedDurationCode: estimatedDurationCode,
+            riskLevelCode: riskLevelCode,
+            evidencePhotoUrl: evidencePhotoUrl,
+            reportedByUsername: reportedByUsername,
+            comments: resolvedComments,
+            createdAt: report.createdAt,
+            updatedAt: DateTime.now(),
+            needsSync: false,
+          ).toMap();
+        })
+        .toList(growable: false);
 
     await prefs.setString(_hazardsKey, jsonEncode(encoded));
+  }
+
+  List<HazardCommentRecord> _decodeHazardComments(String commentsJson) {
+    try {
+      final List<dynamic> decoded = jsonDecode(commentsJson) as List<dynamic>;
+      return decoded
+          .map(
+            (dynamic row) =>
+                HazardCommentRecord.fromMap((row as Map<String, dynamic>)),
+          )
+          .toList(growable: false);
+    } catch (_) {
+      return const <HazardCommentRecord>[];
+    }
   }
 
   String _generateLocalUuid() {

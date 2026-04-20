@@ -230,16 +230,12 @@ class LocalDatabaseManager {
           await db.execute(
             'ALTER TABLE $_userTable ADD COLUMN backend_user_id INTEGER',
           );
-          await db.execute(
-            'ALTER TABLE $_userTable ADD COLUMN email TEXT',
-          );
+          await db.execute('ALTER TABLE $_userTable ADD COLUMN email TEXT');
           await db.execute(
             'ALTER TABLE $_userTable ADD COLUMN access_token TEXT',
           );
 
-          await db.execute(
-            'ALTER TABLE $_petsTable ADD COLUMN remote_id TEXT',
-          );
+          await db.execute('ALTER TABLE $_petsTable ADD COLUMN remote_id TEXT');
           await db.execute(
             'ALTER TABLE $_petsTable ADD COLUMN sync_status TEXT NOT NULL DEFAULT "created"',
           );
@@ -321,27 +317,21 @@ class LocalDatabaseManager {
     return rows.map(PetRecord.fromMap).toList(growable: false);
   }
 
-  Future<int> addPet({
-    required String name,
-    String? photoPath,
-  }) async {
+  Future<int> addPet({required String name, String? photoPath}) async {
     final Database db = await database;
     final int now = DateTime.now().millisecondsSinceEpoch;
 
-    return db.insert(
-      _petsTable,
-      <String, Object?>{
-        'remote_id': null,
-        'name': name,
-        'photo_path': photoPath,
-        'sync_status': 'created',
-        'last_modified_at': now,
-        'synced_at': null,
-        'created_at': now,
-        'updated_at': now,
-        'needs_sync': 1,
-      },
-    );
+    return db.insert(_petsTable, <String, Object?>{
+      'remote_id': null,
+      'name': name,
+      'photo_path': photoPath,
+      'sync_status': 'created',
+      'last_modified_at': now,
+      'synced_at': null,
+      'created_at': now,
+      'updated_at': now,
+      'needs_sync': 1,
+    });
   }
 
   Future<int> getPetsCount() async {
@@ -436,8 +426,7 @@ class LocalDatabaseManager {
       updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
       needsSync: true,
     );
-    final Map<String, Object?> data = dummy.toMap()
-      ..remove('id');
+    final Map<String, Object?> data = dummy.toMap()..remove('id');
     return db.insert(_routesTable, data);
   }
 
@@ -629,7 +618,8 @@ class LocalDatabaseManager {
         'needs_sync': 0,
         'remote_id': remoteId,
         'sync_status': syncStatus,
-        'last_modified_at': (lastModifiedAt ?? DateTime.now()).millisecondsSinceEpoch,
+        'last_modified_at':
+            (lastModifiedAt ?? DateTime.now()).millisecondsSinceEpoch,
         'updated_at': now,
       },
       where: 'local_uuid = ?',
@@ -652,6 +642,7 @@ class LocalDatabaseManager {
     required DateTime reportedAt,
     required String? evidencePhotoUrl,
     required String reportedByUsername,
+    String? commentsJson,
   }) async {
     final Database db = await database;
     final List<Map<String, Object?>> rows = await db.query(
@@ -665,29 +656,26 @@ class LocalDatabaseManager {
     final int remoteMs = remoteLastModifiedAt.millisecondsSinceEpoch;
 
     if (rows.isEmpty) {
-      await db.insert(
-        _hazardsTable,
-        <String, Object?>{
-          'local_uuid': localUuid,
-          'remote_id': remoteId,
-          'sync_status': syncStatus,
-          'last_modified_at': remoteMs,
-          'incident_latitude': incidentLatitude,
-          'incident_longitude': incidentLongitude,
-          'impact_radius_meters': impactRadiusMeters,
-          'category_code': categoryCode,
-          'narrative_description': narrativeDescription,
-          'reported_at': reportedAt.millisecondsSinceEpoch,
-          'estimated_duration_code': estimatedDurationCode,
-          'risk_level_code': riskLevelCode,
-          'evidence_photo_url': evidencePhotoUrl,
-          'reported_by_username': reportedByUsername,
-          'comments_json': '[]',
-          'created_at': remoteMs,
-          'updated_at': remoteMs,
-          'needs_sync': 0,
-        },
-      );
+      await db.insert(_hazardsTable, <String, Object?>{
+        'local_uuid': localUuid,
+        'remote_id': remoteId,
+        'sync_status': syncStatus,
+        'last_modified_at': remoteMs,
+        'incident_latitude': incidentLatitude,
+        'incident_longitude': incidentLongitude,
+        'impact_radius_meters': impactRadiusMeters,
+        'category_code': categoryCode,
+        'narrative_description': narrativeDescription,
+        'reported_at': reportedAt.millisecondsSinceEpoch,
+        'estimated_duration_code': estimatedDurationCode,
+        'risk_level_code': riskLevelCode,
+        'evidence_photo_url': evidencePhotoUrl,
+        'reported_by_username': reportedByUsername,
+        'comments_json': commentsJson ?? '[]',
+        'created_at': remoteMs,
+        'updated_at': remoteMs,
+        'needs_sync': 0,
+      });
       return;
     }
 
@@ -714,6 +702,7 @@ class LocalDatabaseManager {
         'risk_level_code': riskLevelCode,
         'evidence_photo_url': evidencePhotoUrl,
         'reported_by_username': reportedByUsername,
+        'comments_json': commentsJson ?? local.toMap()['comments_json'],
         'updated_at': now,
         'needs_sync': 0,
       },
@@ -747,7 +736,8 @@ class LocalDatabaseManager {
         'needs_sync': 0,
         'remote_id': remoteId,
         'sync_status': syncStatus,
-        'last_modified_at': (lastModifiedAt ?? DateTime.now()).millisecondsSinceEpoch,
+        'last_modified_at':
+            (lastModifiedAt ?? DateTime.now()).millisecondsSinceEpoch,
         'updated_at': now,
       },
       where: 'id = ?',
@@ -775,20 +765,17 @@ class LocalDatabaseManager {
     final int remoteMs = remoteLastModifiedAt.millisecondsSinceEpoch;
 
     if (rows.isEmpty) {
-      await db.insert(
-        _petsTable,
-        <String, Object?>{
-          'remote_id': remoteId,
-          'name': name,
-          'photo_path': photoPath,
-          'sync_status': syncStatus,
-          'last_modified_at': remoteMs,
-          'synced_at': remoteMs,
-          'created_at': remoteMs,
-          'updated_at': remoteMs,
-          'needs_sync': 0,
-        },
-      );
+      await db.insert(_petsTable, <String, Object?>{
+        'remote_id': remoteId,
+        'name': name,
+        'photo_path': photoPath,
+        'sync_status': syncStatus,
+        'last_modified_at': remoteMs,
+        'synced_at': remoteMs,
+        'created_at': remoteMs,
+        'updated_at': remoteMs,
+        'needs_sync': 0,
+      });
       return;
     }
 
@@ -839,7 +826,8 @@ class LocalDatabaseManager {
         'needs_sync': 0,
         'remote_id': remoteId,
         'sync_status': syncStatus,
-        'last_modified_at': (lastModifiedAt ?? DateTime.now()).millisecondsSinceEpoch,
+        'last_modified_at':
+            (lastModifiedAt ?? DateTime.now()).millisecondsSinceEpoch,
         'updated_at': now,
       },
       where: 'id = ?',
@@ -865,23 +853,22 @@ class LocalDatabaseManager {
 
     final int now = DateTime.now().millisecondsSinceEpoch;
     final int remoteMs = remoteLastModifiedAt.millisecondsSinceEpoch;
-    final String pointsJson = jsonEncode(points.map((RoutePoint p) => p.toMap()).toList());
+    final String pointsJson = jsonEncode(
+      points.map((RoutePoint p) => p.toMap()).toList(),
+    );
 
     if (rows.isEmpty) {
-      await db.insert(
-        _routesTable,
-        <String, Object?>{
-          'remote_id': remoteId,
-          'name': name,
-          'points_json': pointsJson,
-          'sync_status': syncStatus,
-          'last_modified_at': remoteMs,
-          'synced_at': remoteMs,
-          'created_at': remoteMs,
-          'updated_at': remoteMs,
-          'needs_sync': 0,
-        },
-      );
+      await db.insert(_routesTable, <String, Object?>{
+        'remote_id': remoteId,
+        'name': name,
+        'points_json': pointsJson,
+        'sync_status': syncStatus,
+        'last_modified_at': remoteMs,
+        'synced_at': remoteMs,
+        'created_at': remoteMs,
+        'updated_at': remoteMs,
+        'needs_sync': 0,
+      });
       return;
     }
 

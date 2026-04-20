@@ -28,6 +28,10 @@ Route::middleware('api.token')->group(function (): void {
     // Obtener todos los peligros
     Route::get('/hazards', [HazardReportController::class, 'index']);
 
+    // Comentarios por peligro
+    Route::get('/hazards/{hazardReport}/comments', [HazardReportController::class, 'comments']);
+    Route::post('/hazards/{hazardReport}/comments', [HazardReportController::class, 'storeComment']);
+
     // Obtener peligros no sincronizados
     Route::get('/hazards/unsynced', [HazardReportController::class, 'getUnsynced']);
 

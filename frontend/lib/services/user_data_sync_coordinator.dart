@@ -15,8 +15,8 @@ class UserDataSyncCoordinator {
   UserDataSyncCoordinator({
     required LocalDatabaseManager databaseManager,
     http.Client? httpClient,
-  })  : _databaseManager = databaseManager,
-        _apiClient = BackendApiClient(httpClient: httpClient ?? http.Client());
+  }) : _databaseManager = databaseManager,
+       _apiClient = BackendApiClient(httpClient: httpClient ?? http.Client());
 
   final LocalDatabaseManager _databaseManager;
   final BackendApiClient _apiClient;
@@ -61,7 +61,8 @@ class UserDataSyncCoordinator {
 
   Future<String?> _currentAccessToken() async {
     try {
-      final LocalUserProfile profile = await _databaseManager.getLocalUserProfile();
+      final LocalUserProfile profile = await _databaseManager
+          .getLocalUserProfile();
       return profile.accessToken;
     } catch (_) {
       return null;
@@ -70,9 +71,13 @@ class UserDataSyncCoordinator {
 
   Future<void> scheduleSync() async {
     _syncQueued = true;
-    _log('scheduleSync solicitado. queued=$_syncQueued inProgress=$_syncInProgress');
+    _log(
+      'scheduleSync solicitado. queued=$_syncQueued inProgress=$_syncInProgress',
+    );
     if (_syncInProgress) {
-      _log('scheduleSync en cola: se ejecutará al finalizar la sincronización actual.');
+      _log(
+        'scheduleSync en cola: se ejecutará al finalizar la sincronización actual.',
+      );
       return;
     }
     await _drainSyncQueue();
@@ -82,7 +87,9 @@ class UserDataSyncCoordinator {
     _syncQueued = true;
     _log('syncNow solicitado. queued=$_syncQueued inProgress=$_syncInProgress');
     if (_syncInProgress) {
-      _log('syncNow en cola: se ejecutará al finalizar la sincronización actual.');
+      _log(
+        'syncNow en cola: se ejecutará al finalizar la sincronización actual.',
+      );
       return;
     }
     await _drainSyncQueue();
@@ -97,7 +104,9 @@ class UserDataSyncCoordinator {
     try {
       while (_syncQueued) {
         _syncQueued = false;
-        _log('sync cycle start: push local + pull remoto. URLs: ${_apiBaseUrls.join(', ')}');
+        _log(
+          'sync cycle start: push local + pull remoto. URLs: ${_apiBaseUrls.join(', ')}',
+        );
         try {
           await _pushLocalPets();
           await _pushLocalRoutes();
@@ -118,8 +127,8 @@ class UserDataSyncCoordinator {
   }
 
   Future<void> _pushLocalHazards() async {
-    final List<HazardReportRecord> pending =
-        await _databaseManager.getHazardReportsNeedingSync();
+    final List<HazardReportRecord> pending = await _databaseManager
+        .getHazardReportsNeedingSync();
 
     _log('push: hazards pendientes=${pending.length}');
 
@@ -130,27 +139,35 @@ class UserDataSyncCoordinator {
 
     final Map<String, Object?> payload = <String, Object?>{
       'hazards': pending
-          .map((HazardReportRecord hazard) => <String, Object?>{
-                'local_id': hazard.localUuid,
-                'remote_id': hazard.remoteId,
-                'incident_latitude': hazard.incidentLatitude,
-                'incident_longitude': hazard.incidentLongitude,
-                'impact_radius_meters': hazard.impactRadiusMeters,
-                'risk_level_code': _normalizeRiskLevelCode(hazard.riskLevelCode),
-            'category_code': _normalizeCategoryCode(hazard.categoryCode),
-            'narrative_description': hazard.narrativeDescription,
-            'description': hazard.narrativeDescription,
-            'estimated_duration_code':
-              _normalizeDurationCode(hazard.estimatedDurationCode),
-            'reported_at': _toBackendDateTime(hazard.reportedAt),
-            'evidence_photo_url': hazard.evidencePhotoUrl,
-            'reported_by_username': hazard.reportedByUsername,
-                'last_modified_at': _toBackendDateTime(hazard.lastModifiedAt),
-              })
+          .map(
+            (HazardReportRecord hazard) => <String, Object?>{
+              'local_id': hazard.localUuid,
+              'remote_id': hazard.remoteId,
+              'incident_latitude': hazard.incidentLatitude,
+              'incident_longitude': hazard.incidentLongitude,
+              'impact_radius_meters': hazard.impactRadiusMeters,
+              'risk_level_code': _normalizeRiskLevelCode(hazard.riskLevelCode),
+              'category_code': _normalizeCategoryCode(hazard.categoryCode),
+              'narrative_description': hazard.narrativeDescription,
+              'description': hazard.narrativeDescription,
+              'estimated_duration_code': _normalizeDurationCode(
+                hazard.estimatedDurationCode,
+              ),
+              'reported_at': _toBackendDateTime(hazard.reportedAt),
+              'evidence_photo_url': hazard.evidencePhotoUrl,
+              'reported_by_username': hazard.reportedByUsername,
+              'comments': hazard.comments
+                  .map((HazardCommentRecord comment) => comment.toMap())
+                  .toList(growable: false),
+              'last_modified_at': _toBackendDateTime(hazard.lastModifiedAt),
+            },
+          )
           .toList(growable: false),
     };
 
-    _log('push payload local_ids=${pending.map((HazardReportRecord h) => h.localUuid).join(', ')}');
+    _log(
+      'push payload local_ids=${pending.map((HazardReportRecord h) => h.localUuid).join(', ')}',
+    );
 
     final http.Response? response = await _postWithFallback(
       path: '/hazards/sync',
@@ -175,12 +192,15 @@ class UserDataSyncCoordinator {
 
     final Map<String, dynamic> syncResults =
         (responseMap['sync_results'] as Map<String, dynamic>?) ??
-            <String, dynamic>{};
+        <String, dynamic>{};
     final List<dynamic> details =
         (syncResults['details'] as List<dynamic>?) ?? <dynamic>[];
 
     final Set<String> failedLocalIds = details
-        .map((dynamic item) => (item as Map<String, dynamic>)['local_id']?.toString())
+        .map(
+          (dynamic item) =>
+              (item as Map<String, dynamic>)['local_id']?.toString(),
+        )
         .whereType<String>()
         .toSet();
 
@@ -225,7 +245,8 @@ class UserDataSyncCoordinator {
 
       final Map<String, dynamic> payload =
           jsonDecode(response.body) as Map<String, dynamic>;
-      final List<dynamic> data = (payload['data'] as List<dynamic>? ?? <dynamic>[]);
+      final List<dynamic> data =
+          (payload['data'] as List<dynamic>? ?? <dynamic>[]);
 
       _log('pull: page=$page recibió ${data.length} hazards remotos.');
 
@@ -241,37 +262,49 @@ class UserDataSyncCoordinator {
           localUuid: localUuid,
           remoteId: remoteId,
           syncStatus: syncStatus,
-          remoteLastModifiedAt: _parseBackendDateTime(hazard['last_modified_at']),
+          remoteLastModifiedAt: _parseBackendDateTime(
+            hazard['last_modified_at'],
+          ),
           incidentLatitude:
               (hazard['incident_latitude'] as num?)?.toDouble() ?? 0,
           incidentLongitude:
               (hazard['incident_longitude'] as num?)?.toDouble() ?? 0,
           impactRadiusMeters:
               (hazard['impact_radius_meters'] as num?)?.round() ?? 100,
-          categoryCode:
-            _normalizeCategoryCode(hazard['category_code']?.toString()),
-          riskLevelCode:
-            _normalizeRiskLevelCode(hazard['risk_level_code']?.toString()),
+          categoryCode: _normalizeCategoryCode(
+            hazard['category_code']?.toString(),
+          ),
+          riskLevelCode: _normalizeRiskLevelCode(
+            hazard['risk_level_code']?.toString(),
+          ),
           narrativeDescription:
-            hazard['narrative_description']?.toString() ??
+              hazard['narrative_description']?.toString() ??
               hazard['description']?.toString() ??
               '',
           estimatedDurationCode: _normalizeDurationCode(
-          hazard['estimated_duration_code']?.toString(),
+            hazard['estimated_duration_code']?.toString(),
           ),
           reportedAt: _parseBackendDateTime(hazard['reported_at']),
           evidencePhotoUrl: hazard['evidence_photo_url']?.toString(),
           reportedByUsername:
-            hazard['reported_by_username']?.toString() ?? 'Anónimo',
+              hazard['reported_by_username']?.toString() ?? 'Anónimo',
+          commentsJson:
+              hazard['comments_json']?.toString() ??
+              jsonEncode(hazard['comments'] ?? <dynamic>[]),
         );
 
-        _log('pull: upsert local_uuid=$localUuid remote_id=$remoteId status=$syncStatus');
+        _log(
+          'pull: upsert local_uuid=$localUuid remote_id=$remoteId status=$syncStatus',
+        );
       }
 
       final Map<String, dynamic> pagination =
-          (payload['pagination'] as Map<String, dynamic>?) ?? <String, dynamic>{};
-      final int currentPage = (pagination['current_page'] as num?)?.toInt() ?? page;
-      final int lastPage = (pagination['last_page'] as num?)?.toInt() ?? currentPage;
+          (payload['pagination'] as Map<String, dynamic>?) ??
+          <String, dynamic>{};
+      final int currentPage =
+          (pagination['current_page'] as num?)?.toInt() ?? page;
+      final int lastPage =
+          (pagination['last_page'] as num?)?.toInt() ?? currentPage;
 
       if (currentPage >= lastPage) {
         _log('pull: fin en page=$currentPage/$lastPage');
@@ -294,20 +327,24 @@ class UserDataSyncCoordinator {
       path: '/pets/sync',
       body: <String, Object?>{
         'pets': pending
-            .map((PetRecord pet) => <String, Object?>{
-                  'local_id': pet.id.toString(),
-                  'remote_id': pet.remoteId,
-                  'name': pet.name,
-                  'photo_path': pet.photoPath,
-                  'sync_status': pet.syncStatus,
-                  'last_modified_at': _toBackendDateTime(pet.lastModifiedAt),
-                })
+            .map(
+              (PetRecord pet) => <String, Object?>{
+                'local_id': pet.id.toString(),
+                'remote_id': pet.remoteId,
+                'name': pet.name,
+                'photo_path': pet.photoPath,
+                'sync_status': pet.syncStatus,
+                'last_modified_at': _toBackendDateTime(pet.lastModifiedAt),
+              },
+            )
             .toList(growable: false),
       },
       bearerToken: await _currentAccessToken(),
     );
 
-    if (response == null || response.statusCode < 200 || response.statusCode >= 300) {
+    if (response == null ||
+        response.statusCode < 200 ||
+        response.statusCode >= 300) {
       _log('push pets: backend inalcanzable o error.');
       return;
     }
@@ -323,7 +360,8 @@ class UserDataSyncCoordinator {
   }
 
   Future<void> _pushLocalRoutes() async {
-    final List<RouteRecord> pending = await _databaseManager.getRoutesNeedingSync();
+    final List<RouteRecord> pending = await _databaseManager
+        .getRoutesNeedingSync();
     _log('push routes: pendientes=${pending.length}');
 
     if (pending.isEmpty) {
@@ -334,20 +372,26 @@ class UserDataSyncCoordinator {
       path: '/routes/sync',
       body: <String, Object?>{
         'routes': pending
-            .map((RouteRecord route) => <String, Object?>{
-                  'local_id': route.id.toString(),
-                  'remote_id': route.remoteId,
-                  'name': route.name,
-                  'points_json': jsonEncode(route.points.map((RoutePoint p) => p.toMap()).toList()),
-                  'sync_status': route.syncStatus,
-                  'last_modified_at': _toBackendDateTime(route.lastModifiedAt),
-                })
+            .map(
+              (RouteRecord route) => <String, Object?>{
+                'local_id': route.id.toString(),
+                'remote_id': route.remoteId,
+                'name': route.name,
+                'points_json': jsonEncode(
+                  route.points.map((RoutePoint p) => p.toMap()).toList(),
+                ),
+                'sync_status': route.syncStatus,
+                'last_modified_at': _toBackendDateTime(route.lastModifiedAt),
+              },
+            )
             .toList(growable: false),
       },
       bearerToken: await _currentAccessToken(),
     );
 
-    if (response == null || response.statusCode < 200 || response.statusCode >= 300) {
+    if (response == null ||
+        response.statusCode < 200 ||
+        response.statusCode >= 300) {
       _log('push routes: backend inalcanzable o error.');
       return;
     }
@@ -377,17 +421,24 @@ class UserDataSyncCoordinator {
       }
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        _log('pull pets failed [${response.statusCode}], body=${response.body}');
+        _log(
+          'pull pets failed [${response.statusCode}], body=${response.body}',
+        );
         return;
       }
 
-      final Map<String, dynamic> payload = jsonDecode(response.body) as Map<String, dynamic>;
-      final List<dynamic> data = (payload['data'] as List<dynamic>? ?? <dynamic>[]);
+      final Map<String, dynamic> payload =
+          jsonDecode(response.body) as Map<String, dynamic>;
+      final List<dynamic> data =
+          (payload['data'] as List<dynamic>? ?? <dynamic>[]);
 
       for (final dynamic item in data) {
         final Map<String, dynamic> pet = item as Map<String, dynamic>;
         await _databaseManager.upsertPetFromRemote(
-          localId: int.tryParse(pet['local_id']?.toString() ?? '') ?? (pet['id'] as num?)?.toInt() ?? 0,
+          localId:
+              int.tryParse(pet['local_id']?.toString() ?? '') ??
+              (pet['id'] as num?)?.toInt() ??
+              0,
           remoteId: pet['remote_id']?.toString() ?? pet['id']?.toString(),
           syncStatus: pet['sync_status']?.toString() ?? 'synced',
           remoteLastModifiedAt: _parseBackendDateTime(pet['last_modified_at']),
@@ -397,9 +448,12 @@ class UserDataSyncCoordinator {
       }
 
       final Map<String, dynamic> pagination =
-          (payload['pagination'] as Map<String, dynamic>?) ?? <String, dynamic>{};
-      final int currentPage = (pagination['current_page'] as num?)?.toInt() ?? page;
-      final int lastPage = (pagination['last_page'] as num?)?.toInt() ?? currentPage;
+          (payload['pagination'] as Map<String, dynamic>?) ??
+          <String, dynamic>{};
+      final int currentPage =
+          (pagination['current_page'] as num?)?.toInt() ?? page;
+      final int lastPage =
+          (pagination['last_page'] as num?)?.toInt() ?? currentPage;
       if (currentPage >= lastPage) {
         break;
       }
@@ -422,35 +476,50 @@ class UserDataSyncCoordinator {
       }
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        _log('pull routes failed [${response.statusCode}], body=${response.body}');
+        _log(
+          'pull routes failed [${response.statusCode}], body=${response.body}',
+        );
         return;
       }
 
-      final Map<String, dynamic> payload = jsonDecode(response.body) as Map<String, dynamic>;
-      final List<dynamic> data = (payload['data'] as List<dynamic>? ?? <dynamic>[]);
+      final Map<String, dynamic> payload =
+          jsonDecode(response.body) as Map<String, dynamic>;
+      final List<dynamic> data =
+          (payload['data'] as List<dynamic>? ?? <dynamic>[]);
 
       for (final dynamic item in data) {
         final Map<String, dynamic> route = item as Map<String, dynamic>;
         final String pointsJson = route['points_json']?.toString() ?? '[]';
         final List<dynamic> rawPoints = jsonDecode(pointsJson) as List<dynamic>;
         final List<RoutePoint> points = rawPoints
-            .map((dynamic point) => RoutePoint.fromMap((point as Map<String, dynamic>)))
+            .map(
+              (dynamic point) =>
+                  RoutePoint.fromMap((point as Map<String, dynamic>)),
+            )
             .toList(growable: false);
 
         await _databaseManager.upsertRouteFromRemote(
-          localId: int.tryParse(route['local_id']?.toString() ?? '') ?? (route['id'] as num?)?.toInt() ?? 0,
+          localId:
+              int.tryParse(route['local_id']?.toString() ?? '') ??
+              (route['id'] as num?)?.toInt() ??
+              0,
           remoteId: route['remote_id']?.toString() ?? route['id']?.toString(),
           syncStatus: route['sync_status']?.toString() ?? 'synced',
-          remoteLastModifiedAt: _parseBackendDateTime(route['last_modified_at']),
+          remoteLastModifiedAt: _parseBackendDateTime(
+            route['last_modified_at'],
+          ),
           name: route['name']?.toString() ?? '',
           points: points,
         );
       }
 
       final Map<String, dynamic> pagination =
-          (payload['pagination'] as Map<String, dynamic>?) ?? <String, dynamic>{};
-      final int currentPage = (pagination['current_page'] as num?)?.toInt() ?? page;
-      final int lastPage = (pagination['last_page'] as num?)?.toInt() ?? currentPage;
+          (payload['pagination'] as Map<String, dynamic>?) ??
+          <String, dynamic>{};
+      final int currentPage =
+          (pagination['current_page'] as num?)?.toInt() ?? page;
+      final int lastPage =
+          (pagination['last_page'] as num?)?.toInt() ?? currentPage;
       if (currentPage >= lastPage) {
         break;
       }
