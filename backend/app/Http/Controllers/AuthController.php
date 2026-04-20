@@ -102,6 +102,38 @@ class AuthController extends Controller
         ]);
     }
 
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autenticado',
+            ], 401);
+        }
+
+        $validated = $request->validate([
+            'name' => ['sometimes', 'string', 'max:255'],
+            'profile_photo_url' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $user->fill([
+            'name' => $validated['name'] ?? $user->name,
+            'profile_photo_url' => $validated['profile_photo_url'] ?? null,
+        ]);
+
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Perfil actualizado correctamente',
+            'data' => [
+                'user' => $this->formatUser($user),
+            ],
+        ]);
+    }
+
     private function issueToken(User $user, string $name): array
     {
         $plainToken = Str::random(64);
@@ -124,6 +156,7 @@ class AuthController extends Controller
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
+            'profile_photo_url' => $user->profile_photo_url,
         ];
     }
 }

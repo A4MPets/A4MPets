@@ -60,7 +60,7 @@ class UserLocalRepository {
     final LocalUserProfile profile = LocalUserProfile(
       id: user['id'] as int,
       username: user['name'] as String,
-      avatarPath: null,
+      avatarPath: user['profile_photo_url']?.toString(),
       isAuthenticated: true,
       backendUserId: user['id'] as int,
       email: user['email'] as String?,
@@ -102,7 +102,7 @@ class UserLocalRepository {
     final LocalUserProfile profile = LocalUserProfile(
       id: user['id'] as int,
       username: user['name'] as String,
-      avatarPath: null,
+      avatarPath: user['profile_photo_url']?.toString(),
       isAuthenticated: true,
       backendUserId: user['id'] as int,
       email: user['email'] as String?,
@@ -132,6 +132,25 @@ class UserLocalRepository {
 
     await databaseManager.clearUserSessionData();
     await databaseManager.saveLocalUserProfile(LocalUserProfile.guest());
+  }
+
+  Future<void> updateProfileAvatar({required String? avatarPath}) async {
+    final LocalUserProfile current = await databaseManager
+        .getLocalUserProfile();
+    final LocalUserProfile updated = LocalUserProfile(
+      id: current.id,
+      username: current.username,
+      avatarPath: avatarPath,
+      isAuthenticated: current.isAuthenticated,
+      backendUserId: current.backendUserId,
+      email: current.email,
+      accessToken: current.accessToken,
+      lastSyncedAt: null,
+    );
+
+    await databaseManager.saveLocalUserProfile(updated);
+    await databaseManager.markUserDataForFutureSync();
+    unawaited(syncCoordinator.scheduleSync());
   }
 
   Future<List<PetRecord>> getPets() {

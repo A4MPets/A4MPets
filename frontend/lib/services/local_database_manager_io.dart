@@ -685,6 +685,11 @@ class LocalDatabaseManager {
       return;
     }
 
+    final String? resolvedEvidencePhoto = _preferOfflineImageSource(
+      currentSource: local.evidencePhotoUrl,
+      remoteSource: evidencePhotoUrl,
+    );
+
     await db.update(
       _hazardsTable,
       <String, Object?>{
@@ -700,7 +705,7 @@ class LocalDatabaseManager {
         'reported_at': reportedAt.millisecondsSinceEpoch,
         'estimated_duration_code': estimatedDurationCode,
         'risk_level_code': riskLevelCode,
-        'evidence_photo_url': evidencePhotoUrl,
+        'evidence_photo_url': resolvedEvidencePhoto,
         'reported_by_username': reportedByUsername,
         'comments_json': commentsJson ?? local.toMap()['comments_json'],
         'updated_at': now,
@@ -784,12 +789,17 @@ class LocalDatabaseManager {
       return;
     }
 
+    final String? resolvedPhotoPath = _preferOfflineImageSource(
+      currentSource: local.photoPath,
+      remoteSource: photoPath,
+    );
+
     await db.update(
       _petsTable,
       <String, Object?>{
         'remote_id': remoteId,
         'name': name,
-        'photo_path': photoPath,
+        'photo_path': resolvedPhotoPath,
         'sync_status': syncStatus,
         'last_modified_at': remoteMs,
         'synced_at': now,
@@ -902,5 +912,38 @@ class LocalDatabaseManager {
 
   Future<void> markUserDataForFutureSync() async {
     await database;
+  }
+
+  String? _preferOfflineImageSource({
+    required String? currentSource,
+    required String? remoteSource,
+  }) {
+    if (currentSource == null || currentSource.isEmpty) {
+      return remoteSource;
+    }
+
+    if (remoteSource == null || remoteSource.isEmpty) {
+      return currentSource;
+    }
+
+    if (_isRemoteUrl(currentSource)) {
+      return remoteSource;
+    }
+
+    // Keep local/base64 source if still available so the app keeps rendering images offline.
+    if (currentSource.startsWith('data:image')) {
+      return currentSource;
+    }
+
+    final File localFile = File(currentSource);
+    if (localFile.existsSync()) {
+      return currentSource;
+    }
+
+    return remoteSource;
+  }
+
+  bool _isRemoteUrl(String value) {
+    return value.startsWith('http://') || value.startsWith('https://');
   }
 }

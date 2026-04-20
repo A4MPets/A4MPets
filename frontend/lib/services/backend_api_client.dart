@@ -4,7 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class BackendApiClient {
-  BackendApiClient({http.Client? httpClient}) : _httpClient = httpClient ?? http.Client();
+  BackendApiClient({http.Client? httpClient})
+    : _httpClient = httpClient ?? http.Client();
 
   static const String configuredApiBaseUrl = String.fromEnvironment(
     'A4M_API_BASE_URL',
@@ -75,6 +76,33 @@ class BackendApiClient {
             .get(
               Uri.parse('$baseUrl$path'),
               headers: jsonHeaders(bearerToken: bearerToken),
+            )
+            .timeout(timeout);
+
+        if (response.statusCode < 500) {
+          return response;
+        }
+      } catch (_) {
+        // Try the next known local endpoint.
+      }
+    }
+
+    return null;
+  }
+
+  Future<http.Response?> putWithFallback(
+    String path, {
+    required Object body,
+    String? bearerToken,
+    Duration timeout = const Duration(seconds: 10),
+  }) async {
+    for (final String baseUrl in baseUrls) {
+      try {
+        final http.Response response = await _httpClient
+            .put(
+              Uri.parse('$baseUrl$path'),
+              headers: jsonHeaders(bearerToken: bearerToken),
+              body: jsonEncode(body),
             )
             .timeout(timeout);
 

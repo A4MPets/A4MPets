@@ -10,6 +10,7 @@ import '../models/pet_record.dart';
 import '../models/route_record.dart';
 import 'backend_api_client.dart';
 import 'local_database_manager.dart';
+import 'media_source_encoder.dart' as media_source_encoder;
 
 class UserDataSyncCoordinator {
   UserDataSyncCoordinator({
@@ -108,9 +109,11 @@ class UserDataSyncCoordinator {
           'sync cycle start: push local + pull remoto. URLs: ${_apiBaseUrls.join(', ')}',
         );
         try {
+          await _pushLocalUserProfile();
           await _pushLocalPets();
           await _pushLocalRoutes();
           await _pushLocalHazards();
+          await _pullRemoteUserProfile();
           await _pullRemotePets();
           await _pullRemoteRoutes();
           await _pullRemoteHazards();
@@ -137,32 +140,60 @@ class UserDataSyncCoordinator {
       return;
     }
 
+    final String? token = await _currentAccessToken();
+    final List<HazardReportRecord> transferableHazards = <HazardReportRecord>[];
+    final List<Map<String, Object?>> hazardPayload = <Map<String, Object?>>[];
+
+    for (final HazardReportRecord hazard in pending) {
+      String? evidencePhotoUrl = hazard.evidencePhotoUrl;
+      if (evidencePhotoUrl != null && evidencePhotoUrl.isNotEmpty) {
+        final String? resolvedUrl = await _resolveImageUrlForSync(
+          source: evidencePhotoUrl,
+          bucket: 'hazards',
+          bearerToken: token,
+        );
+
+        if (resolvedUrl == null) {
+          _log(
+            'push: hazard diferido por foto no sincronizable local_id=${hazard.localUuid}',
+          );
+          continue;
+        }
+
+        evidencePhotoUrl = resolvedUrl;
+      }
+
+      transferableHazards.add(hazard);
+      hazardPayload.add(<String, Object?>{
+        'local_id': hazard.localUuid,
+        'remote_id': hazard.remoteId,
+        'incident_latitude': hazard.incidentLatitude,
+        'incident_longitude': hazard.incidentLongitude,
+        'impact_radius_meters': hazard.impactRadiusMeters,
+        'risk_level_code': _normalizeRiskLevelCode(hazard.riskLevelCode),
+        'category_code': _normalizeCategoryCode(hazard.categoryCode),
+        'narrative_description': hazard.narrativeDescription,
+        'description': hazard.narrativeDescription,
+        'estimated_duration_code': _normalizeDurationCode(
+          hazard.estimatedDurationCode,
+        ),
+        'reported_at': _toBackendDateTime(hazard.reportedAt),
+        'evidence_photo_url': evidencePhotoUrl,
+        'reported_by_username': hazard.reportedByUsername,
+        'comments': hazard.comments
+            .map((HazardCommentRecord comment) => comment.toMap())
+            .toList(growable: false),
+        'last_modified_at': _toBackendDateTime(hazard.lastModifiedAt),
+      });
+    }
+
+    if (hazardPayload.isEmpty) {
+      _log('push: hazards diferidos hasta poder subir imagenes.');
+      return;
+    }
+
     final Map<String, Object?> payload = <String, Object?>{
-      'hazards': pending
-          .map(
-            (HazardReportRecord hazard) => <String, Object?>{
-              'local_id': hazard.localUuid,
-              'remote_id': hazard.remoteId,
-              'incident_latitude': hazard.incidentLatitude,
-              'incident_longitude': hazard.incidentLongitude,
-              'impact_radius_meters': hazard.impactRadiusMeters,
-              'risk_level_code': _normalizeRiskLevelCode(hazard.riskLevelCode),
-              'category_code': _normalizeCategoryCode(hazard.categoryCode),
-              'narrative_description': hazard.narrativeDescription,
-              'description': hazard.narrativeDescription,
-              'estimated_duration_code': _normalizeDurationCode(
-                hazard.estimatedDurationCode,
-              ),
-              'reported_at': _toBackendDateTime(hazard.reportedAt),
-              'evidence_photo_url': hazard.evidencePhotoUrl,
-              'reported_by_username': hazard.reportedByUsername,
-              'comments': hazard.comments
-                  .map((HazardCommentRecord comment) => comment.toMap())
-                  .toList(growable: false),
-              'last_modified_at': _toBackendDateTime(hazard.lastModifiedAt),
-            },
-          )
-          .toList(growable: false),
+      'hazards': hazardPayload,
     };
 
     _log(
@@ -172,7 +203,7 @@ class UserDataSyncCoordinator {
     final http.Response? response = await _postWithFallback(
       path: '/hazards/sync',
       body: payload,
-      bearerToken: await _currentAccessToken(),
+      bearerToken: token,
     );
 
     if (response == null) {
@@ -204,7 +235,7 @@ class UserDataSyncCoordinator {
         .whereType<String>()
         .toSet();
 
-    for (final HazardReportRecord hazard in pending) {
+    for (final HazardReportRecord hazard in transferableHazards) {
       if (failedLocalIds.contains(hazard.localUuid)) {
         _log('push: hazard en conflicto/error, local_id=${hazard.localUuid}');
         continue;
@@ -323,23 +354,49 @@ class UserDataSyncCoordinator {
       return;
     }
 
+    final String? token = await _currentAccessToken();
+    final List<PetRecord> transferablePets = <PetRecord>[];
+    final List<Map<String, Object?>> petPayload = <Map<String, Object?>>[];
+
+    for (final PetRecord pet in pending) {
+      String? photoPath = pet.photoPath;
+      if (photoPath != null && photoPath.isNotEmpty) {
+        final String? resolvedUrl = await _resolveImageUrlForSync(
+          source: photoPath,
+          bucket: 'pets',
+          bearerToken: token,
+        );
+
+        if (resolvedUrl == null) {
+          _log(
+            'push pets: mascota diferida por foto no sincronizable id=${pet.id}',
+          );
+          continue;
+        }
+
+        photoPath = resolvedUrl;
+      }
+
+      transferablePets.add(pet);
+      petPayload.add(<String, Object?>{
+        'local_id': pet.id.toString(),
+        'remote_id': pet.remoteId,
+        'name': pet.name,
+        'photo_path': photoPath,
+        'sync_status': pet.syncStatus,
+        'last_modified_at': _toBackendDateTime(pet.lastModifiedAt),
+      });
+    }
+
+    if (petPayload.isEmpty) {
+      _log('push pets: todos diferidos hasta poder subir imagenes.');
+      return;
+    }
+
     final http.Response? response = await _postWithFallback(
       path: '/pets/sync',
-      body: <String, Object?>{
-        'pets': pending
-            .map(
-              (PetRecord pet) => <String, Object?>{
-                'local_id': pet.id.toString(),
-                'remote_id': pet.remoteId,
-                'name': pet.name,
-                'photo_path': pet.photoPath,
-                'sync_status': pet.syncStatus,
-                'last_modified_at': _toBackendDateTime(pet.lastModifiedAt),
-              },
-            )
-            .toList(growable: false),
-      },
-      bearerToken: await _currentAccessToken(),
+      body: <String, Object?>{'pets': petPayload},
+      bearerToken: token,
     );
 
     if (response == null ||
@@ -349,7 +406,7 @@ class UserDataSyncCoordinator {
       return;
     }
 
-    for (final PetRecord pet in pending) {
+    for (final PetRecord pet in transferablePets) {
       await _databaseManager.markPetAsSynced(
         petId: pet.id,
         remoteId: pet.remoteId,
@@ -527,6 +584,134 @@ class UserDataSyncCoordinator {
     }
   }
 
+  Future<void> _pushLocalUserProfile() async {
+    final LocalUserProfile profile = await _databaseManager
+        .getLocalUserProfile();
+    if (!profile.isAuthenticated) {
+      return;
+    }
+
+    final String? token = await _currentAccessToken();
+    if (token == null || token.isEmpty) {
+      return;
+    }
+
+    String? avatarPath = profile.avatarPath?.trim();
+    if (avatarPath != null && avatarPath.isEmpty) {
+      avatarPath = null;
+    }
+
+    final bool hasPendingLocalAvatar =
+        avatarPath != null &&
+        avatarPath.isNotEmpty &&
+        !_isRemoteImageUrl(avatarPath) &&
+        profile.lastSyncedAt == null;
+
+    if (!hasPendingLocalAvatar && profile.lastSyncedAt != null) {
+      return;
+    }
+
+    String? avatarUrlForBackend = avatarPath;
+    if (hasPendingLocalAvatar) {
+      final String? resolvedAvatarUrl = await _resolveImageUrlForSync(
+        source: avatarPath!,
+        bucket: 'profiles',
+        bearerToken: token,
+      );
+
+      if (resolvedAvatarUrl == null) {
+        _log('push profile: diferido por foto no sincronizable.');
+        return;
+      }
+
+      avatarUrlForBackend = resolvedAvatarUrl;
+    }
+
+    final http.Response? response = await _putWithFallback(
+      path: '/auth/profile',
+      body: <String, Object?>{
+        'name': profile.username,
+        'profile_photo_url': avatarUrlForBackend,
+      },
+      bearerToken: token,
+    );
+
+    if (response == null ||
+        response.statusCode < 200 ||
+        response.statusCode >= 300) {
+      _log('push profile: backend inalcanzable o error.');
+      return;
+    }
+
+    await _databaseManager.saveLocalUserProfile(
+      LocalUserProfile(
+        id: profile.id,
+        username: profile.username,
+        avatarPath: avatarPath,
+        isAuthenticated: profile.isAuthenticated,
+        backendUserId: profile.backendUserId,
+        email: profile.email,
+        accessToken: profile.accessToken,
+        lastSyncedAt: DateTime.now(),
+      ),
+    );
+  }
+
+  Future<void> _pullRemoteUserProfile() async {
+    final LocalUserProfile current = await _databaseManager
+        .getLocalUserProfile();
+    if (!current.isAuthenticated) {
+      return;
+    }
+
+    final String? token = await _currentAccessToken();
+    if (token == null || token.isEmpty) {
+      return;
+    }
+
+    final http.Response? response = await _getWithFallback(
+      path: '/auth/me',
+      bearerToken: token,
+    );
+
+    if (response == null ||
+        response.statusCode < 200 ||
+        response.statusCode >= 300) {
+      _log('pull profile: backend inalcanzable o error.');
+      return;
+    }
+
+    final Map<String, dynamic> payload =
+        jsonDecode(response.body) as Map<String, dynamic>;
+    final Map<String, dynamic> user =
+        (payload['data'] as Map<String, dynamic>?) ?? <String, dynamic>{};
+
+    final String? remoteAvatar = user['profile_photo_url']?.toString();
+    final String? resolvedAvatar = _preferProfileAvatarForPull(
+      currentAvatar: current.avatarPath,
+      remoteAvatar: remoteAvatar,
+    );
+
+    final bool pendingLocalAvatar =
+        current.lastSyncedAt == null &&
+        current.avatarPath != null &&
+        current.avatarPath!.isNotEmpty &&
+        !_isRemoteImageUrl(current.avatarPath!);
+
+    await _databaseManager.saveLocalUserProfile(
+      LocalUserProfile(
+        id: current.id,
+        username: user['name']?.toString() ?? current.username,
+        avatarPath: resolvedAvatar,
+        isAuthenticated: true,
+        backendUserId: (user['id'] as num?)?.toInt() ?? current.backendUserId,
+        email: user['email']?.toString() ?? current.email,
+        accessToken: current.accessToken,
+        lastSyncedAt: pendingLocalAvatar ? null : DateTime.now(),
+      ),
+    );
+  }
+
   DateTime _parseBackendDateTime(Object? value) {
     if (value == null) {
       return DateTime.now().toUtc();
@@ -625,5 +810,91 @@ class UserDataSyncCoordinator {
       bearerToken: bearerToken,
       timeout: const Duration(seconds: 5),
     );
+  }
+
+  Future<http.Response?> _putWithFallback({
+    required String path,
+    required Object body,
+    String? bearerToken,
+  }) async {
+    return _apiClient.putWithFallback(
+      path,
+      body: body,
+      bearerToken: bearerToken,
+      timeout: const Duration(seconds: 5),
+    );
+  }
+
+  bool _isRemoteImageUrl(String source) {
+    return source.startsWith('http://') || source.startsWith('https://');
+  }
+
+  String? _preferProfileAvatarForPull({
+    required String? currentAvatar,
+    required String? remoteAvatar,
+  }) {
+    if (currentAvatar == null || currentAvatar.isEmpty) {
+      return remoteAvatar;
+    }
+
+    if (remoteAvatar == null || remoteAvatar.isEmpty) {
+      return currentAvatar;
+    }
+
+    if (_shouldKeepLocalAvatarSource(currentAvatar)) {
+      return currentAvatar;
+    }
+
+    return remoteAvatar;
+  }
+
+  bool _shouldKeepLocalAvatarSource(String source) {
+    if (source.startsWith('data:image')) {
+      return true;
+    }
+
+    return !_isRemoteImageUrl(source);
+  }
+
+  Future<String?> _resolveImageUrlForSync({
+    required String source,
+    required String bucket,
+    String? bearerToken,
+  }) async {
+    if (source.trim().isEmpty) {
+      return null;
+    }
+
+    if (_isRemoteImageUrl(source)) {
+      return source;
+    }
+
+    final String? dataUri = await media_source_encoder
+        .encodeImageSourceToDataUri(source);
+    if (dataUri == null || dataUri.isEmpty) {
+      return null;
+    }
+
+    final http.Response? response = await _postWithFallback(
+      path: '/media/upload',
+      body: <String, Object?>{'bucket': bucket, 'image_data': dataUri},
+      bearerToken: bearerToken,
+    );
+
+    if (response == null ||
+        response.statusCode < 200 ||
+        response.statusCode >= 300) {
+      return null;
+    }
+
+    final Map<String, dynamic> payload =
+        jsonDecode(response.body) as Map<String, dynamic>;
+    final Map<String, dynamic>? data = payload['data'] as Map<String, dynamic>?;
+    final String? url = data?['url']?.toString();
+    if (url == null || url.isEmpty) {
+      return null;
+    }
+
+    return url;
   }
 }

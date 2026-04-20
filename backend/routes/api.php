@@ -7,6 +7,7 @@ use App\Http\Controllers\HazardReportController;
 use App\Http\Controllers\PetController;
 use App\Http\Controllers\RoutePlanningController;
 use App\Http\Controllers\TravelRouteController;
+use App\Http\Controllers\MediaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -53,6 +54,7 @@ Route::middleware('api.token')->group(function (): void {
 
 Route::middleware('api.token')->group(function (): void {
     Route::get('/auth/me', [AuthController::class, 'me']);
+    Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 
     Route::get('/pets', [PetController::class, 'index']);
@@ -70,7 +72,15 @@ Route::middleware('api.token')->group(function (): void {
     // Planificar ruta usando GraphHopper desde backend
     Route::post('/routes/plan', [RoutePlanningController::class, 'plan']);
 
+    // Subida de archivos de imagen (manteniendo campos URL existentes)
+    Route::post('/media/upload', [MediaController::class, 'upload']);
+
 });
+
+// Lectura pública de imágenes almacenadas por backend
+Route::get('/media/{bucket}/{fileName}', [MediaController::class, 'show'])
+    ->where('bucket', 'pets|hazards|profiles')
+    ->where('fileName', '[A-Za-z0-9._-]+');
 
 // ====== HEALTH CHECK ======
 Route::get('/health', function (Request $request) {

@@ -517,6 +517,11 @@ class LocalDatabaseManager {
       return;
     }
 
+    final String? resolvedPhotoPath = _preferOfflineImageSource(
+      currentSource: existing.photoPath,
+      remoteSource: photoPath,
+    );
+
     final List<Map<String, Object?>> encoded = current
         .map((PetRecord pet) {
           if (pet.id != existing!.id) {
@@ -526,7 +531,7 @@ class LocalDatabaseManager {
             id: pet.id,
             remoteId: remoteId ?? pet.remoteId,
             name: name,
-            photoPath: photoPath,
+            photoPath: resolvedPhotoPath,
             syncStatus: syncStatus,
             lastModifiedAt: remoteLastModifiedAt,
             createdAt: pet.createdAt,
@@ -799,6 +804,11 @@ class LocalDatabaseManager {
       return;
     }
 
+    final String? resolvedEvidencePhoto = _preferOfflineImageSource(
+      currentSource: existing.evidencePhotoUrl,
+      remoteSource: evidencePhotoUrl,
+    );
+
     final List<Map<String, Object?>> encoded = current
         .map((HazardReportRecord report) {
           if (report.id != existing!.id) {
@@ -824,7 +834,7 @@ class LocalDatabaseManager {
             reportedAt: reportedAt,
             estimatedDurationCode: estimatedDurationCode,
             riskLevelCode: riskLevelCode,
-            evidencePhotoUrl: evidencePhotoUrl,
+            evidencePhotoUrl: resolvedEvidencePhoto,
             reportedByUsername: reportedByUsername,
             comments: resolvedComments,
             createdAt: report.createdAt,
@@ -855,5 +865,28 @@ class LocalDatabaseManager {
     final int now = DateTime.now().microsecondsSinceEpoch;
     final int randomPart = (Random().nextDouble() * 0xFFFFFFFF).floor();
     return 'hz-$now-${randomPart.toRadixString(16)}';
+  }
+
+  String? _preferOfflineImageSource({
+    required String? currentSource,
+    required String? remoteSource,
+  }) {
+    if (currentSource == null || currentSource.isEmpty) {
+      return remoteSource;
+    }
+
+    if (remoteSource == null || remoteSource.isEmpty) {
+      return currentSource;
+    }
+
+    if (!_isRemoteUrl(currentSource)) {
+      return currentSource;
+    }
+
+    return remoteSource;
+  }
+
+  bool _isRemoteUrl(String value) {
+    return value.startsWith('http://') || value.startsWith('https://');
   }
 }

@@ -6,12 +6,16 @@ class UserIdentityHeader extends StatelessWidget {
   final bool isDarkMode;
   final String username;
   final String? avatarPath;
+  final VoidCallback? onEditAvatarPressed;
+  final bool isEditingAvatar;
 
   const UserIdentityHeader({
     super.key,
     required this.isDarkMode,
     required this.username,
     this.avatarPath,
+    this.onEditAvatarPressed,
+    this.isEditingAvatar = false,
   });
 
   @override
@@ -29,6 +33,8 @@ class UserIdentityHeader extends StatelessWidget {
         _UserAvatar(
           borderColor: avatarBorderColor,
           avatarPath: avatarPath,
+          onEditPressed: onEditAvatarPressed,
+          isBusy: isEditingAvatar,
         ),
         const SizedBox(height: 14),
         Text(
@@ -48,31 +54,74 @@ class UserIdentityHeader extends StatelessWidget {
 class _UserAvatar extends StatelessWidget {
   final Color borderColor;
   final String? avatarPath;
+  final VoidCallback? onEditPressed;
+  final bool isBusy;
 
   const _UserAvatar({
     required this.borderColor,
     this.avatarPath,
+    this.onEditPressed,
+    this.isBusy = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: 106,
       height: 106,
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: borderColor, width: 2),
-      ),
-      child: ClipOval(
-        child: buildLocalImageWidget(
-          source: avatarPath,
-          fit: BoxFit.cover,
-          fallback: _buildFallbackAvatar(),
-          errorBuilder: (context, error, stackTrace) {
-            return _buildFallbackAvatar();
-          },
-        ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: 106,
+            height: 106,
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: borderColor, width: 2),
+            ),
+            child: ClipOval(
+              child: buildLocalImageWidget(
+                source: avatarPath,
+                fit: BoxFit.cover,
+                fallback: _buildFallbackAvatar(),
+                errorBuilder: (context, error, stackTrace) {
+                  return _buildFallbackAvatar();
+                },
+              ),
+            ),
+          ),
+          if (onEditPressed != null)
+            Positioned(
+              right: -4,
+              bottom: -4,
+              child: SizedBox(
+                width: 34,
+                height: 34,
+                child: Material(
+                  color: Colors.white,
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    onTap: isBusy ? null : onEditPressed,
+                    customBorder: const CircleBorder(),
+                    child: isBusy
+                        ? const Padding(
+                            padding: EdgeInsets.all(9),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Color(0xFF404040),
+                            ),
+                          )
+                        : const Icon(
+                            Icons.edit,
+                            size: 18,
+                            color: Color(0xFF404040),
+                          ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -80,11 +129,7 @@ class _UserAvatar extends StatelessWidget {
   Widget _buildFallbackAvatar() {
     return Container(
       color: const Color(0xFFCFCFCF),
-      child: const Icon(
-        Icons.person,
-        size: 48,
-        color: Color(0xFF666666),
-      ),
+      child: const Icon(Icons.person, size: 48, color: Color(0xFF666666)),
     );
   }
 }

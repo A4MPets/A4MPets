@@ -30,6 +30,44 @@ class ProfileMenuPanel extends ConsumerStatefulWidget {
 
 class _ProfileMenuPanelState extends ConsumerState<ProfileMenuPanel> {
   String? _actionErrorText;
+  bool _isPickingAvatar = false;
+
+  Future<void> _handleEditAvatar() async {
+    setState(() {
+      _actionErrorText = null;
+      _isPickingAvatar = true;
+    });
+
+    try {
+      final String? avatarPath = await ref
+          .read(localMediaStorageServiceProvider)
+          .pickAndStoreProfilePhoto();
+
+      if (avatarPath == null || avatarPath.isEmpty) {
+        return;
+      }
+
+      await ref
+          .read(userLocalRepositoryProvider)
+          .updateProfileAvatar(avatarPath: avatarPath);
+
+      ref.invalidate(localUserProfileProvider);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _actionErrorText = 'No se pudo actualizar la foto de perfil.';
+      });
+    } finally {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isPickingAvatar = false;
+      });
+    }
+  }
 
   Future<void> _handleLogoutPressed() async {
     final Future<String?> Function()? callback = widget.onLogoutPressed;
@@ -57,7 +95,9 @@ class _ProfileMenuPanelState extends ConsumerState<ProfileMenuPanel> {
         ? const Color(0xFFFFFFFF)
         : const Color(0xFF404040);
 
-    final AsyncValue<LocalUserProfile> userProfile = ref.watch(localUserProfileProvider);
+    final AsyncValue<LocalUserProfile> userProfile = ref.watch(
+      localUserProfileProvider,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -68,6 +108,10 @@ class _ProfileMenuPanelState extends ConsumerState<ProfileMenuPanel> {
               isDarkMode: widget.isDarkMode,
               username: profile.username,
               avatarPath: profile.avatarPath,
+              onEditAvatarPressed: profile.isAuthenticated
+                  ? _handleEditAvatar
+                  : null,
+              isEditingAvatar: _isPickingAvatar,
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -139,7 +183,8 @@ class _ProfileMenuPanelState extends ConsumerState<ProfileMenuPanel> {
             );
           },
           loading: () => const SizedBox(height: 14),
-          error: (Object error, StackTrace stackTrace) => const SizedBox(height: 14),
+          error: (Object error, StackTrace stackTrace) =>
+              const SizedBox(height: 14),
         ),
         _ActionButton(
           label: 'Gestionar Mascotas',
@@ -195,10 +240,7 @@ class _ActionButton extends StatelessWidget {
           textAlign: TextAlign.center,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
     );

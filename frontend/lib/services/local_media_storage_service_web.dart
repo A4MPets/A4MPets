@@ -4,29 +4,18 @@ import 'package:file_picker/file_picker.dart';
 
 class LocalMediaStorageService {
   Future<String?> pickAndStorePetPhoto() async {
-    final FilePickerResult? result = await FilePicker.platform.pickFiles(
-      allowMultiple: false,
-      type: FileType.image,
-      withData: true,
-    );
-
-    if (result == null || result.files.isEmpty) {
-      return null;
-    }
-
-    final PlatformFile selectedFile = result.files.single;
-    final List<int>? bytes = selectedFile.bytes;
-    if (bytes == null || bytes.isEmpty) {
-      return null;
-    }
-
-    final String extension = _safeFileExtension(selectedFile.extension);
-    final String mimeType = _guessMimeType(extension);
-    final String base64Value = base64Encode(bytes);
-    return 'data:$mimeType;base64,$base64Value';
+    return _pickAndStoreDataUriImage();
   }
 
   Future<String?> pickAndStoreHazardPhoto() async {
+    return _pickAndStoreDataUriImage();
+  }
+
+  Future<String?> pickAndStoreProfilePhoto() async {
+    return _pickAndStoreDataUriImage();
+  }
+
+  Future<String?> _pickAndStoreDataUriImage() async {
     final FilePickerResult? result = await FilePicker.platform.pickFiles(
       allowMultiple: false,
       type: FileType.image,

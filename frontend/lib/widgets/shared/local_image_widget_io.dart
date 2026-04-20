@@ -1,7 +1,11 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+
+const int _memoryImageCacheLimit = 100;
+final Map<String, Uint8List> _decodedDataUriCache = <String, Uint8List>{};
 
 Widget buildLocalImageWidget({
   required String? source,
@@ -14,14 +18,24 @@ Widget buildLocalImageWidget({
   }
 
   if (source.startsWith('data:image')) {
-    final String? raw = _extractBase64(source);
-    if (raw == null) {
+    final Uint8List? decodedBytes = _decodedBytesForDataUri(source);
+    if (decodedBytes == null) {
       return fallback;
     }
 
     return Image.memory(
-      base64Decode(raw),
+      decodedBytes,
       fit: fit,
+      gaplessPlayback: true,
+      errorBuilder: errorBuilder,
+    );
+  }
+
+  if (source.startsWith('http://') || source.startsWith('https://')) {
+    return Image.network(
+      source,
+      fit: fit,
+      gaplessPlayback: true,
       errorBuilder: errorBuilder,
     );
   }
@@ -34,8 +48,28 @@ Widget buildLocalImageWidget({
   return Image.file(
     file,
     fit: fit,
+    gaplessPlayback: true,
     errorBuilder: errorBuilder,
   );
+}
+
+Uint8List? _decodedBytesForDataUri(String dataUri) {
+  final Uint8List? cached = _decodedDataUriCache[dataUri];
+  if (cached != null) {
+    return cached;
+  }
+
+  final String? raw = _extractBase64(dataUri);
+  if (raw == null) {
+    return null;
+  }
+
+  final Uint8List decoded = base64Decode(raw);
+  if (_decodedDataUriCache.length >= _memoryImageCacheLimit) {
+    _decodedDataUriCache.remove(_decodedDataUriCache.keys.first);
+  }
+  _decodedDataUriCache[dataUri] = decoded;
+  return decoded;
 }
 
 String? _extractBase64(String dataUri) {
