@@ -39,7 +39,7 @@ enum _TripTransportMethod { walking, vehicle }
 class _MapPageState extends ConsumerState<MapPage> {
   final List<_PanelRoute> _panelStack = <_PanelRoute>[];
   int _panelTransitionSeed = 0;
-  final OsmRoutingService _routingService = OsmRoutingService();
+  final OsmRoutingService _routingService = OsmRoutingService(); //por que tenemos un routing service cuando estamos usando el backend para esto¿ o eso se supone¿
   final Distance _distanceCalculator = const Distance();
 
   List<LatLng> _draftRoutePoints = <LatLng>[];
