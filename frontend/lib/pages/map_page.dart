@@ -69,8 +69,15 @@ class _MapPageState extends ConsumerState<MapPage> {
   bool _isAuthRequestLoading = false;
   LatLng? _latestUserLocation;
   List<LatLng> _tripRemainingWaypoints = <LatLng>[];
+  LatLng? _lastTripRerouteLocation;
+  DateTime? _lastTripRerouteAt;
+  bool _tripRerouteInFlight = false;
+  LatLng? _queuedTripRerouteLocation;
+  List<LatLng>? _queuedTripRerouteWaypoints;
 
   static const double _tripWaypointArrivalMeters = 25;
+  static const double _tripRerouteMinDistanceMeters = 18;
+  static const Duration _tripRerouteMinInterval = Duration(seconds: 6);
 
   bool get _hasOpenPanels => _panelStack.isNotEmpty;
 
@@ -139,10 +146,9 @@ class _MapPageState extends ConsumerState<MapPage> {
     }
 
     try {
-      await ref.read(userLocalRepositoryProvider).login(
-            login: login,
-            password: password,
-          );
+      await ref
+          .read(userLocalRepositoryProvider)
+          .login(login: login, password: password);
       await ref.read(localMediaStorageServiceProvider).clearStoredMedia();
 
       ref.invalidate(localUserProfileProvider);
@@ -179,7 +185,9 @@ class _MapPageState extends ConsumerState<MapPage> {
     }
 
     try {
-      await ref.read(userLocalRepositoryProvider).register(
+      await ref
+          .read(userLocalRepositoryProvider)
+          .register(
             username: username,
             email: email,
             password: password,
@@ -336,7 +344,8 @@ class _MapPageState extends ConsumerState<MapPage> {
   void _startTrip(bool isDarkMode) {
     if (_selectedTripRoute == null || _selectedTripRoute!.points.length < 2) {
       setState(() {
-        _tripStartErrorText = 'Selecciona una ruta válida para iniciar el viaje.';
+        _tripStartErrorText =
+            'Selecciona una ruta válida para iniciar el viaje.';
       });
       return;
     }
@@ -499,6 +508,11 @@ class _MapPageState extends ConsumerState<MapPage> {
   void _clearTripSetupState() {
     _selectedTripRoute = null;
     _tripRemainingWaypoints = <LatLng>[];
+    _lastTripRerouteLocation = null;
+    _lastTripRerouteAt = null;
+    _tripRerouteInFlight = false;
+    _queuedTripRerouteLocation = null;
+    _queuedTripRerouteWaypoints = null;
     _selectedTripPetIds.clear();
     _selectedTripTransport = _TripTransportMethod.walking;
     _shouldAvoidHazardsInRouting = true;
@@ -546,7 +560,10 @@ class _MapPageState extends ConsumerState<MapPage> {
     });
 
     if (_latestUserLocation != null && points.isNotEmpty) {
-      await _refreshDraftRoutePolyline(<LatLng>[_latestUserLocation!, ...points]);
+      await _refreshDraftRoutePolyline(<LatLng>[
+        _latestUserLocation!,
+        ...points,
+      ]);
       return;
     }
 
@@ -576,8 +593,8 @@ class _MapPageState extends ConsumerState<MapPage> {
       final List<LatLng> waypoints = _tripRemainingWaypoints.isNotEmpty
           ? _tripRemainingWaypoints
           : _selectedTripRoute!.points
-              .map((RoutePoint p) => p.toLatLng())
-              .toList(growable: false);
+                .map((RoutePoint p) => p.toLatLng())
+                .toList(growable: false);
 
       if (waypoints.isEmpty) {
         return;
@@ -618,7 +635,106 @@ class _MapPageState extends ConsumerState<MapPage> {
       return;
     }
 
-    _refreshDraftRoutePolyline(<LatLng>[location, ...nextRemaining]);
+    _softUpdateTripPolylineHead(location);
+    _maybeRecalculateTripPolyline(
+      location: location,
+      nextWaypoints: nextRemaining,
+      force: changed || _draftRoutePolyline.isEmpty,
+    );
+  }
+
+  void _softUpdateTripPolylineHead(LatLng location) {
+    if (_draftRoutePolyline.isEmpty) {
+      return;
+    }
+
+    final double delta = _distanceCalculator.distance(
+      location,
+      _draftRoutePolyline.first,
+    );
+    if (delta < 2) {
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      final List<LatLng> updated = List<LatLng>.from(_draftRoutePolyline);
+      updated[0] = location;
+      _draftRoutePolyline = updated;
+      _analyzeRouteForHazards();
+    });
+  }
+
+  bool _shouldTriggerTripReroute({
+    required LatLng location,
+    required bool force,
+  }) {
+    if (force ||
+        _lastTripRerouteLocation == null ||
+        _lastTripRerouteAt == null) {
+      return true;
+    }
+
+    final double movedMeters = _distanceCalculator.distance(
+      location,
+      _lastTripRerouteLocation!,
+    );
+    final Duration elapsed = DateTime.now().difference(_lastTripRerouteAt!);
+
+    return movedMeters >= _tripRerouteMinDistanceMeters ||
+        elapsed >= _tripRerouteMinInterval;
+  }
+
+  Future<void> _maybeRecalculateTripPolyline({
+    required LatLng location,
+    required List<LatLng> nextWaypoints,
+    bool force = false,
+  }) async {
+    if (nextWaypoints.isEmpty) {
+      return;
+    }
+
+    if (!_shouldTriggerTripReroute(location: location, force: force)) {
+      return;
+    }
+
+    if (_tripRerouteInFlight) {
+      _queuedTripRerouteLocation = location;
+      _queuedTripRerouteWaypoints = List<LatLng>.from(nextWaypoints);
+      return;
+    }
+
+    _tripRerouteInFlight = true;
+    _lastTripRerouteLocation = location;
+    _lastTripRerouteAt = DateTime.now();
+
+    try {
+      await _refreshDraftRoutePolyline(<LatLng>[
+        location,
+        ...nextWaypoints,
+      ], keepCurrentPolylineWhileLoading: true);
+    } finally {
+      _tripRerouteInFlight = false;
+
+      final LatLng? queuedLocation = _queuedTripRerouteLocation;
+      final List<LatLng>? queuedWaypoints = _queuedTripRerouteWaypoints;
+      _queuedTripRerouteLocation = null;
+      _queuedTripRerouteWaypoints = null;
+
+      if (queuedLocation != null &&
+          queuedWaypoints != null &&
+          queuedWaypoints.isNotEmpty &&
+          mounted) {
+        _maybeRecalculateTripPolyline(
+          location: queuedLocation,
+          nextWaypoints: queuedWaypoints,
+          force: true,
+        );
+      }
+    }
   }
 
   void _openReportHazardPanel(bool isDarkMode) {
@@ -1398,11 +1514,14 @@ class _MapPageState extends ConsumerState<MapPage> {
     _refreshDraftRoutePolyline(updated);
   }
 
-  Future<void> _refreshDraftRoutePolyline(List<LatLng> waypoints) async {
+  Future<void> _refreshDraftRoutePolyline(
+    List<LatLng> waypoints, {
+    bool keepCurrentPolylineWhileLoading = false,
+  }) async {
     final int requestVersion = ++_routePolylineRequestVersion;
 
     // Siempre dibujamos al menos la línea recta mientras llega la ruta vial.
-    if (mounted) {
+    if (!keepCurrentPolylineWhileLoading && mounted) {
       setState(() {
         _draftRoutePolyline = List<LatLng>.from(waypoints);
         _analyzeRouteForHazards();
@@ -1774,18 +1893,28 @@ class _MapPageState extends ConsumerState<MapPage> {
     }
 
     if (panel.isManagePetsPanel || panel.isTripPetSelectionPanel) {
-      final AsyncValue<List<PetRecord>> petsValue = ref.watch(petsControllerProvider);
-      final AsyncValue<LocalUserProfile> profileValue = ref.watch(localUserProfileProvider);
+      final AsyncValue<List<PetRecord>> petsValue = ref.watch(
+        petsControllerProvider,
+      );
+      final AsyncValue<LocalUserProfile> profileValue = ref.watch(
+        localUserProfileProvider,
+      );
       loading = loading || petsValue.isLoading || profileValue.isLoading;
     }
 
     if (panel.isManageRoutesPanel || panel.isTripRouteSelectionPanel) {
-      final AsyncValue<List<RouteRecord>> routesValue = ref.watch(routesControllerProvider);
+      final AsyncValue<List<RouteRecord>> routesValue = ref.watch(
+        routesControllerProvider,
+      );
       loading = loading || routesValue.isLoading;
     }
 
-    if (panel.isHazardDetailsPanel || panel.isHazardCommentsPanel || panel.isHazardSettingsPanel) {
-      final AsyncValue<List<HazardReportRecord>> hazardsValue = ref.watch(hazardReportsControllerProvider);
+    if (panel.isHazardDetailsPanel ||
+        panel.isHazardCommentsPanel ||
+        panel.isHazardSettingsPanel) {
+      final AsyncValue<List<HazardReportRecord>> hazardsValue = ref.watch(
+        hazardReportsControllerProvider,
+      );
       loading = loading || hazardsValue.isLoading;
     }
 
@@ -1813,16 +1942,18 @@ class _MapPageState extends ConsumerState<MapPage> {
         })
         .toList(growable: false);
 
-      final List<LatLng> renderedRoutePoints = _isTripNavigationContext
+    final List<LatLng> renderedRoutePoints = _isTripNavigationContext
         ? (_tripRemainingWaypoints.isNotEmpty
-          ? List<LatLng>.from(_tripRemainingWaypoints)
-          : List<LatLng>.from(_draftRoutePoints))
+              ? List<LatLng>.from(_tripRemainingWaypoints)
+              : List<LatLng>.from(_draftRoutePoints))
         : List<LatLng>.from(_draftRoutePoints);
 
-      final List<LatLng> renderedRoutePolylinePoints =
-        _isTripNavigationContext && _latestUserLocation != null
-          ? <LatLng>[_latestUserLocation!, ...renderedRoutePoints]
-          : List<LatLng>.from(_draftRoutePolyline);
+    final List<LatLng> renderedRoutePolylinePoints =
+        _draftRoutePolyline.isNotEmpty
+        ? List<LatLng>.from(_draftRoutePolyline)
+        : (_isTripNavigationContext && _latestUserLocation != null
+              ? <LatLng>[_latestUserLocation!, ...renderedRoutePoints]
+              : <LatLng>[]);
 
     return Scaffold(
       body: MapWidget(
@@ -1832,8 +1963,8 @@ class _MapPageState extends ConsumerState<MapPage> {
         hideDefaultControls: _hasOpenPanels,
         keepReportDangerVisible: _hasOpenPanels && _panelStack.last.isTripPanel,
         keepModifyLocationVisible:
-          _hasOpenPanels &&
-          (_panelStack.last.isTripStartPanel || _panelStack.last.isTripPanel),
+            _hasOpenPanels &&
+            (_panelStack.last.isTripStartPanel || _panelStack.last.isTripPanel),
         onProfileTap: () => _openProfilePanel(isDarkMode),
         panelOverlay: _buildPanelOverlay(isDarkMode),
         routePoints: renderedRoutePoints,
