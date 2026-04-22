@@ -39,9 +39,11 @@ enum _TripTransportMethod { walking, vehicle }
 class _MapPageState extends ConsumerState<MapPage> {
   final List<_PanelRoute> _panelStack = <_PanelRoute>[];
   int _panelTransitionSeed = 0;
-  final OsmRoutingService _routingService = OsmRoutingService(); //por que tenemos un routing service cuando estamos usando el backend para esto¿ o eso se supone¿
+  final OsmRoutingService _routingService =
+      OsmRoutingService(); //por que tenemos un routing service cuando estamos usando el backend para esto¿ o eso se supone¿
   final Distance _distanceCalculator = const Distance();
 
+  // deberíamos refactorizar todas estas variables y colocarlas en subclases para evitar tener esta super clase gigante
   List<LatLng> _draftRoutePoints = <LatLng>[];
   List<LatLng> _draftRoutePolyline = <LatLng>[];
   List<dynamic> _hazardColoredRouteSegments = <dynamic>[];
@@ -582,6 +584,31 @@ class _MapPageState extends ConsumerState<MapPage> {
     });
   }
 
+  Future<void> _closeAddRoutePanelAfterSave() async {
+    if (!_hasOpenPanels) {
+      return;
+    }
+
+    final _PanelRoute currentPanel = _panelStack.last;
+    if (!currentPanel.isAddRoutePanel) {
+      _closeCurrentPanel();
+      return;
+    }
+
+    final bool returningToTripRouteSelection =
+        _panelStack.length > 1 &&
+        _panelStack[_panelStack.length - 2].isTripRouteSelectionPanel;
+
+    setState(() {
+      _clearDraftRouteVisuals();
+      _panelStack.removeLast();
+    });
+
+    if (returningToTripRouteSelection) {
+      await _restoreTripRouteSelectionAfterEditorClose();
+    }
+  }
+
   void _handleUserLocationChanged(LatLng location) {
     _latestUserLocation = location;
 
@@ -977,10 +1004,11 @@ class _MapPageState extends ConsumerState<MapPage> {
       title: 'Gestionar Rutas',
       anchor: PanelAnchor.topLeft,
       width: 380,
-      maxHeightFactor: 0.40,
+      height: 620,
+      maxHeight: 620,
       adaptHeightToContent: false,
       expandHorizontal: false,
-      expandVertical: false,
+      expandVertical: true,
       scrollContent: false,
       isManageRoutesPanel: true,
       borderRadius: BorderRadius.circular(22),
@@ -1006,10 +1034,10 @@ class _MapPageState extends ConsumerState<MapPage> {
       anchor: PanelAnchor.bottomRight,
       width: 360,
       maxHeightFactor: 0.62,
-      adaptHeightToContent: true,
+      adaptHeightToContent: false,
       expandHorizontal: false,
       expandVertical: false,
-      scrollContent: true,
+      scrollContent: false,
       isTripStartPanel: true,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
@@ -1020,6 +1048,7 @@ class _MapPageState extends ConsumerState<MapPage> {
           selectedPetsCount: _selectedTripPetIds.length,
           selectedRouteName: _selectedTripRoute?.name,
           errorText: _tripStartErrorText,
+          contentTopPadding: 18,
           onSelectPets: () => _openTripPetSelectorPanel(isDarkMode),
           onSelectRoute: () => _openTripRouteSelectorPanel(isDarkMode),
           onEditSelectedRoute: _selectedTripRoute == null
@@ -1038,6 +1067,7 @@ class _MapPageState extends ConsumerState<MapPage> {
           onStartTrip: () => _startTrip(isDarkMode),
         );
       },
+      contentTopPadding: 32,
     );
   }
 
@@ -1088,10 +1118,11 @@ class _MapPageState extends ConsumerState<MapPage> {
       title: 'Ruta',
       anchor: PanelAnchor.bottomRight,
       width: 380,
-      maxHeightFactor: 0.40,
+      height: 620,
+      maxHeight: 620,
       adaptHeightToContent: false,
       expandHorizontal: false,
-      expandVertical: false,
+      expandVertical: true,
       scrollContent: false,
       isTripRouteSelectionPanel: true,
       borderRadius: BorderRadius.circular(22),
@@ -1321,10 +1352,12 @@ class _MapPageState extends ConsumerState<MapPage> {
           routeId: _editingRouteId,
           initialRouteName: _editingRouteName,
           onSavedComplete: () {
-            setState(() {
-              _clearDraftRouteVisuals();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) {
+                return;
+              }
+              _closeAddRoutePanelAfterSave();
             });
-            _closeCurrentPanel();
           },
         );
       },
@@ -1585,7 +1618,7 @@ class _MapPageState extends ConsumerState<MapPage> {
   /// Obtiene los hazards filtrados según los controles de visibilidad
   List<HazardReportRecord> get _filteredHazards {
     return ref
-        .watch(hazardReportsControllerProvider)
+        .read(hazardReportsControllerProvider)
         .whenData((hazards) {
           return hazards.where((HazardReportRecord h) {
             if (h.riskLevelCode == 'low' && !_showLowRiskHazardCircles) {
@@ -1870,6 +1903,7 @@ class _MapPageState extends ConsumerState<MapPage> {
           expandHorizontal: currentPanel.expandHorizontal,
           expandVertical: currentPanel.expandVertical,
           scrollContent: currentPanel.scrollContent,
+            contentTopPadding: currentPanel.contentTopPadding,
           borderRadius: currentPanel.borderRadius,
           showBackButton:
               _panelStack.length > 1 &&
@@ -2047,8 +2081,9 @@ class _PanelRoute {
   final bool isTripStartPanel;
   final bool isTripPanel;
   final bool isTripPetSelectionPanel;
-  final bool isTripRouteSelectionPanel;
-  final BorderRadius borderRadius;
+    final bool isTripRouteSelectionPanel;
+    final BorderRadius borderRadius;
+    final double? contentTopPadding;
   final Widget Function(BuildContext context) contentBuilder;
 
   _PanelRoute({
@@ -2079,6 +2114,7 @@ class _PanelRoute {
     this.isTripPetSelectionPanel = false,
     this.isTripRouteSelectionPanel = false,
     this.borderRadius = const BorderRadius.all(Radius.circular(20)),
+    this.contentTopPadding,
   });
 }
 
@@ -2094,6 +2130,7 @@ class _TripStartPanelContent extends StatelessWidget {
   final VoidCallback? onEditSelectedRoute;
   final ValueChanged<_TripTransportMethod> onTransportChanged;
   final ValueChanged<bool> onAvoidHazardsChanged;
+    final double contentTopPadding;
   final VoidCallback onStartTrip;
 
   const _TripStartPanelContent({
@@ -2108,6 +2145,7 @@ class _TripStartPanelContent extends StatelessWidget {
     this.onEditSelectedRoute,
     required this.onTransportChanged,
     required this.onAvoidHazardsChanged,
+    this.contentTopPadding = 8,
     required this.onStartTrip,
   });
 
@@ -2120,122 +2158,157 @@ class _TripStartPanelContent extends StatelessWidget {
         : AppPalette.iconGray;
 
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize: MainAxisSize.max,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _TripFieldTitle(label: 'Mascotas', color: titleColor),
-        const SizedBox(height: 6),
-        _TripGrayActionButton(
-          label: selectedPetsCount == 0
-              ? 'Seleccionar'
-              : 'Mascotas seleccionadas: $selectedPetsCount',
-          backgroundColor: grayButton,
-          textColor: textColor,
-          onPressed: onSelectPets,
-        ),
-        const SizedBox(height: 10),
-        _TripFieldTitle(label: 'Método de transporte', color: titleColor),
-        const SizedBox(height: 6),
-        SizedBox(
-          height: 46,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: grayButton,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<_TripTransportMethod>(
-                value: selectedTransport,
-                dropdownColor: grayButton,
-                isExpanded: true,
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+        Expanded(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(0, contentTopPadding, 0, 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _TripFieldTitle(label: 'Mascotas', color: titleColor),
+                const SizedBox(height: 6),
+                _TripGrayActionButton(
+                  label: selectedPetsCount == 0
+                      ? 'Seleccionar'
+                      : 'Mascotas seleccionadas: $selectedPetsCount',
+                  backgroundColor: grayButton,
+                  textColor: textColor,
+                  onPressed: onSelectPets,
                 ),
-                items: const <DropdownMenuItem<_TripTransportMethod>>[
-                  DropdownMenuItem<_TripTransportMethod>(
-                    value: _TripTransportMethod.walking,
-                    child: Text('A Pie'),
+                const SizedBox(height: 10),
+                _TripFieldTitle(
+                  label: 'Método de transporte',
+                  color: titleColor,
+                ),
+                const SizedBox(height: 6),
+                SizedBox(
+                  height: 46,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: grayButton,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<_TripTransportMethod>(
+                        value: selectedTransport,
+                        dropdownColor: grayButton,
+                        isExpanded: true,
+                        style: TextStyle(
+                          color: textColor,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        items: const <DropdownMenuItem<_TripTransportMethod>>[
+                          DropdownMenuItem<_TripTransportMethod>(
+                            value: _TripTransportMethod.walking,
+                            child: Text('A Pie'),
+                          ),
+                          DropdownMenuItem<_TripTransportMethod>(
+                            value: _TripTransportMethod.vehicle,
+                            child: Text('En Vehículo'),
+                          ),
+                        ],
+                        onChanged: (_TripTransportMethod? value) {
+                          if (value != null) {
+                            onTransportChanged(value);
+                          }
+                        },
+                      ),
+                    ),
                   ),
-                  DropdownMenuItem<_TripTransportMethod>(
-                    value: _TripTransportMethod.vehicle,
-                    child: Text('En Vehículo'),
+                ),
+                const SizedBox(height: 10),
+                _TripFieldTitle(
+                  label: 'Estrategia de ruta',
+                  color: titleColor,
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  height: 46,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: grayButton,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Evitar peligros',
+                          style: TextStyle(
+                            color: textColor,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Switch(
+                        value: avoidHazards,
+                        onChanged: onAvoidHazardsChanged,
+                        activeThumbColor: AppPalette.primaryBlue,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _TripFieldTitle(label: 'Ruta', color: titleColor),
+                const SizedBox(height: 6),
+                _TripGrayActionButton(
+                  label: selectedRouteName == null
+                      ? 'Seleccionar'
+                      : 'Ruta: $selectedRouteName',
+                  backgroundColor: grayButton,
+                  textColor: textColor,
+                  onPressed: onSelectRoute,
+                ),
+                if (selectedRouteName != null &&
+                    onEditSelectedRoute != null) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 42,
+                    child: OutlinedButton.icon(
+                      onPressed: onEditSelectedRoute,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppPalette.primaryBlue,
+                        side: const BorderSide(
+                          color: AppPalette.primaryBlue,
+                          width: 1,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.edit_rounded, size: 16),
+                      label: const Text(
+                        'Editar ruta seleccionada',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
-                onChanged: (_TripTransportMethod? value) {
-                  if (value != null) {
-                    onTransportChanged(value);
-                  }
-                },
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        _TripFieldTitle(label: 'Estrategia de ruta', color: titleColor),
-        const SizedBox(height: 6),
-        Container(
-          height: 46,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: grayButton,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Evitar peligros',
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                if (errorText != null && errorText!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    errorText!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppPalette.dangerRed,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-              ),
-              Switch(
-                value: avoidHazards,
-                onChanged: onAvoidHazardsChanged,
-                activeThumbColor: AppPalette.primaryBlue,
-              ),
-            ],
+                ],
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 10),
-        _TripFieldTitle(label: 'Ruta', color: titleColor),
-        const SizedBox(height: 6),
-        _TripGrayActionButton(
-          label: selectedRouteName == null
-              ? 'Seleccionar'
-              : 'Ruta: $selectedRouteName',
-          backgroundColor: grayButton,
-          textColor: textColor,
-          onPressed: onSelectRoute,
-        ),
-        if (selectedRouteName != null && onEditSelectedRoute != null) ...[
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 42,
-            child: OutlinedButton.icon(
-              onPressed: onEditSelectedRoute,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppPalette.primaryBlue,
-                side: const BorderSide(color: AppPalette.primaryBlue, width: 1),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              icon: const Icon(Icons.edit_rounded, size: 16),
-              label: const Text(
-                'Editar ruta seleccionada',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-              ),
-            ),
-          ),
-        ],
-        const SizedBox(height: 14),
         SizedBox(
           height: 48,
           child: ElevatedButton(
@@ -2254,18 +2327,6 @@ class _TripStartPanelContent extends StatelessWidget {
             ),
           ),
         ),
-        if (errorText != null && errorText!.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text(
-            errorText!,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppPalette.dangerRed,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
       ],
     );
   }

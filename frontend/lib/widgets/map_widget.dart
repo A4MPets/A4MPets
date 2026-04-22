@@ -234,7 +234,9 @@ class _MapWidgetState extends State<MapWidget> {
         if (mounted) {
           setState(() {
             _userLocation = seedLocation;
-            _userHeading = position.heading.isNaN ? _userHeading : position.heading;
+            _userHeading = position.heading.isNaN
+                ? _userHeading
+                : position.heading;
           });
         }
       } catch (e) {
@@ -393,10 +395,11 @@ class _MapWidgetState extends State<MapWidget> {
 
     final bool isWeb = MediaQuery.of(context).size.width > 900;
     final bool controlsVisible = !widget.hideDefaultControls;
+    final double topSystemInset = MediaQuery.of(context).padding.top;
     final bool reportDangerVisible =
         controlsVisible || widget.keepReportDangerVisible;
     final bool modifyLocationVisible =
-      controlsVisible || widget.keepModifyLocationVisible;
+        controlsVisible || widget.keepModifyLocationVisible;
 
     return Stack(
       children: [
@@ -718,7 +721,7 @@ class _MapWidgetState extends State<MapWidget> {
 
           // User profile button - Mobile (top left corner)
           Positioned(
-            top: 16,
+            top: 16 + topSystemInset,
             left: 16,
             child: _buildAnimatedControl(
               visible: controlsVisible,
@@ -746,7 +749,7 @@ class _MapWidgetState extends State<MapWidget> {
 
           // Settings button - Mobile (top right corner)
           Positioned(
-            top: 16,
+            top: 16 + topSystemInset,
             right: 16,
             child: _buildAnimatedControl(
               visible: controlsVisible,
@@ -865,7 +868,7 @@ class _MapWidgetState extends State<MapWidget> {
 
           // User profile button - Web (top left corner)
           Positioned(
-            top: 16,
+            top: 16 + topSystemInset,
             left: 16,
             child: _buildAnimatedControl(
               visible: controlsVisible,
@@ -893,7 +896,7 @@ class _MapWidgetState extends State<MapWidget> {
 
           // Settings button - Web (top right corner)
           Positioned(
-            top: 16,
+            top: 16 + topSystemInset,
             right: 16,
             child: _buildAnimatedControl(
               visible: controlsVisible,
@@ -921,7 +924,7 @@ class _MapWidgetState extends State<MapWidget> {
 
           // Modify location button - Web (dev tool, below settings)
           Positioned(
-            top: 72,
+            top: 72 + topSystemInset,
             right: 16,
             child: _buildAnimatedControl(
               visible: modifyLocationVisible,
@@ -948,7 +951,6 @@ class _MapWidgetState extends State<MapWidget> {
               ),
             ),
           ),
-
         ],
 
         if (widget.isSelectingRoutePoint)

@@ -2,12 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-enum PanelAnchor {
-  topLeft,
-  topRight,
-  bottomLeft,
-  bottomRight,
-}
+enum PanelAnchor { topLeft, topRight, bottomLeft, bottomRight }
 
 class AppModalPanel extends StatelessWidget {
   final bool isDarkMode;
@@ -25,6 +20,7 @@ class AppModalPanel extends StatelessWidget {
   final VoidCallback onClosePressed;
   final bool showBackButton;
   final bool scrollContent;
+  final double? contentTopPadding;
   final Duration animationDuration;
   final Curve animationCurve;
   final bool showLoadingIndicator;
@@ -46,6 +42,7 @@ class AppModalPanel extends StatelessWidget {
     this.borderRadius = const BorderRadius.all(Radius.circular(20)),
     this.showBackButton = false,
     this.scrollContent = true,
+    this.contentTopPadding,
     this.animationDuration = const Duration(milliseconds: 260),
     this.animationCurve = Curves.easeOutCubic,
     this.showLoadingIndicator = false,
@@ -68,6 +65,7 @@ class AppModalPanel extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
+        final EdgeInsets viewPadding = MediaQuery.of(context).padding;
         final bool isMobile = constraints.maxWidth <= 900;
         final double availableWidth = constraints.maxWidth - (_margin * 2);
         final double availableHeight = constraints.maxHeight - (_margin * 2);
@@ -88,8 +86,25 @@ class AppModalPanel extends StatelessWidget {
             ? availableHeight
             : math.min(height ?? resolvedMaxHeight, resolvedMaxHeight);
 
+        final double resolvedTopPadding =
+            contentTopPadding ?? (hasTitle ? 56 : 12);
+        final double safeTopInset =
+            anchor == PanelAnchor.topLeft || anchor == PanelAnchor.topRight
+            ? viewPadding.top
+            : 0;
+        final double safeBottomInset =
+            anchor == PanelAnchor.bottomLeft ||
+                anchor == PanelAnchor.bottomRight
+            ? viewPadding.bottom
+            : 0;
+
         final Widget panelBody = Padding(
-          padding: const EdgeInsets.all(_margin),
+          padding: EdgeInsets.fromLTRB(
+            _margin,
+            _margin + safeTopInset,
+            _margin,
+            _margin + safeBottomInset,
+          ),
           child: Align(
             alignment: _toAlignment(anchor),
             child: ConstrainedBox(
@@ -111,14 +126,14 @@ class AppModalPanel extends StatelessWidget {
                     if (scrollContent)
                       if (adaptHeightToContent)
                         _PanelScrollableBody(
-                          topPadding: hasTitle ? 56 : 12,
+                          topPadding: resolvedTopPadding,
                           adaptHeightToContent: true,
                           child: child,
                         )
                       else
                         Positioned.fill(
                           child: _PanelScrollableBody(
-                            topPadding: hasTitle ? 56 : 12,
+                            topPadding: resolvedTopPadding,
                             adaptHeightToContent: false,
                             child: child,
                           ),
@@ -128,7 +143,7 @@ class AppModalPanel extends StatelessWidget {
                         child: Padding(
                           padding: EdgeInsets.fromLTRB(
                             16,
-                            hasTitle ? 56 : 12,
+                            resolvedTopPadding,
                             16,
                             18,
                           ),
@@ -203,10 +218,7 @@ class AppModalPanel extends StatelessWidget {
               opacity: value,
               child: Transform.translate(
                 offset: Offset(0, offsetY),
-                child: Transform.scale(
-                  scale: scale,
-                  child: child,
-                ),
+                child: Transform.scale(scale: scale, child: child),
               ),
             );
           },
