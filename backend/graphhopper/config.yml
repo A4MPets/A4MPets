@@ -1,16 +1,23 @@
 graphhopper:
   datareader.file: /data/map.osm.pbf
   graph.location: /data/graph-cache
+  graph.elevation.provider: srtm
+  graph.elevation.cache_dir: /data/graph-cache/elevation
 
   profiles:
     - name: car
       custom_model_files: [car.json]
+    - name: foot
+      custom_model_files: [foot.json, foot_elevation.json]
 
   profiles_ch:
     - profile: car
 
-  graph.encoded_values: car_access, car_average_speed, road_access, road_environment, ferry_speed, max_speed
-  import.osm.ignored_highways: footway,construction,cycleway,path,steps
+  graph.encoded_values: |
+    car_access, car_average_speed, country, road_class, roundabout, max_speed, road_environment,
+    foot_access, foot_average_speed, foot_priority, foot_road_access, hike_rating, average_slope, mtb_rating,
+    ferry_speed
+  import.osm.ignored_highways: construction
 
 server:
   application_connectors:

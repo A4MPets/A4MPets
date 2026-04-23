@@ -3,6 +3,28 @@
 part of 'map_page.dart';
 
 extension _MapPageTripState on _MapPageState {
+  void _refreshTripRoutePreviewForPreferences() {
+    final RouteRecord? selectedRoute = _selectedTripRoute;
+    if (selectedRoute == null) {
+      return;
+    }
+
+    final List<LatLng> routePoints = selectedRoute.points
+        .map((RoutePoint p) => p.toLatLng())
+        .toList(growable: false);
+    if (routePoints.isEmpty) {
+      return;
+    }
+
+    final LatLng? origin = _latestUserLocation;
+    if (origin != null) {
+      _refreshDraftRoutePolyline(<LatLng>[origin, ...routePoints]);
+      return;
+    }
+
+    _refreshDraftRoutePolyline(routePoints);
+  }
+
   void _openStartTripPanel(bool isDarkMode) {
     if (_hasOpenPanels) {
       return;
@@ -485,11 +507,13 @@ extension _MapPageTripState on _MapPageState {
             setState(() {
               _selectedTripTransport = method;
             });
+            _refreshTripRoutePreviewForPreferences();
           },
           onAvoidHazardsChanged: (bool value) {
             setState(() {
               _shouldAvoidHazardsInRouting = value;
             });
+            _refreshTripRoutePreviewForPreferences();
           },
           onStartTrip: () => _startTrip(isDarkMode),
         );
