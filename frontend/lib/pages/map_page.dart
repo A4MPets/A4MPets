@@ -116,6 +116,15 @@ class _MapPageState extends ConsumerState<MapPage> {
     );
   }
 
+  void _syncAndReloadData() {
+    ref.read(userDataSyncCoordinatorProvider).syncNow().then((_) {
+      if (mounted) {
+        ref.read(petsControllerProvider.notifier).reload();
+        ref.read(routesControllerProvider.notifier).reload();
+      }
+    });
+  }
+
   List<HazardReportRecord> get _visibleHazardCircles {
     final List<HazardReportRecord> hazardReports =
         ref.watch(hazardReportsControllerProvider).asData?.value ??

@@ -33,10 +33,12 @@ extension _MapPageTripState on _MapPageState {
   }
 
   void _openTripPetSelectorPanel(bool isDarkMode) {
+    _syncAndReloadData();
     _pushPanel(_buildTripPetSelectorRoute(isDarkMode));
   }
 
   void _openTripRouteSelectorPanel(bool isDarkMode) {
+    _syncAndReloadData();
     _pushPanel(_buildTripRouteSelectorRoute(isDarkMode));
   }
 

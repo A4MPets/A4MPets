@@ -141,6 +141,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
   }
 
   void _openManagePetsPanel(bool isDarkMode) {
+    _syncAndReloadData();
     _pushPanel(_buildManagePetsRoute(isDarkMode));
   }
 

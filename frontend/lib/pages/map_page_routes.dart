@@ -4,6 +4,7 @@ part of 'map_page.dart';
 
 extension _MapPageRoutesState on _MapPageState {
   void _openManageRoutesPanel(bool isDarkMode) {
+    _syncAndReloadData();
     _pushPanel(_buildManageRoutesRoute(isDarkMode));
   }
 
