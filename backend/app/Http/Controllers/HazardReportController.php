@@ -319,7 +319,13 @@ class HazardReportController extends Controller
 
                 // Buscar si ya existe este peligro localmente
                 $existing = HazardReport::query()
-                    ->where('local_id', $hazardData['local_id'])
+                    ->where(function ($query) use ($hazardData): void {
+                        if (!empty($hazardData['remote_id'])) {
+                            $query->where('remote_id', $hazardData['remote_id'])
+                                  ->orWhere('id', $hazardData['remote_id']);
+                        }
+                        $query->orWhere('local_id', $hazardData['local_id']);
+                    })
                     ->first();
                 $remoteTimestamp = Carbon::parse($hazardData['last_modified_at']);
 

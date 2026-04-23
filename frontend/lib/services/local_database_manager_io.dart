@@ -569,7 +569,7 @@ class LocalDatabaseManager {
   }
 
   Future<void> upsertPetFromRemote({
-    required int localId,
+    required String localIdString,
     required String? remoteId,
     required String syncStatus,
     required DateTime remoteLastModifiedAt,
@@ -577,12 +577,28 @@ class LocalDatabaseManager {
     required String? photoPath,
   }) async {
     final Database db = await database;
-    final List<Map<String, Object?>> rows = await db.query(
+    List<Map<String, Object?>> rows = await db.query(
       _petsTable,
-      where: 'remote_id = ? OR id = ?',
-      whereArgs: <Object?>[remoteId, localId],
+      where: 'remote_id = ?',
+      whereArgs: <Object?>[remoteId],
       limit: 1,
     );
+
+    if (rows.isEmpty && localIdString.startsWith('pt_')) {
+      final List<String> parts = localIdString.split('_');
+      if (parts.length >= 3) {
+        final int? parsedId = int.tryParse(parts[1]);
+        final int? parsedCreatedAt = int.tryParse(parts[2]);
+        if (parsedId != null && parsedCreatedAt != null) {
+          rows = await db.query(
+            _petsTable,
+            where: 'id = ? AND created_at = ?',
+            whereArgs: <Object?>[parsedId, parsedCreatedAt],
+            limit: 1,
+          );
+        }
+      }
+    }
 
     final int now = DateTime.now().millisecondsSinceEpoch;
     final int remoteMs = remoteLastModifiedAt.millisecondsSinceEpoch;
@@ -664,7 +680,7 @@ class LocalDatabaseManager {
   }
 
   Future<void> upsertRouteFromRemote({
-    required int localId,
+    required String localIdString,
     required String? remoteId,
     required String syncStatus,
     required DateTime remoteLastModifiedAt,
@@ -672,12 +688,28 @@ class LocalDatabaseManager {
     required List<RoutePoint> points,
   }) async {
     final Database db = await database;
-    final List<Map<String, Object?>> rows = await db.query(
+    List<Map<String, Object?>> rows = await db.query(
       _routesTable,
-      where: 'remote_id = ? OR id = ?',
-      whereArgs: <Object?>[remoteId, localId],
+      where: 'remote_id = ?',
+      whereArgs: <Object?>[remoteId],
       limit: 1,
     );
+
+    if (rows.isEmpty && localIdString.startsWith('rt_')) {
+      final List<String> parts = localIdString.split('_');
+      if (parts.length >= 3) {
+        final int? parsedId = int.tryParse(parts[1]);
+        final int? parsedCreatedAt = int.tryParse(parts[2]);
+        if (parsedId != null && parsedCreatedAt != null) {
+          rows = await db.query(
+            _routesTable,
+            where: 'id = ? AND created_at = ?',
+            whereArgs: <Object?>[parsedId, parsedCreatedAt],
+            limit: 1,
+          );
+        }
+      }
+    }
 
     final int now = DateTime.now().millisecondsSinceEpoch;
     final int remoteMs = remoteLastModifiedAt.millisecondsSinceEpoch;

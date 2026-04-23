@@ -386,7 +386,7 @@ class UserDataSyncCoordinator {
 
       transferablePets.add(pet);
       petPayload.add(<String, Object?>{
-        'local_id': pet.id.toString(),
+        'local_id': 'pt_${pet.id}_${pet.createdAt.millisecondsSinceEpoch}',
         'remote_id': pet.remoteId,
         'name': pet.name,
         'photo_path': photoPath,
@@ -413,10 +413,33 @@ class UserDataSyncCoordinator {
       return;
     }
 
+    final Map<String, dynamic> responseMap =
+        jsonDecode(response.body) as Map<String, dynamic>;
+
+    final Map<String, dynamic> syncResults =
+        (responseMap['sync_results'] as Map<String, dynamic>?) ??
+        <String, dynamic>{};
+    final List<dynamic> details =
+        (syncResults['details'] as List<dynamic>?) ?? <dynamic>[];
+
+    final Map<String, String> remoteIdMap = <String, String>{};
+    for (final dynamic item in details) {
+      final Map<String, dynamic> detail = item as Map<String, dynamic>;
+      final String? locId = detail['local_id']?.toString();
+      final String? remId = detail['remote_id']?.toString();
+      if (locId != null && remId != null) {
+        remoteIdMap[locId] = remId;
+      }
+    }
+
     for (final PetRecord pet in transferablePets) {
+      final String pseudoLocalId = 'pt_${pet.id}_${pet.createdAt.millisecondsSinceEpoch}';
+      final String? newlyAssignedRemoteId = remoteIdMap[pseudoLocalId];
+      final String? finalRemoteId = pet.remoteId ?? newlyAssignedRemoteId;
+
       await _databaseManager.markPetAsSynced(
         petId: pet.id,
-        remoteId: pet.remoteId,
+        remoteId: finalRemoteId,
         syncStatus: pet.syncStatus,
         lastModifiedAt: pet.lastModifiedAt,
       );
@@ -438,7 +461,7 @@ class UserDataSyncCoordinator {
         'routes': pending
             .map(
               (RouteRecord route) => <String, Object?>{
-                'local_id': route.id.toString(),
+                'local_id': 'rt_${route.id}_${route.createdAt.millisecondsSinceEpoch}',
                 'remote_id': route.remoteId,
                 'name': route.name,
                 'points_json': jsonEncode(
@@ -460,10 +483,33 @@ class UserDataSyncCoordinator {
       return;
     }
 
+    final Map<String, dynamic> responseMap =
+        jsonDecode(response.body) as Map<String, dynamic>;
+
+    final Map<String, dynamic> syncResults =
+        (responseMap['sync_results'] as Map<String, dynamic>?) ??
+        <String, dynamic>{};
+    final List<dynamic> details =
+        (syncResults['details'] as List<dynamic>?) ?? <dynamic>[];
+
+    final Map<String, String> remoteIdMap = <String, String>{};
+    for (final dynamic item in details) {
+      final Map<String, dynamic> detail = item as Map<String, dynamic>;
+      final String? locId = detail['local_id']?.toString();
+      final String? remId = detail['remote_id']?.toString();
+      if (locId != null && remId != null) {
+        remoteIdMap[locId] = remId;
+      }
+    }
+
     for (final RouteRecord route in pending) {
+      final String pseudoLocalId = 'rt_${route.id}_${route.createdAt.millisecondsSinceEpoch}';
+      final String? newlyAssignedRemoteId = remoteIdMap[pseudoLocalId];
+      final String? finalRemoteId = route.remoteId ?? newlyAssignedRemoteId;
+
       await _databaseManager.markRouteAsSynced(
         routeId: route.id,
-        remoteId: route.remoteId,
+        remoteId: finalRemoteId,
         syncStatus: route.syncStatus,
         lastModifiedAt: route.lastModifiedAt,
       );
@@ -475,7 +521,7 @@ class UserDataSyncCoordinator {
 
     while (true) {
       final http.Response? response = await _getWithFallback(
-        path: '/pets?per_page=100&page=$page',
+        path: '/pets?include_archived=1&per_page=100&page=$page',
         bearerToken: await _currentAccessToken(),
       );
 
@@ -499,10 +545,7 @@ class UserDataSyncCoordinator {
       for (final dynamic item in data) {
         final Map<String, dynamic> pet = item as Map<String, dynamic>;
         await _databaseManager.upsertPetFromRemote(
-          localId:
-              int.tryParse(pet['local_id']?.toString() ?? '') ??
-              (pet['id'] as num?)?.toInt() ??
-              0,
+          localIdString: pet['local_id']?.toString() ?? '',
           remoteId: pet['remote_id']?.toString() ?? pet['id']?.toString(),
           syncStatus: pet['sync_status']?.toString() ?? 'synced',
           remoteLastModifiedAt: _parseBackendDateTime(pet['last_modified_at']),
@@ -530,7 +573,7 @@ class UserDataSyncCoordinator {
 
     while (true) {
       final http.Response? response = await _getWithFallback(
-        path: '/routes?per_page=100&page=$page',
+        path: '/routes?include_archived=1&per_page=100&page=$page',
         bearerToken: await _currentAccessToken(),
       );
 
@@ -563,10 +606,7 @@ class UserDataSyncCoordinator {
             .toList(growable: false);
 
         await _databaseManager.upsertRouteFromRemote(
-          localId:
-              int.tryParse(route['local_id']?.toString() ?? '') ??
-              (route['id'] as num?)?.toInt() ??
-              0,
+          localIdString: route['local_id']?.toString() ?? '',
           remoteId: route['remote_id']?.toString() ?? route['id']?.toString(),
           syncStatus: route['sync_status']?.toString() ?? 'synced',
           remoteLastModifiedAt: _parseBackendDateTime(

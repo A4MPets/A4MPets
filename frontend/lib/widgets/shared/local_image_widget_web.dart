@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../../services/backend_api_client.dart';
+
 const int _memoryImageCacheLimit = 100;
 final Map<String, Uint8List> _decodedDataUriCache = <String, Uint8List>{};
 
@@ -33,8 +35,28 @@ Widget buildLocalImageWidget({
   if (source.startsWith('http://') ||
       source.startsWith('https://') ||
       source.startsWith('blob:')) {
+    
+    String resolvedSource = source;
+    if (!source.startsWith('blob:') && BackendApiClient.workingBaseUrl != null) {
+      try {
+        final Uri workingUri = Uri.parse(BackendApiClient.workingBaseUrl!);
+        final Uri sourceUri = Uri.parse(source);
+        if (sourceUri.path.contains('/api/media/') || 
+            sourceUri.host == 'localhost' || 
+            sourceUri.host == '127.0.0.1') {
+          resolvedSource = sourceUri.replace(
+            scheme: workingUri.scheme,
+            host: workingUri.host,
+            port: workingUri.port,
+          ).toString();
+        }
+      } catch (_) {
+        // Fallback to original source
+      }
+    }
+
     return Image.network(
-      source,
+      resolvedSource,
       fit: fit,
       gaplessPlayback: true,
       errorBuilder: errorBuilder,

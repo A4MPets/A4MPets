@@ -20,7 +20,11 @@ class PetController extends Controller
             } else {
                 $builder->whereNull('user_id');
             }
-        })->where('sync_status', '!=', 'deleted');
+        });
+
+        if (!$request->query('include_archived')) {
+            $query->where('sync_status', '!=', 'deleted');
+        }
 
         $perPage = min((int) $request->query('per_page', 50), 100);
         $page = (int) $request->query('page', 1);
@@ -70,7 +74,13 @@ class PetController extends Controller
                         } else {
                             $builder->whereNull('user_id');
                         }
-                        $builder->where('local_id', $petData['local_id']);
+                        $builder->where(function ($q) use ($petData): void {
+                            if (!empty($petData['remote_id'])) {
+                                $q->where('remote_id', $petData['remote_id'])
+                                  ->orWhere('id', $petData['remote_id']);
+                            }
+                            $q->orWhere('local_id', $petData['local_id']);
+                        });
                     })
                     ->first();
 

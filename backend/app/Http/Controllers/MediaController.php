@@ -62,7 +62,7 @@ class MediaController extends Controller
             abort(404);
         }
 
-        $absolutePath = storage_path('app/' . $relativePath);
+        $absolutePath = Storage::disk('local')->path($relativePath);
         $mimeType = Storage::disk('local')->mimeType($relativePath) ?? 'application/octet-stream';
 
         return response()->file($absolutePath, [

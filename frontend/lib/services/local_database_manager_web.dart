@@ -466,7 +466,7 @@ class LocalDatabaseManager {
   }
 
   Future<void> upsertPetFromRemote({
-    required int localId,
+    required String localIdString,
     required String? remoteId,
     required String syncStatus,
     required DateTime remoteLastModifiedAt,
@@ -478,9 +478,25 @@ class LocalDatabaseManager {
 
     PetRecord? existing;
     for (final PetRecord pet in current) {
-      if (pet.id == localId || (remoteId != null && pet.remoteId == remoteId)) {
+      if (remoteId != null && pet.remoteId == remoteId) {
         existing = pet;
         break;
+      }
+    }
+
+    if (existing == null && localIdString.startsWith('pt_')) {
+      final List<String> parts = localIdString.split('_');
+      if (parts.length >= 3) {
+        final int? parsedId = int.tryParse(parts[1]);
+        final int? parsedCreatedAt = int.tryParse(parts[2]);
+        if (parsedId != null && parsedCreatedAt != null) {
+          for (final PetRecord pet in current) {
+            if (pet.id == parsedId && pet.createdAt.millisecondsSinceEpoch == parsedCreatedAt) {
+              existing = pet;
+              break;
+            }
+          }
+        }
       }
     }
 
@@ -602,7 +618,7 @@ class LocalDatabaseManager {
   }
 
   Future<void> upsertRouteFromRemote({
-    required int localId,
+    required String localIdString,
     required String? remoteId,
     required String syncStatus,
     required DateTime remoteLastModifiedAt,
@@ -614,10 +630,25 @@ class LocalDatabaseManager {
 
     RouteRecord? existing;
     for (final RouteRecord route in current) {
-      if (route.id == localId ||
-          (remoteId != null && route.remoteId == remoteId)) {
+      if (remoteId != null && route.remoteId == remoteId) {
         existing = route;
         break;
+      }
+    }
+
+    if (existing == null && localIdString.startsWith('rt_')) {
+      final List<String> parts = localIdString.split('_');
+      if (parts.length >= 3) {
+        final int? parsedId = int.tryParse(parts[1]);
+        final int? parsedCreatedAt = int.tryParse(parts[2]);
+        if (parsedId != null && parsedCreatedAt != null) {
+          for (final RouteRecord route in current) {
+            if (route.id == parsedId && route.createdAt.millisecondsSinceEpoch == parsedCreatedAt) {
+              existing = route;
+              break;
+            }
+          }
+        }
       }
     }
 

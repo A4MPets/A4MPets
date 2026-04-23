@@ -923,38 +923,37 @@ class _MapWidgetState extends State<MapWidget> {
               ),
             ),
           ),
+        ],
 
-          // Modify location button - Web (dev tool, below settings)
-          Positioned(
-            top: 72 + topSystemInset,
-            right: 16,
-            child: _buildAnimatedControl(
-              visible: modifyLocationVisible,
-              hiddenOffset: const Offset(0.06, 0),
-              child: GestureDetector(
-                onTap: _toggleCustomPositionMode,
-                child: SizedBox(
-                  width: 48,
-                  height: 48,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: _isCustomPositionMode
-                          ? AppPalette.primaryBlue.withValues(alpha: 0.92)
-                          : translucentWhite,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.location_on,
-                      color: _isCustomPositionMode ? white : contentGray,
-                      size: 24,
-                    ),
+        // Modify location button - Dev tool, visible on both mobile and web
+        Positioned(
+          top: 72 + topSystemInset,
+          right: 16,
+          child: _buildAnimatedControl(
+            visible: modifyLocationVisible,
+            hiddenOffset: const Offset(0.06, 0),
+            child: GestureDetector(
+              onTap: _toggleCustomPositionMode,
+              child: SizedBox(
+                width: 48,
+                height: 48,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: _isCustomPositionMode
+                        ? AppPalette.primaryBlue.withValues(alpha: 0.92)
+                        : translucentWhite,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.location_on,
+                    color: _isCustomPositionMode ? white : contentGray,
+                    size: 24,
                   ),
                 ),
               ),
             ),
           ),
-        ],
-
+        ),
         if (widget.isSelectingRoutePoint)
           Positioned(
             bottom: isWeb ? 24 : 20,

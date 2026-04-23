@@ -138,6 +138,10 @@ class _MapPageState extends ConsumerState<MapPage> {
   }
 
   List<LatLng> get _renderedRoutePoints {
+    if (_hasOpenPanels && _panelStack.last.isAddRoutePanel) {
+      return List<LatLng>.from(_draftRoutePoints);
+    }
+
     if (_isTripNavigationContext) {
       final List<LatLng> activePoints = _tripRemainingWaypoints.isNotEmpty
           ? _tripRemainingWaypoints
@@ -149,6 +153,10 @@ class _MapPageState extends ConsumerState<MapPage> {
   }
 
   List<LatLng> get _renderedRoutePolylinePoints {
+    if (_hasOpenPanels && _panelStack.last.isAddRoutePanel) {
+      return List<LatLng>.from(_draftRoutePolyline);
+    }
+
     if (_draftRoutePolyline.isNotEmpty) {
       return List<LatLng>.from(_draftRoutePolyline);
     }

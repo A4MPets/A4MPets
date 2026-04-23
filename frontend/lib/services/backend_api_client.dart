@@ -12,6 +12,8 @@ class BackendApiClient {
     defaultValue: 'http://localhost:8000/api',
   );
 
+  static String? workingBaseUrl;
+
   final http.Client _httpClient;
 
   List<String> get baseUrls {
@@ -55,6 +57,7 @@ class BackendApiClient {
             .timeout(timeout);
 
         if (response.statusCode < 500) {
+          workingBaseUrl = baseUrl;
           return response;
         }
       } catch (_) {
@@ -80,6 +83,7 @@ class BackendApiClient {
             .timeout(timeout);
 
         if (response.statusCode < 500) {
+          workingBaseUrl = baseUrl;
           return response;
         }
       } catch (_) {
@@ -107,6 +111,7 @@ class BackendApiClient {
             .timeout(timeout);
 
         if (response.statusCode < 500) {
+          workingBaseUrl = baseUrl;
           return response;
         }
       } catch (_) {
@@ -132,6 +137,7 @@ class BackendApiClient {
             .timeout(timeout);
 
         if (response.statusCode < 500) {
+          workingBaseUrl = baseUrl;
           return response;
         }
       } catch (_) {
