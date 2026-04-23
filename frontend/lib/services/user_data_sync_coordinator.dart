@@ -10,17 +10,24 @@ import '../models/pet_record.dart';
 import '../models/route_record.dart';
 import 'backend_api_client.dart';
 import 'local_database_manager.dart';
-import 'media_source_encoder.dart' as media_source_encoder;
+import 'sync_api_gateway.dart';
+import 'sync_datetime_and_codes.dart';
+import 'sync_media_resolver.dart';
 
 class UserDataSyncCoordinator {
   UserDataSyncCoordinator({
     required LocalDatabaseManager databaseManager,
     http.Client? httpClient,
   }) : _databaseManager = databaseManager,
-       _apiClient = BackendApiClient(httpClient: httpClient ?? http.Client());
+       _apiGateway = SyncApiGateway(
+         apiClient: BackendApiClient(httpClient: httpClient ?? http.Client()),
+       ) {
+    _mediaResolver = SyncMediaResolver(postRequest: _postWithFallback);
+  }
 
   final LocalDatabaseManager _databaseManager;
-  final BackendApiClient _apiClient;
+  final SyncApiGateway _apiGateway;
+  late final SyncMediaResolver _mediaResolver;
 
   bool _syncInProgress = false;
   bool _syncQueued = false;
@@ -57,7 +64,7 @@ class UserDataSyncCoordinator {
   }
 
   List<String> get _apiBaseUrls {
-    return _apiClient.baseUrls;
+    return _apiGateway.baseUrls;
   }
 
   Future<String?> _currentAccessToken() async {
@@ -613,8 +620,9 @@ class UserDataSyncCoordinator {
 
     String? avatarUrlForBackend = avatarPath;
     if (hasPendingLocalAvatar) {
+      final String localAvatarPath = avatarPath;
       final String? resolvedAvatarUrl = await _resolveImageUrlForSync(
-        source: avatarPath!,
+        source: localAvatarPath,
         bucket: 'profiles',
         bearerToken: token,
       );
@@ -713,79 +721,23 @@ class UserDataSyncCoordinator {
   }
 
   DateTime _parseBackendDateTime(Object? value) {
-    if (value == null) {
-      return DateTime.now().toUtc();
-    }
-
-    final String raw = value.toString().trim();
-    if (raw.isEmpty) {
-      return DateTime.now().toUtc();
-    }
-
-    return DateTime.tryParse(raw)?.toUtc() ?? DateTime.now().toUtc();
+    return SyncDateTimeAndCodes.parseBackendDateTime(value);
   }
 
   String _toBackendDateTime(DateTime dateTime) {
-    final DateTime utc = dateTime.toUtc();
-    final String y = utc.year.toString().padLeft(4, '0');
-    final String m = utc.month.toString().padLeft(2, '0');
-    final String d = utc.day.toString().padLeft(2, '0');
-    final String hh = utc.hour.toString().padLeft(2, '0');
-    final String mm = utc.minute.toString().padLeft(2, '0');
-    final String ss = utc.second.toString().padLeft(2, '0');
-    return '$y-$m-$d $hh:$mm:$ss';
+    return SyncDateTimeAndCodes.toBackendDateTime(dateTime);
   }
 
   String _normalizeRiskLevelCode(String? value) {
-    final String normalized = (value ?? '').trim().toLowerCase();
-    switch (normalized) {
-      case 'low':
-      case 'medium':
-      case 'high':
-      case 'undefined':
-        return normalized;
-      case 'unknown':
-      case 'unspecified':
-        return 'undefined';
-      default:
-        return 'undefined';
-    }
+    return SyncDateTimeAndCodes.normalizeRiskLevelCode(value);
   }
 
   String _normalizeCategoryCode(String? value) {
-    final String normalized = (value ?? '').trim().toLowerCase();
-    switch (normalized) {
-      case 'contagious_disease':
-      case 'stagnant_water':
-      case 'waste_accumulation':
-      case 'aggressive_animals':
-      case 'undefined':
-        return normalized;
-      case 'unknown':
-      case 'unspecified':
-      default:
-        return 'undefined';
-    }
+    return SyncDateTimeAndCodes.normalizeCategoryCode(value);
   }
 
   String _normalizeDurationCode(String? value) {
-    final String normalized = (value ?? '').trim().toLowerCase();
-    switch (normalized) {
-      case '1_day':
-      case '3_days':
-      case '1_week':
-      case '2_weeks':
-      case '1_month':
-      case '3_months':
-      case '6_months':
-      case '1_year':
-      case 'undefined':
-        return normalized;
-      case 'unknown':
-      case 'unspecified':
-      default:
-        return 'undefined';
-    }
+    return SyncDateTimeAndCodes.normalizeDurationCode(value);
   }
 
   Future<http.Response?> _postWithFallback({
@@ -793,11 +745,10 @@ class UserDataSyncCoordinator {
     required Object body,
     String? bearerToken,
   }) async {
-    return _apiClient.postWithFallback(
-      path,
+    return _apiGateway.post(
+      path: path,
       body: body,
       bearerToken: bearerToken,
-      timeout: const Duration(seconds: 5),
     );
   }
 
@@ -805,10 +756,9 @@ class UserDataSyncCoordinator {
     required String path,
     String? bearerToken,
   }) async {
-    return _apiClient.getWithFallback(
-      path,
+    return _apiGateway.get(
+      path: path,
       bearerToken: bearerToken,
-      timeout: const Duration(seconds: 5),
     );
   }
 
@@ -817,43 +767,25 @@ class UserDataSyncCoordinator {
     required Object body,
     String? bearerToken,
   }) async {
-    return _apiClient.putWithFallback(
-      path,
+    return _apiGateway.put(
+      path: path,
       body: body,
       bearerToken: bearerToken,
-      timeout: const Duration(seconds: 5),
     );
   }
 
   bool _isRemoteImageUrl(String source) {
-    return source.startsWith('http://') || source.startsWith('https://');
+    return _mediaResolver.isRemoteImageUrl(source);
   }
 
   String? _preferProfileAvatarForPull({
     required String? currentAvatar,
     required String? remoteAvatar,
   }) {
-    if (currentAvatar == null || currentAvatar.isEmpty) {
-      return remoteAvatar;
-    }
-
-    if (remoteAvatar == null || remoteAvatar.isEmpty) {
-      return currentAvatar;
-    }
-
-    if (_shouldKeepLocalAvatarSource(currentAvatar)) {
-      return currentAvatar;
-    }
-
-    return remoteAvatar;
-  }
-
-  bool _shouldKeepLocalAvatarSource(String source) {
-    if (source.startsWith('data:image')) {
-      return true;
-    }
-
-    return !_isRemoteImageUrl(source);
+    return _mediaResolver.preferProfileAvatarForPull(
+      currentAvatar: currentAvatar,
+      remoteAvatar: remoteAvatar,
+    );
   }
 
   Future<String?> _resolveImageUrlForSync({
@@ -861,40 +793,10 @@ class UserDataSyncCoordinator {
     required String bucket,
     String? bearerToken,
   }) async {
-    if (source.trim().isEmpty) {
-      return null;
-    }
-
-    if (_isRemoteImageUrl(source)) {
-      return source;
-    }
-
-    final String? dataUri = await media_source_encoder
-        .encodeImageSourceToDataUri(source);
-    if (dataUri == null || dataUri.isEmpty) {
-      return null;
-    }
-
-    final http.Response? response = await _postWithFallback(
-      path: '/media/upload',
-      body: <String, Object?>{'bucket': bucket, 'image_data': dataUri},
+    return _mediaResolver.resolveImageUrlForSync(
+      source: source,
+      bucket: bucket,
       bearerToken: bearerToken,
     );
-
-    if (response == null ||
-        response.statusCode < 200 ||
-        response.statusCode >= 300) {
-      return null;
-    }
-
-    final Map<String, dynamic> payload =
-        jsonDecode(response.body) as Map<String, dynamic>;
-    final Map<String, dynamic>? data = payload['data'] as Map<String, dynamic>?;
-    final String? url = data?['url']?.toString();
-    if (url == null || url.isEmpty) {
-      return null;
-    }
-
-    return url;
   }
 }

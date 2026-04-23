@@ -11,6 +11,7 @@ import '../models/local_user_profile.dart';
 import '../models/hazard_report_record.dart';
 import '../models/pet_record.dart';
 import '../models/route_record.dart';
+import 'local_database_schema.dart';
 
 class LocalDatabaseManager {
   LocalDatabaseManager();
@@ -59,206 +60,23 @@ class LocalDatabaseManager {
       databasePath,
       version: 7,
       onCreate: (Database db, int version) async {
-        await db.execute('''
-          CREATE TABLE $_userTable (
-            id INTEGER PRIMARY KEY,
-            username TEXT NOT NULL,
-            avatar_path TEXT,
-            is_authenticated INTEGER NOT NULL DEFAULT 0,
-            backend_user_id INTEGER,
-            email TEXT,
-            access_token TEXT,
-            last_synced_at INTEGER
-          )
-        ''');
-
-        await db.execute('''
-          CREATE TABLE $_petsTable (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            remote_id TEXT,
-            name TEXT NOT NULL,
-            photo_path TEXT,
-            sync_status TEXT NOT NULL DEFAULT 'created',
-            last_modified_at INTEGER NOT NULL,
-            synced_at INTEGER,
-            created_at INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL,
-            needs_sync INTEGER NOT NULL DEFAULT 1
-          )
-        ''');
-
-        await db.execute('''
-          CREATE TABLE $_routesTable (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            remote_id TEXT,
-            name TEXT NOT NULL,
-            points_json TEXT NOT NULL DEFAULT '[]',
-            sync_status TEXT NOT NULL DEFAULT 'created',
-            last_modified_at INTEGER NOT NULL,
-            synced_at INTEGER,
-            created_at INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL,
-            needs_sync INTEGER NOT NULL DEFAULT 1
-          )
-        ''');
-
-        await db.execute('''
-          CREATE TABLE $_hazardsTable (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            local_uuid TEXT NOT NULL UNIQUE,
-            remote_id TEXT,
-            sync_status TEXT NOT NULL DEFAULT 'created',
-            last_modified_at INTEGER NOT NULL,
-            incident_latitude REAL NOT NULL,
-            incident_longitude REAL NOT NULL,
-            impact_radius_meters INTEGER NOT NULL,
-            category_code TEXT NOT NULL,
-            narrative_description TEXT NOT NULL,
-            reported_at INTEGER NOT NULL,
-            estimated_duration_code TEXT NOT NULL,
-            risk_level_code TEXT NOT NULL,
-            evidence_photo_url TEXT,
-            reported_by_username TEXT NOT NULL DEFAULT 'Anónimo',
-            comments_json TEXT NOT NULL DEFAULT '[]',
-            created_at INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL,
-            needs_sync INTEGER NOT NULL DEFAULT 1
-          )
-        ''');
-
-        await db.execute('''
-          CREATE TABLE route_cache (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            waypoints_hash TEXT NOT NULL UNIQUE,
-            polyline_json TEXT NOT NULL,
-            distance_meters REAL NOT NULL,
-            duration_seconds REAL NOT NULL,
-            cached_at INTEGER NOT NULL
-          )
-        ''');
+        await LocalDatabaseSchema.createTables(
+          db: db,
+          userTable: _userTable,
+          petsTable: _petsTable,
+          routesTable: _routesTable,
+          hazardsTable: _hazardsTable,
+        );
       },
       onUpgrade: (Database db, int oldVersion, int newVersion) async {
-        if (oldVersion < 2) {
-          await db.execute('''
-            CREATE TABLE IF NOT EXISTS $_routesTable (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              name TEXT NOT NULL,
-              points_json TEXT NOT NULL DEFAULT '[]',
-              created_at INTEGER NOT NULL,
-              updated_at INTEGER NOT NULL,
-              needs_sync INTEGER NOT NULL DEFAULT 1
-            )
-          ''');
-        }
-
-        if (oldVersion < 3) {
-          await db.execute('''
-            CREATE TABLE IF NOT EXISTS $_hazardsTable (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              local_uuid TEXT NOT NULL UNIQUE,
-              remote_id TEXT,
-              sync_status TEXT NOT NULL DEFAULT 'created',
-              last_modified_at INTEGER NOT NULL,
-              incident_latitude REAL NOT NULL,
-              incident_longitude REAL NOT NULL,
-              impact_radius_meters INTEGER NOT NULL,
-              category_code TEXT NOT NULL,
-              narrative_description TEXT NOT NULL,
-              reported_at INTEGER NOT NULL,
-              estimated_duration_code TEXT NOT NULL,
-              risk_level_code TEXT NOT NULL,
-              evidence_photo_url TEXT,
-              reported_by_username TEXT NOT NULL DEFAULT 'Anónimo',
-              comments_json TEXT NOT NULL DEFAULT '[]',
-              created_at INTEGER NOT NULL,
-              updated_at INTEGER NOT NULL,
-              needs_sync INTEGER NOT NULL DEFAULT 1
-            )
-          ''');
-        }
-
-        if (oldVersion < 4) {
-          await db.execute(
-            'ALTER TABLE $_hazardsTable ADD COLUMN reported_by_username TEXT NOT NULL DEFAULT "Anónimo"',
-          );
-          await db.execute(
-            'ALTER TABLE $_hazardsTable ADD COLUMN comments_json TEXT NOT NULL DEFAULT "[]"',
-          );
-        }
-
-        if (oldVersion < 5) {
-          await db.execute('''
-            CREATE TABLE IF NOT EXISTS route_cache (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              waypoints_hash TEXT NOT NULL UNIQUE,
-              polyline_json TEXT NOT NULL,
-              distance_meters REAL NOT NULL,
-              duration_seconds REAL NOT NULL,
-              cached_at INTEGER NOT NULL
-            )
-          ''');
-        }
-
-        if (oldVersion < 6) {
-          await db.execute(
-            'ALTER TABLE $_hazardsTable ADD COLUMN local_uuid TEXT',
-          );
-          await db.execute(
-            'ALTER TABLE $_hazardsTable ADD COLUMN remote_id TEXT',
-          );
-          await db.execute(
-            'ALTER TABLE $_hazardsTable ADD COLUMN sync_status TEXT NOT NULL DEFAULT "created"',
-          );
-          await db.execute(
-            'ALTER TABLE $_hazardsTable ADD COLUMN last_modified_at INTEGER',
-          );
-          await db.execute(
-            'UPDATE $_hazardsTable SET local_uuid = COALESCE(local_uuid, "legacy-" || id)',
-          );
-          await db.execute(
-            'UPDATE $_hazardsTable SET last_modified_at = COALESCE(last_modified_at, updated_at, created_at)',
-          );
-          await db.execute(
-            'CREATE UNIQUE INDEX IF NOT EXISTS idx_hazards_local_uuid ON $_hazardsTable(local_uuid)',
-          );
-          await db.execute(
-            'CREATE INDEX IF NOT EXISTS idx_hazards_remote_id ON $_hazardsTable(remote_id)',
-          );
-        }
-
-        if (oldVersion < 7) {
-          await db.execute(
-            'ALTER TABLE $_userTable ADD COLUMN backend_user_id INTEGER',
-          );
-          await db.execute('ALTER TABLE $_userTable ADD COLUMN email TEXT');
-          await db.execute(
-            'ALTER TABLE $_userTable ADD COLUMN access_token TEXT',
-          );
-
-          await db.execute('ALTER TABLE $_petsTable ADD COLUMN remote_id TEXT');
-          await db.execute(
-            'ALTER TABLE $_petsTable ADD COLUMN sync_status TEXT NOT NULL DEFAULT "created"',
-          );
-          await db.execute(
-            'ALTER TABLE $_petsTable ADD COLUMN last_modified_at INTEGER',
-          );
-          await db.execute(
-            'ALTER TABLE $_petsTable ADD COLUMN synced_at INTEGER',
-          );
-
-          await db.execute(
-            'ALTER TABLE $_routesTable ADD COLUMN remote_id TEXT',
-          );
-          await db.execute(
-            'ALTER TABLE $_routesTable ADD COLUMN sync_status TEXT NOT NULL DEFAULT "created"',
-          );
-          await db.execute(
-            'ALTER TABLE $_routesTable ADD COLUMN last_modified_at INTEGER',
-          );
-          await db.execute(
-            'ALTER TABLE $_routesTable ADD COLUMN synced_at INTEGER',
-          );
-        }
+        await LocalDatabaseSchema.applyMigrations(
+          db: db,
+          oldVersion: oldVersion,
+          userTable: _userTable,
+          petsTable: _petsTable,
+          routesTable: _routesTable,
+          hazardsTable: _hazardsTable,
+        );
       },
     );
   }

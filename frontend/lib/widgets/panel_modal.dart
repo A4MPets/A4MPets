@@ -67,8 +67,21 @@ class AppModalPanel extends StatelessWidget {
       builder: (BuildContext context, BoxConstraints constraints) {
         final EdgeInsets viewPadding = MediaQuery.of(context).padding;
         final bool isMobile = constraints.maxWidth <= 900;
+        final double safeTopInset =
+            anchor == PanelAnchor.topLeft || anchor == PanelAnchor.topRight
+            ? viewPadding.top
+            : 0;
+        final double safeBottomInset =
+            anchor == PanelAnchor.bottomLeft ||
+                anchor == PanelAnchor.bottomRight
+            ? viewPadding.bottom
+            : 0;
         final double availableWidth = constraints.maxWidth - (_margin * 2);
-        final double availableHeight = constraints.maxHeight - (_margin * 2);
+        final double availableHeight =
+            constraints.maxHeight -
+            (_margin * 2) -
+            safeTopInset -
+            safeBottomInset;
 
         final double resolvedWidth = isMobile || expandHorizontal
             ? availableWidth
@@ -88,15 +101,6 @@ class AppModalPanel extends StatelessWidget {
 
         final double resolvedTopPadding =
             contentTopPadding ?? (hasTitle ? 56 : 12);
-        final double safeTopInset =
-            anchor == PanelAnchor.topLeft || anchor == PanelAnchor.topRight
-            ? viewPadding.top
-            : 0;
-        final double safeBottomInset =
-            anchor == PanelAnchor.bottomLeft ||
-                anchor == PanelAnchor.bottomRight
-            ? viewPadding.bottom
-            : 0;
 
         final Widget panelBody = Padding(
           padding: EdgeInsets.fromLTRB(

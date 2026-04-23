@@ -524,21 +524,23 @@ class _MapWidgetState extends State<MapWidget> {
                       .toList(growable: false),
                 ),
               ),
-            if (widget.hazardReports.isNotEmpty)
+            if (widget.visibleHazardCircles.isNotEmpty)
               RepaintBoundary(
                 child: MarkerLayer(
-                  markers: widget.hazardReports
+                  markers: widget.visibleHazardCircles
                       .map((HazardReportRecord report) {
                         return Marker(
                           point: LatLng(
                             report.incidentLatitude,
                             report.incidentLongitude,
                           ),
-                          width: 16,
-                          height: 16,
+                          width: 24,
+                          height: 24,
                           child: GestureDetector(
                             onTap: () => widget.onHazardTap?.call(report),
-                            child: const _HazardMarkerWidget(),
+                            child: _HazardMarkerWidget(
+                              color: _hazardBorderColor(report),
+                            ),
                           ),
                         );
                       })
@@ -1069,15 +1071,38 @@ class _MapWidgetState extends State<MapWidget> {
 }
 
 class _HazardMarkerWidget extends StatelessWidget {
-  const _HazardMarkerWidget();
+  final Color color;
+
+  const _HazardMarkerWidget({required this.color});
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppPalette.dangerRed,
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 0.8),
+    return Center(
+      child: Container(
+        width: 20,
+        height: 20,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.18),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        alignment: Alignment.center,
+        child: const Text(
+          '!',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+            height: 1,
+          ),
+        ),
       ),
     );
   }
@@ -1177,7 +1202,7 @@ class _DeveloperLocationMarker extends StatelessWidget {
             height: 50,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: const Color(0xFF5984BC).withOpacity(0.3),
+                color: const Color(0xFF5984BC).withValues(alpha: 0.3),
                 shape: BoxShape.circle,
               ),
             ),
@@ -1189,7 +1214,7 @@ class _DeveloperLocationMarker extends StatelessWidget {
           height: 30,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: const Color(0xFF5984BC).withOpacity(0.7),
+              color: const Color(0xFF5984BC).withValues(alpha: 0.7),
               shape: BoxShape.circle,
               border: Border.all(color: const Color(0xFF5984BC), width: 2),
             ),
