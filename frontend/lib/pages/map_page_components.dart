@@ -15,8 +15,15 @@ class _PanelRoute {
   final bool expandVertical;
   final bool scrollContent;
   final bool isAddRoutePanel;
+  final bool isReportSelectorPanel;
   final bool isReportHazardPanel;
+  final bool isLostPetReportPanel;
+  final bool isFoundPetReportPanel;
+  final bool isGenericReportPanel;
   final bool isHazardDetailsPanel;
+  final bool isLostPetDetailsPanel;
+  final bool isFoundPetDetailsPanel;
+  final bool isGenericReportDetailsPanel;
   final bool isHazardSettingsPanel;
   final bool isHazardCommentsPanel;
   final bool isManagePetsPanel;
@@ -52,8 +59,15 @@ class _PanelRoute {
     this.expandVertical = false,
     this.scrollContent = true,
     this.isAddRoutePanel = false,
+    this.isReportSelectorPanel = false,
     this.isReportHazardPanel = false,
+    this.isLostPetReportPanel = false,
+    this.isFoundPetReportPanel = false,
+    this.isGenericReportPanel = false,
     this.isHazardDetailsPanel = false,
+    this.isLostPetDetailsPanel = false,
+    this.isFoundPetDetailsPanel = false,
+    this.isGenericReportDetailsPanel = false,
     this.isHazardSettingsPanel = false,
     this.isHazardCommentsPanel = false,
     this.isManagePetsPanel = false,

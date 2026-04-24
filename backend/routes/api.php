@@ -4,6 +4,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\HazardReportController;
+use App\Http\Controllers\LostPetReportController;
+use App\Http\Controllers\FoundPetReportController;
+use App\Http\Controllers\GenericReportController;
 use App\Http\Controllers\PetController;
 use App\Http\Controllers\RoutePlanningController;
 use App\Http\Controllers\TravelRouteController;
@@ -53,6 +56,29 @@ Route::middleware('api.token')->group(function (): void {
 });
 
 Route::middleware('api.token')->group(function (): void {
+    Route::get('/lost-pet-reports', [LostPetReportController::class, 'index']);
+    Route::post('/lost-pet-reports/sync', [LostPetReportController::class, 'sync']);
+    Route::get('/lost-pet-reports/{lostPetReport}', [LostPetReportController::class, 'show']);
+    Route::post('/lost-pet-reports', [LostPetReportController::class, 'store']);
+    Route::put('/lost-pet-reports/{lostPetReport}', [LostPetReportController::class, 'update']);
+    Route::delete('/lost-pet-reports/{lostPetReport}', [LostPetReportController::class, 'destroy']);
+
+    Route::get('/found-pet-reports', [FoundPetReportController::class, 'index']);
+    Route::post('/found-pet-reports/sync', [FoundPetReportController::class, 'sync']);
+    Route::get('/found-pet-reports/{foundPetReport}', [FoundPetReportController::class, 'show']);
+    Route::post('/found-pet-reports', [FoundPetReportController::class, 'store']);
+    Route::put('/found-pet-reports/{foundPetReport}', [FoundPetReportController::class, 'update']);
+    Route::delete('/found-pet-reports/{foundPetReport}', [FoundPetReportController::class, 'destroy']);
+
+    Route::get('/generic-reports', [GenericReportController::class, 'index']);
+    Route::post('/generic-reports/sync', [GenericReportController::class, 'sync']);
+    Route::get('/generic-reports/{genericReport}', [GenericReportController::class, 'show']);
+    Route::post('/generic-reports', [GenericReportController::class, 'store']);
+    Route::put('/generic-reports/{genericReport}', [GenericReportController::class, 'update']);
+    Route::delete('/generic-reports/{genericReport}', [GenericReportController::class, 'destroy']);
+});
+
+Route::middleware('api.token')->group(function (): void {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
@@ -79,7 +105,7 @@ Route::middleware('api.token')->group(function (): void {
 
 // Lectura pública de imágenes almacenadas por backend
 Route::get('/media/{bucket}/{fileName}', [MediaController::class, 'show'])
-    ->where('bucket', 'pets|hazards|profiles')
+    ->where('bucket', 'pets|hazards|profiles|lost_pets|found_pets|generic_reports')
     ->where('fileName', '[A-Za-z0-9._-]+');
 
 // ====== HEALTH CHECK ======

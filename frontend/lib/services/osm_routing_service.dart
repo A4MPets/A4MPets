@@ -35,10 +35,12 @@ class OsmRoutingService {
 
     final Map<String, Object?> payload = <String, Object?>{
       'points': waypoints
-          .map((LatLng point) => <String, double>{
-                'lat': point.latitude,
-                'lng': point.longitude,
-              })
+          .map(
+            (LatLng point) => <String, double>{
+              'lat': point.latitude,
+              'lng': point.longitude,
+            },
+          )
           .toList(growable: false),
       'avoid_hazards': avoidHazards,
       'travel_mode': travelMode,
@@ -70,7 +72,9 @@ class OsmRoutingService {
     }
 
     if (response.statusCode != 200) {
-      throw Exception('Backend de rutas respondió con código ${response.statusCode}.');
+      throw Exception(
+        'Backend de rutas respondió con código ${response.statusCode}.',
+      );
     }
 
     final Map<String, dynamic> decoded =
@@ -88,10 +92,7 @@ class OsmRoutingService {
 
     return coords.map((dynamic raw) {
       final List<dynamic> pair = raw as List<dynamic>;
-      return LatLng(
-        (pair[1] as num).toDouble(),
-        (pair[0] as num).toDouble(),
-      );
+      return LatLng((pair[1] as num).toDouble(), (pair[0] as num).toDouble());
     }).toList();
   }
 }

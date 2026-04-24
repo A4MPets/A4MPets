@@ -356,12 +356,37 @@ extension _MapPageRoutesState on _MapPageState {
   }
 
   void _onMapTap(LatLng point) {
+    if (_activeReportSelectionContext == _ReportMapSelectionContext.lostPet) {
+      setState(() {
+        _manualLostPetLocation = point;
+        _activeReportSelectionContext = null;
+      });
+      return;
+    }
+
+    if (_activeReportSelectionContext == _ReportMapSelectionContext.foundPet) {
+      setState(() {
+        _manualFoundPetLocation = point;
+        _activeReportSelectionContext = null;
+      });
+      return;
+    }
+
+    if (_activeReportSelectionContext == _ReportMapSelectionContext.generic) {
+      setState(() {
+        _manualGenericReportLocation = point;
+        _activeReportSelectionContext = null;
+      });
+      return;
+    }
+
     if (_hasOpenPanels &&
         _panelStack.last.isReportHazardPanel &&
         _isSelectingHazardLocationOnMap) {
       setState(() {
         _manualHazardLocation = point;
         _isSelectingHazardLocationOnMap = false;
+        _activeReportSelectionContext = null;
         _isReportHazardPanelMinimized = false;
       });
       return;

@@ -11,6 +11,18 @@ class LocalMediaStorageService {
     return _pickAndStoreDataUriImage();
   }
 
+  Future<String?> pickAndStoreLostPetPhoto() async {
+    return _pickAndStoreDataUriImage();
+  }
+
+  Future<String?> pickAndStoreFoundPetPhoto() async {
+    return _pickAndStoreDataUriImage();
+  }
+
+  Future<String?> pickAndStoreGenericReportPhoto() async {
+    return _pickAndStoreDataUriImage();
+  }
+
   Future<String?> pickAndStoreProfilePhoto() async {
     return _pickAndStoreDataUriImage();
   }

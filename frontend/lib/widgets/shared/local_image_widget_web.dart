@@ -35,20 +35,22 @@ Widget buildLocalImageWidget({
   if (source.startsWith('http://') ||
       source.startsWith('https://') ||
       source.startsWith('blob:')) {
-    
     String resolvedSource = source;
-    if (!source.startsWith('blob:') && BackendApiClient.workingBaseUrl != null) {
+    if (!source.startsWith('blob:') &&
+        BackendApiClient.workingBaseUrl != null) {
       try {
         final Uri workingUri = Uri.parse(BackendApiClient.workingBaseUrl!);
         final Uri sourceUri = Uri.parse(source);
-        if (sourceUri.path.contains('/api/media/') || 
-            sourceUri.host == 'localhost' || 
+        if (sourceUri.path.contains('/api/media/') ||
+            sourceUri.host == 'localhost' ||
             sourceUri.host == '127.0.0.1') {
-          resolvedSource = sourceUri.replace(
-            scheme: workingUri.scheme,
-            host: workingUri.host,
-            port: workingUri.port,
-          ).toString();
+          resolvedSource = sourceUri
+              .replace(
+                scheme: workingUri.scheme,
+                host: workingUri.host,
+                port: workingUri.port,
+              )
+              .toString();
         }
       } catch (_) {
         // Fallback to original source

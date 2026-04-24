@@ -6,8 +6,8 @@ import 'package:flutter/material.dart';
 /// Servicio para analizar rutas y marcar segmentos peligrosos
 /// Solo pinta, sin modificar la ruta
 class RouteHazardVisualizerService {
-  static const Color _safeColor = Color(0xFF4A90E2);     // Azul - seguro
-  static const Color _hazardColor = Color(0xFFE74C3C);   // Rojo - peligroso
+  static const Color _safeColor = Color(0xFF4A90E2); // Azul - seguro
+  static const Color _hazardColor = Color(0xFFE74C3C); // Rojo - peligroso
 
   /// Verifica qué partes de una ruta intersectan con hazards
   /// Retorna segmentos coloreados de la ruta
@@ -30,12 +30,12 @@ class RouteHazardVisualizerService {
     }
 
     final List<ColoredRouteSegment> segments = [];
-    
+
     // Iteramos sobre cada par de puntos consecutivos en la polilinea
     for (int i = 0; i < routePolyline.length - 1; i++) {
       final LatLng start = routePolyline[i];
       final LatLng end = routePolyline[i + 1];
-      
+
       final bool segmentHasHazard = _segmentIntersectsHazard(
         start: start,
         end: end,
@@ -90,13 +90,13 @@ class RouteHazardVisualizerService {
   }) {
     // Distancias Haversine a los extremos
     const Distance distanceCalculator = Distance();
-    
+
     final double distToStart = distanceCalculator.as(
       LengthUnit.Meter,
       point,
       lineStart,
     );
-    
+
     final double distToEnd = distanceCalculator.as(
       LengthUnit.Meter,
       point,
@@ -107,14 +107,15 @@ class RouteHazardVisualizerService {
     // Si la proyección cae fuera del segmento, usa la distancia a los endpoints
     final double dx = lineEnd.longitude - lineStart.longitude;
     final double dy = lineEnd.latitude - lineStart.latitude;
-    
+
     if (dx == 0 && dy == 0) {
       return distToStart;
     }
 
     // Parámetro t representa la posición del punto proyectado en la línea
     // t=0 es el inicio, t=1 es el final, 0<t<1 significa dentro del segmento
-    final double t = ((point.longitude - lineStart.longitude) * dx +
+    final double t =
+        ((point.longitude - lineStart.longitude) * dx +
             (point.latitude - lineStart.latitude) * dy) /
         (dx * dx + dy * dy);
 
@@ -131,11 +132,7 @@ class RouteHazardVisualizerService {
         lineStart.longitude + t * (lineEnd.longitude - lineStart.longitude),
       );
 
-      return distanceCalculator.as(
-        LengthUnit.Meter,
-        point,
-        projection,
-      );
+      return distanceCalculator.as(LengthUnit.Meter, point, projection);
     }
   }
 }

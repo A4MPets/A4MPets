@@ -56,8 +56,9 @@ class _HazardCommentsPanelContentState
     });
 
     try {
-      final LocalUserProfile profile =
-          await ref.read(localUserProfileProvider.future);
+      final LocalUserProfile profile = await ref.read(
+        localUserProfileProvider.future,
+      );
 
       final HazardCommentRecord comment = HazardCommentRecord(
         authorUsername: profile.isAuthenticated ? profile.username : 'Anónimo',
@@ -67,10 +68,9 @@ class _HazardCommentsPanelContentState
         createdAt: DateTime.now(),
       );
 
-      await ref.read(hazardReportsControllerProvider.notifier).addCommentToHazard(
-            hazardId: widget.hazard.id,
-            comment: comment,
-          );
+      await ref
+          .read(hazardReportsControllerProvider.notifier)
+          .addCommentToHazard(hazardId: widget.hazard.id, comment: comment);
 
       if (!mounted) {
         return;
@@ -95,8 +95,9 @@ class _HazardCommentsPanelContentState
 
   @override
   Widget build(BuildContext context) {
-    final AsyncValue<List<HazardReportRecord>> hazardsAsync =
-        ref.watch(hazardReportsControllerProvider);
+    final AsyncValue<List<HazardReportRecord>> hazardsAsync = ref.watch(
+      hazardReportsControllerProvider,
+    );
 
     final List<HazardReportRecord> allHazards =
         hazardsAsync.asData?.value ?? const <HazardReportRecord>[];
@@ -116,9 +117,7 @@ class _HazardCommentsPanelContentState
         Expanded(
           child: Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-            ),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(14)),
             child: Scrollbar(
               thumbVisibility: true,
               child: ListView.separated(
@@ -183,8 +182,10 @@ class _HazardCommentsPanelContentState
               ),
               filled: true,
               fillColor: AppPalette.fieldBackground(widget.isDarkMode),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -195,8 +196,10 @@ class _HazardCommentsPanelContentState
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide:
-                    const BorderSide(color: AppPalette.primaryBlue, width: 1),
+                borderSide: const BorderSide(
+                  color: AppPalette.primaryBlue,
+                  width: 1,
+                ),
               ),
             ),
           ),
@@ -236,10 +239,7 @@ class _HazardCommentsPanelContentState
                   )
                 : const Text(
                     'Enviar comentario',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                   ),
           ),
         ),
@@ -252,10 +252,7 @@ class _CommentTile extends StatelessWidget {
   final bool isDarkMode;
   final HazardCommentRecord comment;
 
-  const _CommentTile({
-    required this.isDarkMode,
-    required this.comment,
-  });
+  const _CommentTile({required this.isDarkMode, required this.comment});
 
   @override
   Widget build(BuildContext context) {
@@ -334,11 +331,7 @@ class _CommentTile extends StatelessWidget {
   Widget _defaultAvatar() {
     return Container(
       color: AppPalette.placeholderGray,
-      child: const Icon(
-        Icons.person,
-        size: 18,
-        color: AppPalette.iconGray,
-      ),
+      child: const Icon(Icons.person, size: 18, color: AppPalette.iconGray),
     );
   }
 

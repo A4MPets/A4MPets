@@ -17,7 +17,7 @@ class HazardCommentRecord {
 
   factory HazardCommentRecord.fromMap(Map<String, dynamic> map) {
     return HazardCommentRecord(
-      authorUsername: map['author_username'] as String? ?? 'Anónimo',
+      authorUsername: map['author_username'] as String? ?? 'Anonimo',
       authorAvatarUrl: map['author_avatar_url'] as String?,
       isAnonymous: (map['is_anonymous'] as bool?) ?? true,
       commentText: map['comment_text'] as String? ?? '',
@@ -88,7 +88,8 @@ class HazardReportRecord {
     final int idValue = (map['id'] as num?)?.toInt() ?? 0;
     final int createdAtMs = (map['created_at'] as num?)?.toInt() ?? nowMs;
     final int updatedAtMs = (map['updated_at'] as num?)?.toInt() ?? createdAtMs;
-    final int reportedAtMs = (map['reported_at'] as num?)?.toInt() ?? updatedAtMs;
+    final int reportedAtMs =
+        (map['reported_at'] as num?)?.toInt() ?? updatedAtMs;
     final int lastModifiedMs =
         (map['last_modified_at'] as num?)?.toInt() ?? updatedAtMs;
     final String fallbackLocalUuid = 'legacy-${map['id'] ?? nowMs}';
@@ -108,10 +109,12 @@ class HazardReportRecord {
       estimatedDurationCode: map['estimated_duration_code'] as String,
       riskLevelCode: map['risk_level_code'] as String,
       evidencePhotoUrl: map['evidence_photo_url'] as String?,
-        reportedByUsername: map['reported_by_username'] as String? ?? 'Anónimo',
-        comments: rawComments
-          .map((dynamic item) =>
-            HazardCommentRecord.fromMap(item as Map<String, dynamic>))
+      reportedByUsername: map['reported_by_username'] as String? ?? 'Anonimo',
+      comments: rawComments
+          .map(
+            (dynamic item) =>
+                HazardCommentRecord.fromMap(item as Map<String, dynamic>),
+          )
           .toList(growable: false),
       createdAt: DateTime.fromMillisecondsSinceEpoch(createdAtMs),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(updatedAtMs),
@@ -152,38 +155,41 @@ class HazardReportRecord {
       case 'stagnant_water':
         return 'Aguas estancadas';
       case 'waste_accumulation':
-        return 'Acumulación de residuos';
-      case 'aggressive_animals':
-        return 'Animales agresivos';
+        return 'Acumulacion de residuos';
+      case 'pest_presence':
+        return 'Presencia de plagas';
+      case 'possible_rabies_vectors':
+        return 'Posibles transmisores de rabia';
       case 'undefined':
+      case 'unknown':
       case 'unspecified':
       default:
-        return 'No lo sé';
+        return 'No lo se';
     }
   }
 
   static String durationLabelFromCode(String code) {
     switch (code) {
       case '1_day':
-        return '1 Día';
+        return '1 Dia';
       case '3_days':
-        return '3 Días';
+        return '3 Dias';
       case '1_week':
-        return '1 semana';
+        return '1 Semana';
       case '2_weeks':
-        return '2 semanas';
+        return '2 Semanas';
       case '1_month':
-        return '1 mes';
+        return '1 Mes';
       case '3_months':
-        return '3 meses';
+        return '3 Meses';
       case '6_months':
-        return '6 meses';
+        return '6 Meses';
       case '1_year':
-        return '1 año';
+        return '1 Ano';
       case 'undefined':
       case 'unknown':
       default:
-        return 'No lo sé';
+        return 'No lo se';
     }
   }
 
@@ -198,7 +204,7 @@ class HazardReportRecord {
       case 'undefined':
       case 'unknown':
       default:
-        return 'No lo sé';
+        return 'No lo se';
     }
   }
 }

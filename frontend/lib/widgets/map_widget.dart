@@ -6,7 +6,10 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import '../models/found_pet_report_record.dart';
+import '../models/generic_report_record.dart';
 import '../models/hazard_report_record.dart';
+import '../models/lost_pet_report_record.dart';
 import '../models/colored_route_segment.dart';
 import '../theme/app_palette.dart';
 
@@ -37,14 +40,26 @@ class MapWidget extends StatefulWidget {
   final void Function(LatLng)? onMapTap;
   final List<HazardReportRecord> hazardReports;
   final List<HazardReportRecord> visibleHazardCircles;
+  final List<LostPetReportRecord> lostPetReports;
+  final List<FoundPetReportRecord> foundPetReports;
+  final List<GenericReportRecord> genericReports;
   final HazardReportRecord? highlightedHazard;
   final LatLng? hazardDraftLocation;
   final int? hazardDraftImpactRadiusMeters;
   final String? hazardDraftRiskLevelCode;
   final bool isSelectingHazardLocation;
+  final LatLng? lostPetDraftLocation;
+  final LatLng? foundPetDraftLocation;
+  final LatLng? genericReportDraftLocation;
+  final bool isSelectingReportLocation;
   final bool routeSelectionHintAtTop;
-  final bool hazardSelectionHintAtTop;
+  final bool reportSelectionHintAtTop;
+  final String reportSelectionHintText;
+  final Color reportSelectionHintColor;
   final void Function(HazardReportRecord report)? onHazardTap;
+  final void Function(LostPetReportRecord report)? onLostPetTap;
+  final void Function(FoundPetReportRecord report)? onFoundPetTap;
+  final void Function(GenericReportRecord report)? onGenericReportTap;
   final LatLng? cameraFocusTarget;
   final double? cameraFocusZoom;
   final int cameraFocusRevision;
@@ -83,14 +98,26 @@ class MapWidget extends StatefulWidget {
     this.onMapTap,
     this.hazardReports = const <HazardReportRecord>[],
     this.visibleHazardCircles = const <HazardReportRecord>[],
+    this.lostPetReports = const <LostPetReportRecord>[],
+    this.foundPetReports = const <FoundPetReportRecord>[],
+    this.genericReports = const <GenericReportRecord>[],
     this.highlightedHazard,
     this.hazardDraftLocation,
     this.hazardDraftImpactRadiusMeters,
     this.hazardDraftRiskLevelCode,
     this.isSelectingHazardLocation = false,
+    this.lostPetDraftLocation,
+    this.foundPetDraftLocation,
+    this.genericReportDraftLocation,
+    this.isSelectingReportLocation = false,
     this.routeSelectionHintAtTop = false,
-    this.hazardSelectionHintAtTop = false,
+    this.reportSelectionHintAtTop = false,
+    this.reportSelectionHintText = 'Toca el mapa para ubicar el reporte',
+    this.reportSelectionHintColor = AppPalette.primaryBlue,
     this.onHazardTap,
+    this.onLostPetTap,
+    this.onFoundPetTap,
+    this.onGenericReportTap,
     this.cameraFocusTarget,
     this.cameraFocusZoom,
     this.cameraFocusRevision = 0,
@@ -841,6 +868,121 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
                   ],
                 ),
               ),
+            if (widget.lostPetReports.isNotEmpty)
+              RepaintBoundary(
+                child: MarkerLayer(
+                  markers: widget.lostPetReports
+                      .map((LostPetReportRecord report) {
+                        return Marker(
+                          point: LatLng(
+                            report.lastSeenLatitude,
+                            report.lastSeenLongitude,
+                          ),
+                          width: 24,
+                          height: 24,
+                          child: GestureDetector(
+                            onTap: () => widget.onLostPetTap?.call(report),
+                            child: const _HazardMarkerWidget(
+                              color: AppPalette.reportYellow,
+                              label: '?',
+                            ),
+                          ),
+                        );
+                      })
+                      .toList(growable: false),
+                ),
+              ),
+            if (widget.foundPetReports.isNotEmpty)
+              RepaintBoundary(
+                child: MarkerLayer(
+                  markers: widget.foundPetReports
+                      .map((FoundPetReportRecord report) {
+                        return Marker(
+                          point: LatLng(report.latitude, report.longitude),
+                          width: 24,
+                          height: 24,
+                          child: GestureDetector(
+                            onTap: () => widget.onFoundPetTap?.call(report),
+                            child: const _HazardMarkerWidget(
+                              color: AppPalette.reportGreen,
+                              label: '!',
+                            ),
+                          ),
+                        );
+                      })
+                      .toList(growable: false),
+                ),
+              ),
+            if (widget.genericReports.isNotEmpty)
+              RepaintBoundary(
+                child: MarkerLayer(
+                  markers: widget.genericReports
+                      .map((GenericReportRecord report) {
+                        return Marker(
+                          point: LatLng(report.latitude, report.longitude),
+                          width: 24,
+                          height: 24,
+                          child: GestureDetector(
+                            onTap: () =>
+                                widget.onGenericReportTap?.call(report),
+                            child: const _HazardMarkerWidget(
+                              color: AppPalette.charcoal,
+                              label: 'i',
+                            ),
+                          ),
+                        );
+                      })
+                      .toList(growable: false),
+                ),
+              ),
+            if (widget.lostPetDraftLocation != null)
+              RepaintBoundary(
+                child: MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: widget.lostPetDraftLocation!,
+                      width: 24,
+                      height: 24,
+                      child: const _HazardMarkerWidget(
+                        color: AppPalette.reportYellow,
+                        label: '?',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (widget.foundPetDraftLocation != null)
+              RepaintBoundary(
+                child: MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: widget.foundPetDraftLocation!,
+                      width: 24,
+                      height: 24,
+                      child: const _HazardMarkerWidget(
+                        color: AppPalette.reportGreen,
+                        label: '!',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (widget.genericReportDraftLocation != null)
+              RepaintBoundary(
+                child: MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: widget.genericReportDraftLocation!,
+                      width: 24,
+                      height: 24,
+                      child: const _HazardMarkerWidget(
+                        color: AppPalette.charcoal,
+                        label: 'i',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             if (widget.routePolylinePoints.length >= 2)
               RepaintBoundary(
                 child: PolylineLayer(polylines: _buildRoutePolylines()),
@@ -930,26 +1072,29 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (reportDangerVisible)
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton(
-                          onPressed: _onReportarPeligro,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: secondary,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: SizedBox(
+                          width: 220,
+                          height: 56,
+                          child: ElevatedButton(
+                            onPressed: _onReportarPeligro,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: secondary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
-                          ),
-                          child: const Text(
-                            'Reportar Peligro',
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                            child: const Text(
+                              'Reportar',
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
@@ -1118,7 +1263,7 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
                     ),
                   ),
                   child: const Text(
-                    'Reportar Peligro',
+                    'Reportar',
                     textAlign: TextAlign.center,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -1311,15 +1456,21 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
         _buildSelectionHintPositioned(
           isWeb: isWeb,
           topSystemInset: topSystemInset,
-          anchorTop: widget.hazardSelectionHintAtTop,
+          anchorTop: widget.reportSelectionHintAtTop,
           bottomOffset: isWeb ? 72 : 68,
-          visible: widget.isSelectingHazardLocation,
+          visible:
+              widget.isSelectingHazardLocation ||
+              widget.isSelectingReportLocation,
           child: _buildSelectionHint(
-            color: _hazardBorderColorForRiskLevel(
-              widget.hazardDraftRiskLevelCode,
-            ),
+            color: widget.isSelectingHazardLocation
+                ? _hazardBorderColorForRiskLevel(
+                    widget.hazardDraftRiskLevelCode,
+                  )
+                : widget.reportSelectionHintColor,
             icon: Icons.place_rounded,
-            text: 'Toca el mapa para ubicar el peligro',
+            text: widget.isSelectingHazardLocation
+                ? 'Toca el mapa para ubicar el peligro'
+                : widget.reportSelectionHintText,
           ),
         ),
         if (widget.panelOverlay != null)
@@ -1474,8 +1625,9 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
 
 class _HazardMarkerWidget extends StatelessWidget {
   final Color color;
+  final String label;
 
-  const _HazardMarkerWidget({required this.color});
+  const _HazardMarkerWidget({required this.color, this.label = '!'});
 
   @override
   Widget build(BuildContext context) {
@@ -1496,8 +1648,8 @@ class _HazardMarkerWidget extends StatelessWidget {
           ],
         ),
         alignment: Alignment.center,
-        child: const Text(
-          '!',
+        child: Text(
+          label,
           style: TextStyle(
             color: Colors.white,
             fontSize: 12,

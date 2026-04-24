@@ -4,6 +4,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/local_user_profile.dart';
+import '../models/lost_pet_report_record.dart';
+import '../models/found_pet_report_record.dart';
+import '../models/generic_report_record.dart';
 import '../models/hazard_report_record.dart';
 import '../models/pet_record.dart';
 import '../models/route_record.dart';
@@ -271,6 +274,92 @@ class UserLocalRepository {
   }
 
   Future<void> syncHazardsNow() {
+    return syncCoordinator.syncNow();
+  }
+
+  Future<List<LostPetReportRecord>> getLostPetReports() {
+    return databaseManager.getLostPetReports();
+  }
+
+  Future<void> addLostPetReport({
+    required double lastSeenLatitude,
+    required double lastSeenLongitude,
+    required String name,
+    required String details,
+    required DateTime disappearanceDate,
+    String? photoUrl,
+    String? phone,
+  }) async {
+    await databaseManager.addLostPetReport(
+      lastSeenLatitude: lastSeenLatitude,
+      lastSeenLongitude: lastSeenLongitude,
+      name: name,
+      details: details,
+      disappearanceDate: disappearanceDate,
+      photoUrl: photoUrl,
+      phone: phone,
+    );
+    await databaseManager.markUserDataForFutureSync();
+    unawaited(syncCoordinator.scheduleSync());
+  }
+
+  Future<void> syncLostPetReportsNow() {
+    return syncCoordinator.syncNow();
+  }
+
+  Future<List<FoundPetReportRecord>> getFoundPetReports() {
+    return databaseManager.getFoundPetReports();
+  }
+
+  Future<void> addFoundPetReport({
+    required double latitude,
+    required double longitude,
+    required String details,
+    required DateTime foundDate,
+    String? photoUrl,
+    String? phone,
+  }) async {
+    await databaseManager.addFoundPetReport(
+      latitude: latitude,
+      longitude: longitude,
+      details: details,
+      foundDate: foundDate,
+      photoUrl: photoUrl,
+      phone: phone,
+    );
+    await databaseManager.markUserDataForFutureSync();
+    unawaited(syncCoordinator.scheduleSync());
+  }
+
+  Future<void> syncFoundPetReportsNow() {
+    return syncCoordinator.syncNow();
+  }
+
+  Future<List<GenericReportRecord>> getGenericReports() {
+    return databaseManager.getGenericReports();
+  }
+
+  Future<void> addGenericReport({
+    required double latitude,
+    required double longitude,
+    required String description,
+    required DateTime reportedDate,
+    required String riskLevelCode,
+    String? photoUrl,
+  }) async {
+    await databaseManager.addGenericReport(
+      latitude: latitude,
+      longitude: longitude,
+      description: description,
+      reportedDate: reportedDate,
+      riskLevelCode: riskLevelCode,
+      photoUrl: photoUrl,
+    );
+    await databaseManager.markUserDataForFutureSync();
+    unawaited(syncCoordinator.scheduleSync());
+  }
+
+  Future<void> syncGenericReportsNow() {
     return syncCoordinator.syncNow();
   }
 

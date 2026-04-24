@@ -104,13 +104,20 @@ class HazardReport extends Model
 
     public function setCategoryCodeAttribute(?string $value): void
     {
-        $code = $this->normalizeCode((string) $value, [
+        $normalized = strtolower(trim((string) $value));
+        if ($normalized === 'aggressive_animals') {
+            $normalized = 'possible_rabies_vectors';
+        } elseif ($normalized === '' || in_array($normalized, ['unknown', 'unspecified', 'undefined'], true)) {
+            $normalized = 'pest_presence';
+        }
+
+        $code = in_array($normalized, [
             'contagious_disease',
             'stagnant_water',
             'waste_accumulation',
-            'aggressive_animals',
-            'undefined',
-        ]);
+            'pest_presence',
+            'possible_rabies_vectors',
+        ], true) ? $normalized : 'pest_presence';
         $this->attributes['category_id'] = HazardCategory::idByCode($code);
     }
 

@@ -7,6 +7,9 @@ void _invalidateUserScopedData(WidgetRef ref) {
   ref.invalidate(petsControllerProvider);
   ref.invalidate(routesControllerProvider);
   ref.invalidate(hazardReportsControllerProvider);
+  ref.invalidate(lostPetReportsControllerProvider);
+  ref.invalidate(foundPetReportsControllerProvider);
+  ref.invalidate(genericReportsControllerProvider);
 }
 
 extension _MapPageAuthAndProfileState on _MapPageState {

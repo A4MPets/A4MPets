@@ -5,6 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/hazard_report_record.dart';
+import '../models/lost_pet_report_record.dart';
+import '../models/found_pet_report_record.dart';
+import '../models/generic_report_record.dart';
 import '../models/local_user_profile.dart';
 import '../models/pet_record.dart';
 import '../models/route_record.dart';
@@ -135,10 +138,16 @@ class UserDataSyncCoordinator {
           await _pushLocalPets();
           await _pushLocalRoutes();
           await _pushLocalHazards();
+          await _pushLocalLostPetReports();
+          await _pushLocalFoundPetReports();
+          await _pushLocalGenericReports();
           await _pullRemoteUserProfile();
           await _pullRemotePets();
           await _pullRemoteRoutes();
           await _pullRemoteHazards();
+          await _pullRemoteLostPetReports();
+          await _pullRemoteFoundPetReports();
+          await _pullRemoteGenericReports();
           _log('sync cycle end: completado.');
         } catch (error) {
           _log('sync cycle error: $error');
@@ -364,6 +373,434 @@ class UserDataSyncCoordinator {
         break;
       }
 
+      page += 1;
+    }
+  }
+
+  Future<void> _pushLocalLostPetReports() async {
+    final List<LostPetReportRecord> pending = await _databaseManager
+        .getLostPetReportsNeedingSync();
+    _log('push lost pets: pendientes=${pending.length}');
+
+    if (pending.isEmpty) {
+      return;
+    }
+
+    final String? token = await _currentAccessToken();
+    final List<LostPetReportRecord> transferable = <LostPetReportRecord>[];
+    final List<Map<String, Object?>> payloadItems = <Map<String, Object?>>[];
+
+    for (final LostPetReportRecord report in pending) {
+      String? photoUrl = report.photoUrl;
+      if (photoUrl != null && photoUrl.isNotEmpty) {
+        final String? resolvedUrl = await _resolveImageUrlForSync(
+          source: photoUrl,
+          bucket: 'lost_pets',
+          bearerToken: token,
+        );
+        if (resolvedUrl == null) {
+          continue;
+        }
+        photoUrl = resolvedUrl;
+      }
+
+      transferable.add(report);
+      payloadItems.add(<String, Object?>{
+        'local_id': report.localUuid,
+        'remote_id': report.remoteId,
+        'last_seen_latitude': report.lastSeenLatitude,
+        'last_seen_longitude': report.lastSeenLongitude,
+        'name': report.name,
+        'details': report.details,
+        'disappearance_date': _toBackendDateTime(report.disappearanceDate),
+        'photo_url': photoUrl,
+        'phone': report.phone,
+        'sync_status': report.syncStatus,
+        'last_modified_at': _toBackendDateTime(report.lastModifiedAt),
+      });
+    }
+
+    if (payloadItems.isEmpty) {
+      return;
+    }
+
+    final http.Response? response = await _postWithFallback(
+      path: '/lost-pet-reports/sync',
+      body: <String, Object?>{'lost_pet_reports': payloadItems},
+      bearerToken: token,
+    );
+
+    if (response == null ||
+        response.statusCode < 200 ||
+        response.statusCode >= 300) {
+      return;
+    }
+
+    final Map<String, dynamic> responseMap =
+        jsonDecode(response.body) as Map<String, dynamic>;
+    final Map<String, dynamic> syncResults =
+        (responseMap['sync_results'] as Map<String, dynamic>?) ??
+        <String, dynamic>{};
+    final List<dynamic> details =
+        (syncResults['details'] as List<dynamic>?) ?? <dynamic>[];
+    final Set<String> failedLocalIds = details
+        .map(
+          (dynamic item) =>
+              (item as Map<String, dynamic>)['local_id']?.toString(),
+        )
+        .whereType<String>()
+        .toSet();
+
+    for (final LostPetReportRecord report in transferable) {
+      if (failedLocalIds.contains(report.localUuid)) {
+        continue;
+      }
+      await _databaseManager.markLostPetReportAsSynced(
+        localUuid: report.localUuid,
+        remoteId: report.remoteId,
+        syncStatus: 'synced',
+        lastModifiedAt: report.lastModifiedAt,
+      );
+    }
+  }
+
+  Future<void> _pullRemoteLostPetReports() async {
+    int page = 1;
+    while (true) {
+      final http.Response? response = await _getWithFallback(
+        path: '/lost-pet-reports?include_archived=1&per_page=100&page=$page',
+        bearerToken: await _currentAccessToken(),
+      );
+      if (response == null ||
+          response.statusCode < 200 ||
+          response.statusCode >= 300) {
+        return;
+      }
+
+      final Map<String, dynamic> payload =
+          jsonDecode(response.body) as Map<String, dynamic>;
+      final List<dynamic> data =
+          (payload['data'] as List<dynamic>? ?? <dynamic>[]);
+
+      for (final dynamic item in data) {
+        final Map<String, dynamic> report = item as Map<String, dynamic>;
+        final String localUuid =
+            report['local_id']?.toString() ?? 'remote-${report['id']}';
+        final String? remoteId =
+            report['remote_id']?.toString() ?? report['id']?.toString();
+        await _databaseManager.upsertLostPetReportFromRemote(
+          localUuid: localUuid,
+          remoteId: remoteId,
+          syncStatus: report['sync_status']?.toString() ?? 'synced',
+          remoteLastModifiedAt: _parseBackendDateTime(
+            report['last_modified_at'],
+          ),
+          lastSeenLatitude:
+              (report['last_seen_latitude'] as num?)?.toDouble() ?? 0,
+          lastSeenLongitude:
+              (report['last_seen_longitude'] as num?)?.toDouble() ?? 0,
+          name: report['name']?.toString() ?? '',
+          details: report['details']?.toString() ?? '',
+          disappearanceDate: _parseBackendDateTime(
+            report['disappearance_date'],
+          ),
+          photoUrl: report['photo_url']?.toString(),
+          phone: report['phone']?.toString(),
+        );
+      }
+
+      final Map<String, dynamic> pagination =
+          (payload['pagination'] as Map<String, dynamic>?) ??
+          <String, dynamic>{};
+      final int currentPage =
+          (pagination['current_page'] as num?)?.toInt() ?? page;
+      final int lastPage =
+          (pagination['last_page'] as num?)?.toInt() ?? currentPage;
+      if (currentPage >= lastPage) {
+        break;
+      }
+      page += 1;
+    }
+  }
+
+  Future<void> _pushLocalFoundPetReports() async {
+    final List<FoundPetReportRecord> pending = await _databaseManager
+        .getFoundPetReportsNeedingSync();
+    _log('push found pets: pendientes=${pending.length}');
+
+    if (pending.isEmpty) {
+      return;
+    }
+
+    final String? token = await _currentAccessToken();
+    final List<FoundPetReportRecord> transferable = <FoundPetReportRecord>[];
+    final List<Map<String, Object?>> payloadItems = <Map<String, Object?>>[];
+
+    for (final FoundPetReportRecord report in pending) {
+      String? photoUrl = report.photoUrl;
+      if (photoUrl != null && photoUrl.isNotEmpty) {
+        final String? resolvedUrl = await _resolveImageUrlForSync(
+          source: photoUrl,
+          bucket: 'found_pets',
+          bearerToken: token,
+        );
+        if (resolvedUrl == null) {
+          continue;
+        }
+        photoUrl = resolvedUrl;
+      }
+
+      transferable.add(report);
+      payloadItems.add(<String, Object?>{
+        'local_id': report.localUuid,
+        'remote_id': report.remoteId,
+        'latitude': report.latitude,
+        'longitude': report.longitude,
+        'details': report.details,
+        'found_date': _toBackendDateTime(report.foundDate),
+        'photo_url': photoUrl,
+        'phone': report.phone,
+        'sync_status': report.syncStatus,
+        'last_modified_at': _toBackendDateTime(report.lastModifiedAt),
+      });
+    }
+
+    if (payloadItems.isEmpty) {
+      return;
+    }
+
+    final http.Response? response = await _postWithFallback(
+      path: '/found-pet-reports/sync',
+      body: <String, Object?>{'found_pet_reports': payloadItems},
+      bearerToken: token,
+    );
+
+    if (response == null ||
+        response.statusCode < 200 ||
+        response.statusCode >= 300) {
+      return;
+    }
+
+    final Map<String, dynamic> responseMap =
+        jsonDecode(response.body) as Map<String, dynamic>;
+    final Map<String, dynamic> syncResults =
+        (responseMap['sync_results'] as Map<String, dynamic>?) ??
+        <String, dynamic>{};
+    final List<dynamic> details =
+        (syncResults['details'] as List<dynamic>?) ?? <dynamic>[];
+    final Set<String> failedLocalIds = details
+        .map(
+          (dynamic item) =>
+              (item as Map<String, dynamic>)['local_id']?.toString(),
+        )
+        .whereType<String>()
+        .toSet();
+
+    for (final FoundPetReportRecord report in transferable) {
+      if (failedLocalIds.contains(report.localUuid)) {
+        continue;
+      }
+      await _databaseManager.markFoundPetReportAsSynced(
+        localUuid: report.localUuid,
+        remoteId: report.remoteId,
+        syncStatus: 'synced',
+        lastModifiedAt: report.lastModifiedAt,
+      );
+    }
+  }
+
+  Future<void> _pullRemoteFoundPetReports() async {
+    int page = 1;
+    while (true) {
+      final http.Response? response = await _getWithFallback(
+        path: '/found-pet-reports?include_archived=1&per_page=100&page=$page',
+        bearerToken: await _currentAccessToken(),
+      );
+      if (response == null ||
+          response.statusCode < 200 ||
+          response.statusCode >= 300) {
+        return;
+      }
+
+      final Map<String, dynamic> payload =
+          jsonDecode(response.body) as Map<String, dynamic>;
+      final List<dynamic> data =
+          (payload['data'] as List<dynamic>? ?? <dynamic>[]);
+
+      for (final dynamic item in data) {
+        final Map<String, dynamic> report = item as Map<String, dynamic>;
+        final String localUuid =
+            report['local_id']?.toString() ?? 'remote-${report['id']}';
+        final String? remoteId =
+            report['remote_id']?.toString() ?? report['id']?.toString();
+        await _databaseManager.upsertFoundPetReportFromRemote(
+          localUuid: localUuid,
+          remoteId: remoteId,
+          syncStatus: report['sync_status']?.toString() ?? 'synced',
+          remoteLastModifiedAt: _parseBackendDateTime(
+            report['last_modified_at'],
+          ),
+          latitude: (report['latitude'] as num?)?.toDouble() ?? 0,
+          longitude: (report['longitude'] as num?)?.toDouble() ?? 0,
+          details: report['details']?.toString() ?? '',
+          foundDate: _parseBackendDateTime(report['found_date']),
+          photoUrl: report['photo_url']?.toString(),
+          phone: report['phone']?.toString(),
+        );
+      }
+
+      final Map<String, dynamic> pagination =
+          (payload['pagination'] as Map<String, dynamic>?) ??
+          <String, dynamic>{};
+      final int currentPage =
+          (pagination['current_page'] as num?)?.toInt() ?? page;
+      final int lastPage =
+          (pagination['last_page'] as num?)?.toInt() ?? currentPage;
+      if (currentPage >= lastPage) {
+        break;
+      }
+      page += 1;
+    }
+  }
+
+  Future<void> _pushLocalGenericReports() async {
+    final List<GenericReportRecord> pending = await _databaseManager
+        .getGenericReportsNeedingSync();
+    _log('push generic reports: pendientes=${pending.length}');
+
+    if (pending.isEmpty) {
+      return;
+    }
+
+    final String? token = await _currentAccessToken();
+    final List<GenericReportRecord> transferable = <GenericReportRecord>[];
+    final List<Map<String, Object?>> payloadItems = <Map<String, Object?>>[];
+
+    for (final GenericReportRecord report in pending) {
+      String? photoUrl = report.photoUrl;
+      if (photoUrl != null && photoUrl.isNotEmpty) {
+        final String? resolvedUrl = await _resolveImageUrlForSync(
+          source: photoUrl,
+          bucket: 'generic_reports',
+          bearerToken: token,
+        );
+        if (resolvedUrl == null) {
+          continue;
+        }
+        photoUrl = resolvedUrl;
+      }
+
+      transferable.add(report);
+      payloadItems.add(<String, Object?>{
+        'local_id': report.localUuid,
+        'remote_id': report.remoteId,
+        'latitude': report.latitude,
+        'longitude': report.longitude,
+        'description': report.description,
+        'reported_date': _toBackendDateTime(report.reportedDate),
+        'risk_level_code': _normalizeRiskLevelCode(report.riskLevelCode),
+        'photo_url': photoUrl,
+        'sync_status': report.syncStatus,
+        'last_modified_at': _toBackendDateTime(report.lastModifiedAt),
+      });
+    }
+
+    if (payloadItems.isEmpty) {
+      return;
+    }
+
+    final http.Response? response = await _postWithFallback(
+      path: '/generic-reports/sync',
+      body: <String, Object?>{'generic_reports': payloadItems},
+      bearerToken: token,
+    );
+
+    if (response == null ||
+        response.statusCode < 200 ||
+        response.statusCode >= 300) {
+      return;
+    }
+
+    final Map<String, dynamic> responseMap =
+        jsonDecode(response.body) as Map<String, dynamic>;
+    final Map<String, dynamic> syncResults =
+        (responseMap['sync_results'] as Map<String, dynamic>?) ??
+        <String, dynamic>{};
+    final List<dynamic> details =
+        (syncResults['details'] as List<dynamic>?) ?? <dynamic>[];
+    final Set<String> failedLocalIds = details
+        .map(
+          (dynamic item) =>
+              (item as Map<String, dynamic>)['local_id']?.toString(),
+        )
+        .whereType<String>()
+        .toSet();
+
+    for (final GenericReportRecord report in transferable) {
+      if (failedLocalIds.contains(report.localUuid)) {
+        continue;
+      }
+      await _databaseManager.markGenericReportAsSynced(
+        localUuid: report.localUuid,
+        remoteId: report.remoteId,
+        syncStatus: 'synced',
+        lastModifiedAt: report.lastModifiedAt,
+      );
+    }
+  }
+
+  Future<void> _pullRemoteGenericReports() async {
+    int page = 1;
+    while (true) {
+      final http.Response? response = await _getWithFallback(
+        path: '/generic-reports?include_archived=1&per_page=100&page=$page',
+        bearerToken: await _currentAccessToken(),
+      );
+      if (response == null ||
+          response.statusCode < 200 ||
+          response.statusCode >= 300) {
+        return;
+      }
+
+      final Map<String, dynamic> payload =
+          jsonDecode(response.body) as Map<String, dynamic>;
+      final List<dynamic> data =
+          (payload['data'] as List<dynamic>? ?? <dynamic>[]);
+
+      for (final dynamic item in data) {
+        final Map<String, dynamic> report = item as Map<String, dynamic>;
+        final String localUuid =
+            report['local_id']?.toString() ?? 'remote-${report['id']}';
+        final String? remoteId =
+            report['remote_id']?.toString() ?? report['id']?.toString();
+        await _databaseManager.upsertGenericReportFromRemote(
+          localUuid: localUuid,
+          remoteId: remoteId,
+          syncStatus: report['sync_status']?.toString() ?? 'synced',
+          remoteLastModifiedAt: _parseBackendDateTime(
+            report['last_modified_at'],
+          ),
+          latitude: (report['latitude'] as num?)?.toDouble() ?? 0,
+          longitude: (report['longitude'] as num?)?.toDouble() ?? 0,
+          description: report['description']?.toString() ?? '',
+          reportedDate: _parseBackendDateTime(report['reported_date']),
+          riskLevelCode: _normalizeRiskLevelCode(
+            report['risk_level_code']?.toString(),
+          ),
+          photoUrl: report['photo_url']?.toString(),
+        );
+      }
+
+      final Map<String, dynamic> pagination =
+          (payload['pagination'] as Map<String, dynamic>?) ??
+          <String, dynamic>{};
+      final int currentPage =
+          (pagination['current_page'] as num?)?.toInt() ?? page;
+      final int lastPage =
+          (pagination['last_page'] as num?)?.toInt() ?? currentPage;
+      if (currentPage >= lastPage) {
+        break;
+      }
       page += 1;
     }
   }

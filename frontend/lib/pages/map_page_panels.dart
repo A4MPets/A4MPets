@@ -83,9 +83,22 @@ extension _MapPagePanelsState on _MapPageState {
       }
       if (currentPanel.isReportHazardPanel) {
         _isSelectingHazardLocationOnMap = false;
+        _activeReportSelectionContext = null;
         _manualHazardLocation = null;
         _hazardDraftPreview = null;
         _isReportHazardPanelMinimized = false;
+      }
+      if (currentPanel.isLostPetReportPanel) {
+        _activeReportSelectionContext = null;
+        _manualLostPetLocation = null;
+      }
+      if (currentPanel.isFoundPetReportPanel) {
+        _activeReportSelectionContext = null;
+        _manualFoundPetLocation = null;
+      }
+      if (currentPanel.isGenericReportPanel) {
+        _activeReportSelectionContext = null;
+        _manualGenericReportLocation = null;
       }
       if (currentPanel.isHazardDetailsPanel) {
         _selectedHazard = null;
@@ -201,15 +214,32 @@ extension _MapPagePanelsState on _MapPageState {
     }
 
     if (panel.isHazardDetailsPanel ||
+        panel.isLostPetDetailsPanel ||
+        panel.isFoundPetDetailsPanel ||
+        panel.isGenericReportDetailsPanel ||
         panel.isHazardCommentsPanel ||
         panel.isHazardSettingsPanel) {
       final AsyncValue<List<HazardReportRecord>> hazardsValue = ref.watch(
         hazardReportsControllerProvider,
       );
-      loading = loading || hazardsValue.isLoading;
+      final AsyncValue<List<LostPetReportRecord>> lostPetReportsValue = ref
+          .watch(lostPetReportsControllerProvider);
+      final AsyncValue<List<FoundPetReportRecord>> foundPetReportsValue = ref
+          .watch(foundPetReportsControllerProvider);
+      final AsyncValue<List<GenericReportRecord>> genericReportsValue = ref
+          .watch(genericReportsControllerProvider);
+      loading =
+          loading ||
+          hazardsValue.isLoading ||
+          lostPetReportsValue.isLoading ||
+          foundPetReportsValue.isLoading ||
+          genericReportsValue.isLoading;
     }
 
-    if (panel.isReportHazardPanel) {
+    if (panel.isReportHazardPanel ||
+        panel.isLostPetReportPanel ||
+        panel.isFoundPetReportPanel ||
+        panel.isGenericReportPanel) {
       loading = loading || _isUserLocationLoading;
     }
 

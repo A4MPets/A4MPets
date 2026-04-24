@@ -29,11 +29,13 @@ extension _MapPageHazardsState on _MapPageState {
   void _openReportHazardPanel(bool isDarkMode) {
     if (_hasOpenPanels &&
         !_panelStack.last.isTripPanel &&
-        !_panelStack.last.isTripStartPanel) {
+        !_panelStack.last.isTripStartPanel &&
+        !_panelStack.last.isReportSelectorPanel) {
       return;
     }
     setState(() {
       _isSelectingHazardLocationOnMap = false;
+      _activeReportSelectionContext = null;
       _manualHazardLocation = null;
       _isReportHazardPanelMinimized = false;
       _hazardDraftPreview = const HazardDraftPreview(
@@ -43,7 +45,7 @@ extension _MapPageHazardsState on _MapPageState {
         isSelectingOnMap: false,
       );
     });
-    _pushPanel(_buildReportHazardRoute(isDarkMode));
+    _replaceOrPushReportPanel(_buildReportHazardRoute(isDarkMode));
   }
 
   void _openHazardLayersSettingsPanel(bool isDarkMode) {
@@ -114,6 +116,7 @@ extension _MapPageHazardsState on _MapPageState {
   void _startHazardMapSelection() {
     setState(() {
       _isSelectingHazardLocationOnMap = true;
+      _activeReportSelectionContext = _ReportMapSelectionContext.hazard;
       _isReportHazardPanelMinimized = true;
     });
   }
@@ -127,6 +130,7 @@ extension _MapPageHazardsState on _MapPageState {
   void _useCurrentHazardLocation() {
     setState(() {
       _isSelectingHazardLocationOnMap = false;
+      _activeReportSelectionContext = null;
       _manualHazardLocation = null;
       _isReportHazardPanelMinimized = false;
       if (_latestUserLocation == null || _userLocationErrorText != null) {
@@ -173,8 +177,8 @@ extension _MapPageHazardsState on _MapPageState {
       title: 'Reportar Peligro',
       anchor: PanelAnchor.bottomLeft,
       width: 340,
-      mobileMaxHeightFactor: 0.5,
-      desktopMaxHeightFactor: 0.5,
+      mobileMaxHeightFactor: 0.72,
+      desktopMaxHeightFactor: 0.48,
       adaptHeightToContent: false,
       expandHorizontal: false,
       expandVertical: false,
@@ -210,8 +214,8 @@ extension _MapPageHazardsState on _MapPageState {
       title: 'Configuración de mapa',
       anchor: PanelAnchor.topRight,
       width: 360,
-      height: 260,
-      maxHeight: 320,
+      height: 360,
+      maxHeight: 420,
       adaptHeightToContent: false,
       expandHorizontal: false,
       expandVertical: true,
@@ -229,6 +233,9 @@ extension _MapPageHazardsState on _MapPageState {
               showLowRiskCircles: _showLowRiskHazardCircles,
               showMediumRiskCircles: _showMediumRiskHazardCircles,
               showHighRiskCircles: _showHighRiskHazardCircles,
+              showLostPetReports: _showLostPetReports,
+              showFoundPetReports: _showFoundPetReports,
+              showGenericReports: _showGenericReports,
               onToggleDarkMode: (bool value) {
                 ref.read(themeModeProvider.notifier).state = value;
               },
@@ -245,6 +252,21 @@ extension _MapPageHazardsState on _MapPageState {
               onToggleHighRisk: (bool value) {
                 setState(() {
                   _showHighRiskHazardCircles = value;
+                });
+              },
+              onToggleLostPetReports: (bool value) {
+                setState(() {
+                  _showLostPetReports = value;
+                });
+              },
+              onToggleFoundPetReports: (bool value) {
+                setState(() {
+                  _showFoundPetReports = value;
+                });
+              },
+              onToggleGenericReports: (bool value) {
+                setState(() {
+                  _showGenericReports = value;
                 });
               },
             );

@@ -16,6 +16,27 @@ class LocalMediaStorageService {
     );
   }
 
+  Future<String?> pickAndStoreLostPetPhoto() async {
+    return _pickAndStorePhoto(
+      directoryName: 'lost_pet_photos',
+      filePrefix: 'lost_pet',
+    );
+  }
+
+  Future<String?> pickAndStoreFoundPetPhoto() async {
+    return _pickAndStorePhoto(
+      directoryName: 'found_pet_photos',
+      filePrefix: 'found_pet',
+    );
+  }
+
+  Future<String?> pickAndStoreGenericReportPhoto() async {
+    return _pickAndStorePhoto(
+      directoryName: 'generic_report_photos',
+      filePrefix: 'generic_report',
+    );
+  }
+
   Future<String?> pickAndStoreProfilePhoto() async {
     return _pickAndStorePhoto(
       directoryName: 'profile_photos',

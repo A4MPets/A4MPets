@@ -4,11 +4,12 @@ import 'package:http/http.dart' as http;
 
 import 'media_source_encoder.dart' as media_source_encoder;
 
-typedef SyncPostRequest = Future<http.Response?> Function({
-  required String path,
-  required Object body,
-  String? bearerToken,
-});
+typedef SyncPostRequest =
+    Future<http.Response?> Function({
+      required String path,
+      required Object body,
+      String? bearerToken,
+    });
 
 class SyncMediaResolver {
   SyncMediaResolver({required SyncPostRequest postRequest})
@@ -60,7 +61,8 @@ class SyncMediaResolver {
       return source;
     }
 
-    final String? dataUri = await media_source_encoder.encodeImageSourceToDataUri(source);
+    final String? dataUri = await media_source_encoder
+        .encodeImageSourceToDataUri(source);
     if (dataUri == null || dataUri.isEmpty) {
       return null;
     }
@@ -71,11 +73,14 @@ class SyncMediaResolver {
       bearerToken: bearerToken,
     );
 
-    if (response == null || response.statusCode < 200 || response.statusCode >= 300) {
+    if (response == null ||
+        response.statusCode < 200 ||
+        response.statusCode >= 300) {
       return null;
     }
 
-    final Map<String, dynamic> payload = jsonDecode(response.body) as Map<String, dynamic>;
+    final Map<String, dynamic> payload =
+        jsonDecode(response.body) as Map<String, dynamic>;
     final Map<String, dynamic>? data = payload['data'] as Map<String, dynamic>?;
     final String? url = data?['url']?.toString();
     if (url == null || url.isEmpty) {

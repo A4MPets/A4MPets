@@ -108,10 +108,7 @@ class HazardDetailsPanelContent extends StatelessWidget {
             ),
             child: const Text(
               'Ver comentarios',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
             ),
           ),
         ),

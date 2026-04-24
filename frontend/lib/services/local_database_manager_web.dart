@@ -4,6 +4,9 @@ import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/local_user_profile.dart';
+import '../models/lost_pet_report_record.dart';
+import '../models/found_pet_report_record.dart';
+import '../models/generic_report_record.dart';
 import '../models/hazard_report_record.dart';
 import '../models/pet_record.dart';
 import '../models/route_record.dart';
@@ -15,6 +18,9 @@ class LocalDatabaseManager {
   static const String _petsKey = 'pets_list_json';
   static const String _routesKey = 'routes_list_json';
   static const String _hazardsKey = 'hazard_reports_list_json';
+  static const String _lostPetReportsKey = 'lost_pet_reports_list_json';
+  static const String _foundPetReportsKey = 'found_pet_reports_list_json';
+  static const String _genericReportsKey = 'generic_reports_list_json';
 
   Future<SharedPreferences> get _prefs async => SharedPreferences.getInstance();
 
@@ -37,6 +43,29 @@ class LocalDatabaseManager {
     if (!prefs.containsKey(_hazardsKey)) {
       await prefs.setString(_hazardsKey, jsonEncode(<Map<String, Object?>>[]));
     }
+
+    if (!prefs.containsKey(_lostPetReportsKey)) {
+      await prefs.setString(
+        _lostPetReportsKey,
+        jsonEncode(<Map<String, Object?>>[]),
+      );
+    }
+
+    if (!prefs.containsKey(_foundPetReportsKey)) {
+      await prefs.setString(
+        _foundPetReportsKey,
+        jsonEncode(<Map<String, Object?>>[]),
+      );
+    }
+
+    if (!prefs.containsKey(_genericReportsKey)) {
+      await prefs.setString(
+        _genericReportsKey,
+        jsonEncode(<Map<String, Object?>>[]),
+      );
+    }
+
+    await _migrateLegacyHazardCategories(prefs);
   }
 
   Future<LocalUserProfile> getLocalUserProfile() async {
@@ -491,7 +520,8 @@ class LocalDatabaseManager {
         final int? parsedCreatedAt = int.tryParse(parts[2]);
         if (parsedId != null && parsedCreatedAt != null) {
           for (final PetRecord pet in current) {
-            if (pet.id == parsedId && pet.createdAt.millisecondsSinceEpoch == parsedCreatedAt) {
+            if (pet.id == parsedId &&
+                pet.createdAt.millisecondsSinceEpoch == parsedCreatedAt) {
               existing = pet;
               break;
             }
@@ -643,7 +673,8 @@ class LocalDatabaseManager {
         final int? parsedCreatedAt = int.tryParse(parts[2]);
         if (parsedId != null && parsedCreatedAt != null) {
           for (final RouteRecord route in current) {
-            if (route.id == parsedId && route.createdAt.millisecondsSinceEpoch == parsedCreatedAt) {
+            if (route.id == parsedId &&
+                route.createdAt.millisecondsSinceEpoch == parsedCreatedAt) {
               existing = route;
               break;
             }
@@ -878,6 +909,600 @@ class LocalDatabaseManager {
     await prefs.setString(_hazardsKey, jsonEncode(encoded));
   }
 
+  Future<List<LostPetReportRecord>> getLostPetReports() async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final String raw = prefs.getString(_lostPetReportsKey)!;
+    final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
+    return decoded
+        .map(
+          (dynamic row) => LostPetReportRecord.fromMap(
+            (row as Map<String, dynamic>).cast<String, Object?>(),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  Future<int> addLostPetReport({
+    required double lastSeenLatitude,
+    required double lastSeenLongitude,
+    required String name,
+    required String details,
+    required DateTime disappearanceDate,
+    String? photoUrl,
+    String? phone,
+  }) async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final List<LostPetReportRecord> current = await getLostPetReports();
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    final int nextId = current.isEmpty
+        ? 1
+        : current
+                  .map((LostPetReportRecord report) => report.id)
+                  .reduce((int a, int b) => a > b ? a : b) +
+              1;
+
+    final LostPetReportRecord newReport = LostPetReportRecord(
+      id: nextId,
+      localUuid: _generateLocalUuid('lost'),
+      remoteId: null,
+      syncStatus: 'created',
+      lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
+      lastSeenLatitude: lastSeenLatitude,
+      lastSeenLongitude: lastSeenLongitude,
+      name: name,
+      details: details,
+      disappearanceDate: disappearanceDate,
+      photoUrl: photoUrl,
+      phone: phone,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(now),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+      needsSync: true,
+    );
+
+    final List<Map<String, Object?>> encoded = <Map<String, Object?>>[
+      ...current.map((LostPetReportRecord report) => report.toMap()),
+      newReport.toMap(),
+    ];
+
+    await prefs.setString(_lostPetReportsKey, jsonEncode(encoded));
+    return nextId;
+  }
+
+  Future<List<LostPetReportRecord>> getLostPetReportsNeedingSync() async {
+    final List<LostPetReportRecord> reports = await getLostPetReports();
+    return reports
+        .where((LostPetReportRecord report) => report.needsSync)
+        .toList(growable: false);
+  }
+
+  Future<void> markLostPetReportAsSynced({
+    required String localUuid,
+    String? remoteId,
+    String syncStatus = 'synced',
+    DateTime? lastModifiedAt,
+  }) async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final List<LostPetReportRecord> current = await getLostPetReports();
+
+    final List<Map<String, Object?>> encoded = current
+        .map((LostPetReportRecord report) {
+          if (report.localUuid != localUuid) {
+            return report.toMap();
+          }
+          return LostPetReportRecord(
+            id: report.id,
+            localUuid: report.localUuid,
+            remoteId: remoteId ?? report.remoteId,
+            syncStatus: syncStatus,
+            lastModifiedAt: lastModifiedAt ?? DateTime.now(),
+            lastSeenLatitude: report.lastSeenLatitude,
+            lastSeenLongitude: report.lastSeenLongitude,
+            name: report.name,
+            details: report.details,
+            disappearanceDate: report.disappearanceDate,
+            photoUrl: report.photoUrl,
+            phone: report.phone,
+            createdAt: report.createdAt,
+            updatedAt: DateTime.now(),
+            needsSync: false,
+          ).toMap();
+        })
+        .toList(growable: false);
+
+    await prefs.setString(_lostPetReportsKey, jsonEncode(encoded));
+  }
+
+  Future<void> upsertLostPetReportFromRemote({
+    required String localUuid,
+    required String? remoteId,
+    required String syncStatus,
+    required DateTime remoteLastModifiedAt,
+    required double lastSeenLatitude,
+    required double lastSeenLongitude,
+    required String name,
+    required String details,
+    required DateTime disappearanceDate,
+    required String? photoUrl,
+    required String? phone,
+  }) async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final List<LostPetReportRecord> current = await getLostPetReports();
+
+    LostPetReportRecord? existing;
+    for (final LostPetReportRecord report in current) {
+      if (report.localUuid == localUuid ||
+          (remoteId != null && report.remoteId == remoteId)) {
+        existing = report;
+        break;
+      }
+    }
+
+    final int nextId = current.isEmpty
+        ? 1
+        : current
+                  .map((LostPetReportRecord report) => report.id)
+                  .reduce((int a, int b) => a > b ? a : b) +
+              1;
+
+    if (existing == null) {
+      final LostPetReportRecord inserted = LostPetReportRecord(
+        id: nextId,
+        localUuid: localUuid,
+        remoteId: remoteId,
+        syncStatus: syncStatus,
+        lastModifiedAt: remoteLastModifiedAt,
+        lastSeenLatitude: lastSeenLatitude,
+        lastSeenLongitude: lastSeenLongitude,
+        name: name,
+        details: details,
+        disappearanceDate: disappearanceDate,
+        photoUrl: photoUrl,
+        phone: phone,
+        createdAt: remoteLastModifiedAt,
+        updatedAt: remoteLastModifiedAt,
+        needsSync: false,
+      );
+
+      final List<Map<String, Object?>> encoded = <Map<String, Object?>>[
+        ...current.map((LostPetReportRecord report) => report.toMap()),
+        inserted.toMap(),
+      ];
+      await prefs.setString(_lostPetReportsKey, jsonEncode(encoded));
+      return;
+    }
+
+    if (existing.needsSync &&
+        existing.lastModifiedAt.isAfter(remoteLastModifiedAt)) {
+      return;
+    }
+
+    final List<Map<String, Object?>> encoded = current
+        .map((LostPetReportRecord report) {
+          if (report.id != existing!.id) {
+            return report.toMap();
+          }
+          return LostPetReportRecord(
+            id: report.id,
+            localUuid: localUuid,
+            remoteId: remoteId ?? report.remoteId,
+            syncStatus: syncStatus,
+            lastModifiedAt: remoteLastModifiedAt,
+            lastSeenLatitude: lastSeenLatitude,
+            lastSeenLongitude: lastSeenLongitude,
+            name: name,
+            details: details,
+            disappearanceDate: disappearanceDate,
+            photoUrl: _preferOfflineImageSource(
+              currentSource: report.photoUrl,
+              remoteSource: photoUrl,
+            ),
+            phone: phone,
+            createdAt: report.createdAt,
+            updatedAt: DateTime.now(),
+            needsSync: false,
+          ).toMap();
+        })
+        .toList(growable: false);
+
+    await prefs.setString(_lostPetReportsKey, jsonEncode(encoded));
+  }
+
+  Future<List<FoundPetReportRecord>> getFoundPetReports() async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final String raw = prefs.getString(_foundPetReportsKey)!;
+    final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
+    return decoded
+        .map(
+          (dynamic row) => FoundPetReportRecord.fromMap(
+            (row as Map<String, dynamic>).cast<String, Object?>(),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  Future<int> addFoundPetReport({
+    required double latitude,
+    required double longitude,
+    required String details,
+    required DateTime foundDate,
+    String? photoUrl,
+    String? phone,
+  }) async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final List<FoundPetReportRecord> current = await getFoundPetReports();
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    final int nextId = current.isEmpty
+        ? 1
+        : current
+                  .map((FoundPetReportRecord report) => report.id)
+                  .reduce((int a, int b) => a > b ? a : b) +
+              1;
+
+    final FoundPetReportRecord newReport = FoundPetReportRecord(
+      id: nextId,
+      localUuid: _generateLocalUuid('found'),
+      remoteId: null,
+      syncStatus: 'created',
+      lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
+      latitude: latitude,
+      longitude: longitude,
+      details: details,
+      foundDate: foundDate,
+      photoUrl: photoUrl,
+      phone: phone,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(now),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+      needsSync: true,
+    );
+
+    final List<Map<String, Object?>> encoded = <Map<String, Object?>>[
+      ...current.map((FoundPetReportRecord report) => report.toMap()),
+      newReport.toMap(),
+    ];
+
+    await prefs.setString(_foundPetReportsKey, jsonEncode(encoded));
+    return nextId;
+  }
+
+  Future<List<FoundPetReportRecord>> getFoundPetReportsNeedingSync() async {
+    final List<FoundPetReportRecord> reports = await getFoundPetReports();
+    return reports
+        .where((FoundPetReportRecord report) => report.needsSync)
+        .toList(growable: false);
+  }
+
+  Future<void> markFoundPetReportAsSynced({
+    required String localUuid,
+    String? remoteId,
+    String syncStatus = 'synced',
+    DateTime? lastModifiedAt,
+  }) async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final List<FoundPetReportRecord> current = await getFoundPetReports();
+
+    final List<Map<String, Object?>> encoded = current
+        .map((FoundPetReportRecord report) {
+          if (report.localUuid != localUuid) {
+            return report.toMap();
+          }
+          return FoundPetReportRecord(
+            id: report.id,
+            localUuid: report.localUuid,
+            remoteId: remoteId ?? report.remoteId,
+            syncStatus: syncStatus,
+            lastModifiedAt: lastModifiedAt ?? DateTime.now(),
+            latitude: report.latitude,
+            longitude: report.longitude,
+            details: report.details,
+            foundDate: report.foundDate,
+            photoUrl: report.photoUrl,
+            phone: report.phone,
+            createdAt: report.createdAt,
+            updatedAt: DateTime.now(),
+            needsSync: false,
+          ).toMap();
+        })
+        .toList(growable: false);
+
+    await prefs.setString(_foundPetReportsKey, jsonEncode(encoded));
+  }
+
+  Future<void> upsertFoundPetReportFromRemote({
+    required String localUuid,
+    required String? remoteId,
+    required String syncStatus,
+    required DateTime remoteLastModifiedAt,
+    required double latitude,
+    required double longitude,
+    required String details,
+    required DateTime foundDate,
+    required String? photoUrl,
+    required String? phone,
+  }) async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final List<FoundPetReportRecord> current = await getFoundPetReports();
+
+    FoundPetReportRecord? existing;
+    for (final FoundPetReportRecord report in current) {
+      if (report.localUuid == localUuid ||
+          (remoteId != null && report.remoteId == remoteId)) {
+        existing = report;
+        break;
+      }
+    }
+
+    final int nextId = current.isEmpty
+        ? 1
+        : current
+                  .map((FoundPetReportRecord report) => report.id)
+                  .reduce((int a, int b) => a > b ? a : b) +
+              1;
+
+    if (existing == null) {
+      final FoundPetReportRecord inserted = FoundPetReportRecord(
+        id: nextId,
+        localUuid: localUuid,
+        remoteId: remoteId,
+        syncStatus: syncStatus,
+        lastModifiedAt: remoteLastModifiedAt,
+        latitude: latitude,
+        longitude: longitude,
+        details: details,
+        foundDate: foundDate,
+        photoUrl: photoUrl,
+        phone: phone,
+        createdAt: remoteLastModifiedAt,
+        updatedAt: remoteLastModifiedAt,
+        needsSync: false,
+      );
+
+      final List<Map<String, Object?>> encoded = <Map<String, Object?>>[
+        ...current.map((FoundPetReportRecord report) => report.toMap()),
+        inserted.toMap(),
+      ];
+      await prefs.setString(_foundPetReportsKey, jsonEncode(encoded));
+      return;
+    }
+
+    if (existing.needsSync &&
+        existing.lastModifiedAt.isAfter(remoteLastModifiedAt)) {
+      return;
+    }
+
+    final List<Map<String, Object?>> encoded = current
+        .map((FoundPetReportRecord report) {
+          if (report.id != existing!.id) {
+            return report.toMap();
+          }
+          return FoundPetReportRecord(
+            id: report.id,
+            localUuid: localUuid,
+            remoteId: remoteId ?? report.remoteId,
+            syncStatus: syncStatus,
+            lastModifiedAt: remoteLastModifiedAt,
+            latitude: latitude,
+            longitude: longitude,
+            details: details,
+            foundDate: foundDate,
+            photoUrl: _preferOfflineImageSource(
+              currentSource: report.photoUrl,
+              remoteSource: photoUrl,
+            ),
+            phone: phone,
+            createdAt: report.createdAt,
+            updatedAt: DateTime.now(),
+            needsSync: false,
+          ).toMap();
+        })
+        .toList(growable: false);
+
+    await prefs.setString(_foundPetReportsKey, jsonEncode(encoded));
+  }
+
+  Future<List<GenericReportRecord>> getGenericReports() async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final String raw = prefs.getString(_genericReportsKey)!;
+    final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
+    return decoded
+        .map(
+          (dynamic row) => GenericReportRecord.fromMap(
+            (row as Map<String, dynamic>).cast<String, Object?>(),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  Future<int> addGenericReport({
+    required double latitude,
+    required double longitude,
+    required String description,
+    required DateTime reportedDate,
+    required String riskLevelCode,
+    String? photoUrl,
+  }) async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final List<GenericReportRecord> current = await getGenericReports();
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    final int nextId = current.isEmpty
+        ? 1
+        : current
+                  .map((GenericReportRecord report) => report.id)
+                  .reduce((int a, int b) => a > b ? a : b) +
+              1;
+
+    final GenericReportRecord newReport = GenericReportRecord(
+      id: nextId,
+      localUuid: _generateLocalUuid('generic'),
+      remoteId: null,
+      syncStatus: 'created',
+      lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
+      latitude: latitude,
+      longitude: longitude,
+      description: description,
+      reportedDate: reportedDate,
+      riskLevelCode: riskLevelCode,
+      photoUrl: photoUrl,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(now),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+      needsSync: true,
+    );
+
+    final List<Map<String, Object?>> encoded = <Map<String, Object?>>[
+      ...current.map((GenericReportRecord report) => report.toMap()),
+      newReport.toMap(),
+    ];
+
+    await prefs.setString(_genericReportsKey, jsonEncode(encoded));
+    return nextId;
+  }
+
+  Future<List<GenericReportRecord>> getGenericReportsNeedingSync() async {
+    final List<GenericReportRecord> reports = await getGenericReports();
+    return reports
+        .where((GenericReportRecord report) => report.needsSync)
+        .toList(growable: false);
+  }
+
+  Future<void> markGenericReportAsSynced({
+    required String localUuid,
+    String? remoteId,
+    String syncStatus = 'synced',
+    DateTime? lastModifiedAt,
+  }) async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final List<GenericReportRecord> current = await getGenericReports();
+
+    final List<Map<String, Object?>> encoded = current
+        .map((GenericReportRecord report) {
+          if (report.localUuid != localUuid) {
+            return report.toMap();
+          }
+          return GenericReportRecord(
+            id: report.id,
+            localUuid: report.localUuid,
+            remoteId: remoteId ?? report.remoteId,
+            syncStatus: syncStatus,
+            lastModifiedAt: lastModifiedAt ?? DateTime.now(),
+            latitude: report.latitude,
+            longitude: report.longitude,
+            description: report.description,
+            reportedDate: report.reportedDate,
+            riskLevelCode: report.riskLevelCode,
+            photoUrl: report.photoUrl,
+            createdAt: report.createdAt,
+            updatedAt: DateTime.now(),
+            needsSync: false,
+          ).toMap();
+        })
+        .toList(growable: false);
+
+    await prefs.setString(_genericReportsKey, jsonEncode(encoded));
+  }
+
+  Future<void> upsertGenericReportFromRemote({
+    required String localUuid,
+    required String? remoteId,
+    required String syncStatus,
+    required DateTime remoteLastModifiedAt,
+    required double latitude,
+    required double longitude,
+    required String description,
+    required DateTime reportedDate,
+    required String riskLevelCode,
+    required String? photoUrl,
+  }) async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final List<GenericReportRecord> current = await getGenericReports();
+
+    GenericReportRecord? existing;
+    for (final GenericReportRecord report in current) {
+      if (report.localUuid == localUuid ||
+          (remoteId != null && report.remoteId == remoteId)) {
+        existing = report;
+        break;
+      }
+    }
+
+    final int nextId = current.isEmpty
+        ? 1
+        : current
+                  .map((GenericReportRecord report) => report.id)
+                  .reduce((int a, int b) => a > b ? a : b) +
+              1;
+
+    if (existing == null) {
+      final GenericReportRecord inserted = GenericReportRecord(
+        id: nextId,
+        localUuid: localUuid,
+        remoteId: remoteId,
+        syncStatus: syncStatus,
+        lastModifiedAt: remoteLastModifiedAt,
+        latitude: latitude,
+        longitude: longitude,
+        description: description,
+        reportedDate: reportedDate,
+        riskLevelCode: riskLevelCode,
+        photoUrl: photoUrl,
+        createdAt: remoteLastModifiedAt,
+        updatedAt: remoteLastModifiedAt,
+        needsSync: false,
+      );
+
+      final List<Map<String, Object?>> encoded = <Map<String, Object?>>[
+        ...current.map((GenericReportRecord report) => report.toMap()),
+        inserted.toMap(),
+      ];
+      await prefs.setString(_genericReportsKey, jsonEncode(encoded));
+      return;
+    }
+
+    if (existing.needsSync &&
+        existing.lastModifiedAt.isAfter(remoteLastModifiedAt)) {
+      return;
+    }
+
+    final List<Map<String, Object?>> encoded = current
+        .map((GenericReportRecord report) {
+          if (report.id != existing!.id) {
+            return report.toMap();
+          }
+          return GenericReportRecord(
+            id: report.id,
+            localUuid: localUuid,
+            remoteId: remoteId ?? report.remoteId,
+            syncStatus: syncStatus,
+            lastModifiedAt: remoteLastModifiedAt,
+            latitude: latitude,
+            longitude: longitude,
+            description: description,
+            reportedDate: reportedDate,
+            riskLevelCode: riskLevelCode,
+            photoUrl: _preferOfflineImageSource(
+              currentSource: report.photoUrl,
+              remoteSource: photoUrl,
+            ),
+            createdAt: report.createdAt,
+            updatedAt: DateTime.now(),
+            needsSync: false,
+          ).toMap();
+        })
+        .toList(growable: false);
+
+    await prefs.setString(_genericReportsKey, jsonEncode(encoded));
+  }
+
   List<HazardCommentRecord> _decodeHazardComments(String commentsJson) {
     try {
       final List<dynamic> decoded = jsonDecode(commentsJson) as List<dynamic>;
@@ -892,10 +1517,42 @@ class LocalDatabaseManager {
     }
   }
 
-  String _generateLocalUuid() {
+  String _generateLocalUuid([String prefix = 'hz']) {
     final int now = DateTime.now().microsecondsSinceEpoch;
     final int randomPart = (Random().nextDouble() * 0xFFFFFFFF).floor();
-    return 'hz-$now-${randomPart.toRadixString(16)}';
+    return '$prefix-$now-${randomPart.toRadixString(16)}';
+  }
+
+  Future<void> _migrateLegacyHazardCategories(SharedPreferences prefs) async {
+    final String raw = prefs.getString(_hazardsKey) ?? '[]';
+    final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
+    bool changed = false;
+    final List<Map<String, Object?>> migrated = decoded
+        .map((dynamic row) {
+          final Map<String, Object?> map = (row as Map<String, dynamic>)
+              .cast<String, Object?>();
+          final String currentCode =
+              map['category_code']?.toString().trim().toLowerCase() ?? '';
+          String nextCode = currentCode;
+          if (currentCode == 'aggressive_animals') {
+            nextCode = 'possible_rabies_vectors';
+          } else if (currentCode.isEmpty ||
+              currentCode == 'undefined' ||
+              currentCode == 'unknown' ||
+              currentCode == 'unspecified') {
+            nextCode = 'pest_presence';
+          }
+          if (nextCode != currentCode) {
+            changed = true;
+            map['category_code'] = nextCode;
+          }
+          return map;
+        })
+        .toList(growable: false);
+
+    if (changed) {
+      await prefs.setString(_hazardsKey, jsonEncode(migrated));
+    }
   }
 
   String? _preferOfflineImageSource({

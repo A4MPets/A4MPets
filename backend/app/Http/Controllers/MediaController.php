@@ -11,7 +11,7 @@ class MediaController extends Controller
     public function upload(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'bucket' => ['required', 'string', 'in:pets,hazards,profiles'],
+            'bucket' => ['required', 'string', 'in:pets,hazards,profiles,lost_pets,found_pets,generic_reports'],
             'image_data' => ['required', 'string'],
             'file_name' => ['nullable', 'string', 'max:140'],
         ]);
@@ -49,7 +49,7 @@ class MediaController extends Controller
 
     public function show(string $bucket, string $fileName)
     {
-        if (!in_array($bucket, ['pets', 'hazards', 'profiles'], true)) {
+        if (!in_array($bucket, ['pets', 'hazards', 'profiles', 'lost_pets', 'found_pets', 'generic_reports'], true)) {
             abort(404);
         }
 

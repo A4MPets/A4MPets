@@ -6,10 +6,7 @@ class RoutePoint {
   final double latitude;
   final double longitude;
 
-  const RoutePoint({
-    required this.latitude,
-    required this.longitude,
-  });
+  const RoutePoint({required this.latitude, required this.longitude});
 
   factory RoutePoint.fromMap(Map<String, dynamic> map) {
     return RoutePoint(

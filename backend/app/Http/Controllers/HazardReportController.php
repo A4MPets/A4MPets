@@ -527,17 +527,21 @@ class HazardReportController extends Controller
             'contagious_disease',
             'stagnant_water',
             'waste_accumulation',
-            'aggressive_animals',
-            'undefined',
+            'pest_presence',
+            'possible_rabies_vectors',
         ], true)) {
             return $normalized;
         }
 
-        if (in_array($normalized, ['unknown', 'unspecified', ''], true)) {
-            return 'undefined';
+        if ($normalized === 'aggressive_animals') {
+            return 'possible_rabies_vectors';
         }
 
-        return 'undefined';
+        if (in_array($normalized, ['unknown', 'unspecified', 'undefined', ''], true)) {
+            return 'pest_presence';
+        }
+
+        return 'pest_presence';
     }
 
     private function normalizeDurationCode(?string $value): string
