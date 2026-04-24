@@ -1,29 +1,49 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../providers/local_data_providers.dart';
 import '../theme/app_palette.dart';
 import 'shared/local_image_widget.dart';
 
+class HazardDraftPreview {
+  final LatLng? location;
+  final int impactRadiusMeters;
+  final String riskLevelCode;
+  final bool isSelectingOnMap;
+
+  const HazardDraftPreview({
+    required this.location,
+    required this.impactRadiusMeters,
+    required this.riskLevelCode,
+    required this.isSelectingOnMap,
+  });
+}
+
 class ReportHazardPanelContent extends ConsumerStatefulWidget {
   final bool isDarkMode;
-  final LatLng? developerSelectedLocation;
-  final bool isDeveloperSelectingOnMap;
-  final VoidCallback onStartDeveloperMapSelection;
-  final VoidCallback onClearDeveloperLocation;
+  final LatLng? currentDeviceLocation;
+  final bool isLoadingCurrentLocation;
+  final String? currentLocationErrorText;
+  final LatLng? selectedHazardLocation;
+  final bool isSelectingHazardLocationOnMap;
+  final VoidCallback onStartMapSelection;
+  final VoidCallback onUseCurrentLocation;
+  final ValueChanged<HazardDraftPreview> onPreviewChanged;
   final VoidCallback onReported;
 
   const ReportHazardPanelContent({
     super.key,
     required this.isDarkMode,
-    required this.developerSelectedLocation,
-    required this.isDeveloperSelectingOnMap,
-    required this.onStartDeveloperMapSelection,
-    required this.onClearDeveloperLocation,
+    required this.currentDeviceLocation,
+    required this.isLoadingCurrentLocation,
+    required this.currentLocationErrorText,
+    required this.selectedHazardLocation,
+    required this.isSelectingHazardLocationOnMap,
+    required this.onStartMapSelection,
+    required this.onUseCurrentLocation,
+    required this.onPreviewChanged,
     required this.onReported,
   });
 
@@ -37,33 +57,32 @@ class _ReportHazardPanelContentState
   static const List<_SelectionOption> _categoryOptions = <_SelectionOption>[
     _SelectionOption('contagious_disease', 'Enfermedad contagiosa'),
     _SelectionOption('stagnant_water', 'Aguas estancadas'),
-    _SelectionOption('waste_accumulation', 'Acumulación de residuos'),
+    _SelectionOption('waste_accumulation', 'Acumulacion de residuos'),
     _SelectionOption('aggressive_animals', 'Animales agresivos'),
-    _SelectionOption('undefined', 'No lo sé'),
+    _SelectionOption('undefined', 'No lo se'),
   ];
 
   static const List<_SelectionOption> _durationOptions = <_SelectionOption>[
-    _SelectionOption('undefined', 'No lo sé'),
-    _SelectionOption('1_day', '1 Día'),
-    _SelectionOption('3_days', '3 Días'),
+    _SelectionOption('undefined', 'No lo se'),
+    _SelectionOption('1_day', '1 Dia'),
+    _SelectionOption('3_days', '3 Dias'),
     _SelectionOption('1_week', '1 semana'),
     _SelectionOption('2_weeks', '2 semanas'),
     _SelectionOption('1_month', '1 mes'),
     _SelectionOption('3_months', '3 meses'),
     _SelectionOption('6_months', '6 meses'),
-    _SelectionOption('1_year', '1 año'),
+    _SelectionOption('1_year', '1 ano'),
   ];
 
   static const List<_SelectionOption> _riskOptions = <_SelectionOption>[
     _SelectionOption('low', 'Bajo'),
     _SelectionOption('medium', 'Medio'),
     _SelectionOption('high', 'Alto'),
-    _SelectionOption('undefined', 'No lo sé'),
+    _SelectionOption('undefined', 'No lo se'),
   ];
 
   late final TextEditingController _descriptionController;
 
-  LatLng? _currentLocation;
   String _selectedCategoryCode = 'undefined';
   String _selectedDurationCode = 'undefined';
   String _selectedRiskLevelCode = 'undefined';
@@ -71,19 +90,22 @@ class _ReportHazardPanelContentState
   String? _storedEvidencePhotoUrl;
 
   late final DateTime _reportedAt;
-  bool _isLoadingLocation = true;
   bool _isSaving = false;
   bool _isPickingPhoto = false;
   String? _locationErrorText;
   String? _descriptionErrorText;
+  String? _submitValidationErrorText;
   String? _saveErrorText;
+
+  LatLng? get _effectiveHazardLocation {
+    return widget.selectedHazardLocation ?? widget.currentDeviceLocation;
+  }
 
   @override
   void initState() {
     super.initState();
     _descriptionController = TextEditingController();
     _reportedAt = DateTime.now();
-    _resolveCurrentLocation();
   }
 
   @override
@@ -92,59 +114,21 @@ class _ReportHazardPanelContentState
     super.dispose();
   }
 
-  Future<void> _resolveCurrentLocation() async {
-    setState(() {
-      _isLoadingLocation = true;
-    });
-
-    try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          _currentLocation = null;
-          _isLoadingLocation = false;
-          _locationErrorText =
-              'Debes habilitar la ubicación para reportar un peligro.';
-        });
-        return;
-      }
-
-      final Position position = await Geolocator.getCurrentPosition();
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _currentLocation = LatLng(position.latitude, position.longitude);
-        _isLoadingLocation = false;
-        _locationErrorText = null;
-      });
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _currentLocation = null;
-        _isLoadingLocation = false;
-        _locationErrorText =
-            'No se pudo obtener tu ubicación actual. Revisa permisos e inténtalo nuevamente.';
-      });
-    }
+  void _emitDraftPreview() {
+    widget.onPreviewChanged(
+      HazardDraftPreview(
+        location: _effectiveHazardLocation,
+        impactRadiusMeters: _selectedImpactRadiusMeters,
+        riskLevelCode: _selectedRiskLevelCode,
+        isSelectingOnMap: widget.isSelectingHazardLocationOnMap,
+      ),
+    );
   }
 
   Future<void> _pickEvidencePhoto() async {
     setState(() {
       _isPickingPhoto = true;
+      _saveErrorText = null;
     });
 
     try {
@@ -159,7 +143,7 @@ class _ReportHazardPanelContentState
       setState(() {
         _storedEvidencePhotoUrl = storedPath;
       });
-    } catch (error) {
+    } catch (_) {
       if (!mounted) {
         return;
       }
@@ -176,18 +160,21 @@ class _ReportHazardPanelContentState
   }
 
   Future<void> _saveHazardReport() async {
-    final LatLng? resolvedLocation =
-        widget.developerSelectedLocation ?? _currentLocation;
+    final LatLng? resolvedLocation = _effectiveHazardLocation;
 
     setState(() {
       _locationErrorText = null;
       _descriptionErrorText = null;
+      _submitValidationErrorText = null;
       _saveErrorText = null;
     });
 
     if (resolvedLocation == null) {
       setState(() {
-        _locationErrorText = 'Necesitamos tu ubicación actual para reportar.';
+        _locationErrorText =
+            'Necesitamos una ubicacion valida para reportar este peligro.';
+        _submitValidationErrorText =
+            'Completa los campos obligatorios para reportar.';
       });
       return;
     }
@@ -195,7 +182,9 @@ class _ReportHazardPanelContentState
     final String narrativeDescription = _descriptionController.text.trim();
     if (narrativeDescription.isEmpty) {
       setState(() {
-        _descriptionErrorText = 'La descripción del peligro es obligatoria.';
+        _descriptionErrorText = 'La descripcion del peligro es obligatoria.';
+        _submitValidationErrorText =
+            'Completa los campos obligatorios para reportar.';
       });
       return;
     }
@@ -208,9 +197,11 @@ class _ReportHazardPanelContentState
       final profile = await ref.read(localUserProfileProvider.future);
       final String reporterName = profile.isAuthenticated
           ? profile.username
-          : 'Anónimo';
+          : 'Anonimo';
 
-      await ref.read(hazardReportsControllerProvider.notifier).addHazardReport(
+      await ref
+          .read(hazardReportsControllerProvider.notifier)
+          .addHazardReport(
             incidentLatitude: resolvedLocation.latitude,
             incidentLongitude: resolvedLocation.longitude,
             impactRadiusMeters: _selectedImpactRadiusMeters,
@@ -247,6 +238,13 @@ class _ReportHazardPanelContentState
 
   @override
   Widget build(BuildContext context) {
+    final String? resolvedLocationErrorText =
+        _locationErrorText ??
+        (widget.selectedHazardLocation == null &&
+                !widget.isSelectingHazardLocationOnMap
+            ? widget.currentLocationErrorText
+            : null);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -255,58 +253,23 @@ class _ReportHazardPanelContentState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (kDebugMode)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: _FixedLocationBanner(
-                          isDarkMode: widget.isDarkMode,
-                          isLoading: _isLoadingLocation,
-                          location: _currentLocation,
-                          onRetry: _resolveCurrentLocation,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _DeveloperLocationBanner(
-                          isDarkMode: widget.isDarkMode,
-                          isSelectingOnMap: widget.isDeveloperSelectingOnMap,
-                          selectedLocation: widget.developerSelectedLocation,
-                          onStartSelection: widget.onStartDeveloperMapSelection,
-                          onClearSelection: widget.onClearDeveloperLocation,
-                        ),
-                      ),
-                    ],
-                  )
-                else
-                  _FixedLocationBanner(
-                    isDarkMode: widget.isDarkMode,
-                    isLoading: _isLoadingLocation,
-                    location: _currentLocation,
-                    onRetry: _resolveCurrentLocation,
-                  ),
-                if (_locationErrorText != null) ...[
+                _HazardLocationCard(
+                  isDarkMode: widget.isDarkMode,
+                  onStartSelection: widget.onStartMapSelection,
+                  onUseCurrentLocation: widget.onUseCurrentLocation,
+                ),
+                if (resolvedLocationErrorText != null) ...[
                   const SizedBox(height: 6),
-                  _FieldErrorText(message: _locationErrorText!),
+                  _FieldErrorText(message: resolvedLocationErrorText),
                 ],
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 _LabeledField(
-                  label: 'Radio de afectación (metros)',
+                  label: 'Radio de afectacion ($_selectedImpactRadiusMeters m)',
                   child: _buildImpactRadiusDropdown(),
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  'Valor seleccionado: $_selectedImpactRadiusMeters m',
-                  style: const TextStyle(
-                    color: AppPalette.textMutedDark,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 _LabeledField(
-                  label: 'Categoría',
+                  label: 'Categoria',
                   child: _buildDropdown(
                     value: _selectedCategoryCode,
                     items: _categoryOptions,
@@ -317,13 +280,13 @@ class _ReportHazardPanelContentState
                     },
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 _LabeledField(
-                  label: 'Descripción del peligro',
+                  label: 'Descripcion del peligro',
                   child: _buildTextField(
                     controller: _descriptionController,
                     hintText: 'Describe lo que observas en el lugar',
-                    maxLines: 4,
+                    maxLines: 3,
                     errorText: _descriptionErrorText,
                     onSubmitted: (_) {
                       if (!_isSaving) {
@@ -335,14 +298,15 @@ class _ReportHazardPanelContentState
                           value.trim().isNotEmpty) {
                         setState(() {
                           _descriptionErrorText = null;
+                          _submitValidationErrorText = null;
                         });
                       }
                     },
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 _LabeledField(
-                  label: 'Duración aproximada',
+                  label: 'Duracion aproximada',
                   child: _buildDropdown(
                     value: _selectedDurationCode,
                     items: _durationOptions,
@@ -353,7 +317,7 @@ class _ReportHazardPanelContentState
                     },
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 _LabeledField(
                   label: 'Nivel de riesgo',
                   child: _buildDropdown(
@@ -363,10 +327,11 @@ class _ReportHazardPanelContentState
                       setState(() {
                         _selectedRiskLevelCode = value;
                       });
+                      _emitDraftPreview();
                     },
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 _LabeledField(
                   label: 'Foto (opcional)',
                   child: _EvidencePhotoField(
@@ -380,10 +345,10 @@ class _ReportHazardPanelContentState
             ),
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
         if (_saveErrorText != null) ...[
           _FieldErrorText(message: _saveErrorText!),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
         ],
         SizedBox(
           height: 48,
@@ -408,13 +373,14 @@ class _ReportHazardPanelContentState
                   )
                 : const Text(
                     'Reportar',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                   ),
           ),
         ),
+        if (_submitValidationErrorText != null) ...[
+          const SizedBox(height: 8),
+          _FieldErrorText(message: _submitValidationErrorText!),
+        ],
       ],
     );
   }
@@ -436,8 +402,9 @@ class _ReportHazardPanelContentState
       keyboardType: keyboardType,
       maxLines: maxLines,
       onChanged: onChanged,
-      textInputAction:
-          onSubmitted != null ? TextInputAction.done : TextInputAction.newline,
+      textInputAction: onSubmitted != null
+          ? TextInputAction.done
+          : TextInputAction.newline,
       onSubmitted: onSubmitted,
       style: TextStyle(
         color: textColor,
@@ -453,8 +420,10 @@ class _ReportHazardPanelContentState
         ),
         filled: true,
         fillColor: AppPalette.fieldBackground(widget.isDarkMode),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 11,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -518,8 +487,7 @@ class _ReportHazardPanelContentState
       decoration: InputDecoration(
         filled: true,
         fillColor: AppPalette.fieldBackground(widget.isDarkMode),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -563,8 +531,7 @@ class _ReportHazardPanelContentState
       decoration: InputDecoration(
         filled: true,
         fillColor: AppPalette.fieldBackground(widget.isDarkMode),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -580,10 +547,8 @@ class _ReportHazardPanelContentState
       ),
       items: const <int>[1, 10, 100, 300]
           .map(
-            (int value) => DropdownMenuItem<int>(
-              value: value,
-              child: Text('$value m'),
-            ),
+            (int value) =>
+                DropdownMenuItem<int>(value: value, child: Text('$value m')),
           )
           .toList(growable: false),
       onChanged: (int? nextValue) {
@@ -593,6 +558,7 @@ class _ReportHazardPanelContentState
         setState(() {
           _selectedImpactRadiusMeters = nextValue;
         });
+        _emitDraftPreview();
       },
     );
   }
@@ -620,10 +586,7 @@ class _LabeledField extends StatelessWidget {
   final String label;
   final Widget child;
 
-  const _LabeledField({
-    required this.label,
-    required this.child,
-  });
+  const _LabeledField({required this.label, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -645,17 +608,15 @@ class _LabeledField extends StatelessWidget {
   }
 }
 
-class _FixedLocationBanner extends StatelessWidget {
+class _HazardLocationCard extends StatelessWidget {
   final bool isDarkMode;
-  final bool isLoading;
-  final LatLng? location;
-  final VoidCallback onRetry;
+  final VoidCallback onStartSelection;
+  final VoidCallback onUseCurrentLocation;
 
-  const _FixedLocationBanner({
+  const _HazardLocationCard({
     required this.isDarkMode,
-    required this.isLoading,
-    required this.location,
-    required this.onRetry,
+    required this.onStartSelection,
+    required this.onUseCurrentLocation,
   });
 
   @override
@@ -664,63 +625,112 @@ class _FixedLocationBanner extends StatelessWidget {
     final Color textColor = AppPalette.textPrimary(isDarkMode);
 
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Ubicación automática',
-            style: TextStyle(
-              color: textColor,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 4),
-          if (isLoading)
-            const Text(
-              'Obteniendo ubicación actual...',
-              style: TextStyle(
-                color: AppPalette.textMutedDark,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: AppPalette.primaryBlue.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.place_rounded,
+                  color: AppPalette.primaryBlue,
+                  size: 20,
+                ),
               ),
-            )
-          else if (location == null)
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'No se pudo obtener la ubicación. Activa permisos y reintenta.',
-                    style: TextStyle(
-                      color: AppPalette.textMutedDark,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ubicacion del peligro',
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Selecciona el lugar del peligro.',
+                      style: TextStyle(
+                        color: AppPalette.textMutedDark,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 38,
+                  child: OutlinedButton.icon(
+                    onPressed: onStartSelection,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppPalette.primaryBlue,
+                      side: const BorderSide(
+                        color: AppPalette.primaryBlue,
+                        width: 1,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.place_rounded, size: 16),
+                    label: const Text(
+                      'Marcar en el mapa',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
-                TextButton(
-                  onPressed: onRetry,
-                  child: const Text('Reintentar'),
-                ),
-              ],
-            )
-          else
-            Text(
-              'Debes estar físicamente en el lugar para reportar. '
-              'Lat: ${location!.latitude.toStringAsFixed(6)}, '
-              'Lng: ${location!.longitude.toStringAsFixed(6)}',
-              style: const TextStyle(
-                color: AppPalette.textMutedDark,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
               ),
-            ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SizedBox(
+                  height: 38,
+                  child: TextButton.icon(
+                    onPressed: onUseCurrentLocation,
+                    style: TextButton.styleFrom(
+                      foregroundColor: textColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.my_location_rounded, size: 16),
+                    label: const Text(
+                      'Usar ubicacion actual',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -745,7 +755,7 @@ class _EvidencePhotoField extends StatelessWidget {
     final Color borderColor = AppPalette.border(isDarkMode);
 
     return Container(
-      height: 118,
+      height: 104,
       decoration: BoxDecoration(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(14),
@@ -761,7 +771,7 @@ class _EvidencePhotoField extends StatelessWidget {
                       source: photoSource,
                       fit: BoxFit.cover,
                       fallback: const _PhotoPlaceholder(),
-                      errorBuilder: (_, __, ___) => const _PhotoPlaceholder(),
+                      errorBuilder: (_, _, _) => const _PhotoPlaceholder(),
                     )
                   : const _PhotoPlaceholder(),
             ),
@@ -794,81 +804,6 @@ class _EvidencePhotoField extends StatelessWidget {
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DeveloperLocationBanner extends StatelessWidget {
-  final bool isDarkMode;
-  final bool isSelectingOnMap;
-  final LatLng? selectedLocation;
-  final VoidCallback onStartSelection;
-  final VoidCallback onClearSelection;
-
-  const _DeveloperLocationBanner({
-    required this.isDarkMode,
-    required this.isSelectingOnMap,
-    required this.selectedLocation,
-    required this.onStartSelection,
-    required this.onClearSelection,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final Color borderColor = AppPalette.border(isDarkMode);
-    final Color textColor = AppPalette.textPrimary(isDarkMode);
-
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Ubicación dev (debug)',
-            style: TextStyle(
-              color: textColor,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            isSelectingOnMap
-                ? 'Selecciona un punto tocando el mapa.'
-                : selectedLocation == null
-                    ? 'Sin ubicación manual seleccionada.'
-                    : 'Lat: ${selectedLocation!.latitude.toStringAsFixed(6)}\nLng: ${selectedLocation!.longitude.toStringAsFixed(6)}',
-            style: const TextStyle(
-              color: AppPalette.textMutedDark,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                child: TextButton(
-                  onPressed: onStartSelection,
-                  child: const Text('Marcar en mapa'),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: TextButton(
-                  onPressed: selectedLocation == null ? null : onClearSelection,
-                  child: const Text('Limpiar'),
-                ),
-              ),
-            ],
           ),
         ],
       ),

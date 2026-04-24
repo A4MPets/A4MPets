@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 enum PanelAnchor { topLeft, topRight, bottomLeft, bottomRight }
 
-class AppModalPanel extends StatelessWidget {
+class AppModalPanel extends StatefulWidget {
   final bool isDarkMode;
   final String? title;
   final Widget child;
@@ -16,6 +16,8 @@ class AppModalPanel extends StatelessWidget {
   final bool adaptHeightToContent;
   final double? maxHeight;
   final double? maxHeightFactor;
+  final double? mobileMaxHeightFactor;
+  final double? desktopMaxHeightFactor;
   final BorderRadius borderRadius;
   final VoidCallback onClosePressed;
   final bool showBackButton;
@@ -24,6 +26,10 @@ class AppModalPanel extends StatelessWidget {
   final Duration animationDuration;
   final Curve animationCurve;
   final bool showLoadingIndicator;
+  final bool canMinimize;
+  final bool isMinimized;
+  final double minimizedHeight;
+  final VoidCallback? onToggleMinimize;
 
   const AppModalPanel({
     super.key,
@@ -39,6 +45,8 @@ class AppModalPanel extends StatelessWidget {
     this.adaptHeightToContent = false,
     this.maxHeight,
     this.maxHeightFactor,
+    this.mobileMaxHeightFactor,
+    this.desktopMaxHeightFactor,
     this.borderRadius = const BorderRadius.all(Radius.circular(20)),
     this.showBackButton = false,
     this.scrollContent = true,
@@ -46,174 +54,244 @@ class AppModalPanel extends StatelessWidget {
     this.animationDuration = const Duration(milliseconds: 260),
     this.animationCurve = Curves.easeOutCubic,
     this.showLoadingIndicator = false,
+    this.canMinimize = false,
+    this.isMinimized = false,
+    this.minimizedHeight = 74,
+    this.onToggleMinimize,
   });
 
   static const double _margin = 16;
   static const double _floatingTopOffset = 10;
 
   @override
+  State<AppModalPanel> createState() => _AppModalPanelState();
+}
+
+class _AppModalPanelState extends State<AppModalPanel> {
+  bool _hasPlayedEntranceAnimation = false;
+
+  @override
   Widget build(BuildContext context) {
-    final Color panelBackground = isDarkMode
+    final Color panelBackground = widget.isDarkMode
         ? const Color(0xCC201E1E)
         : const Color(0xCCE6E6E6);
 
-    final Color titleColor = isDarkMode
+    final Color titleColor = widget.isDarkMode
         ? const Color(0xFFAAAAAA)
         : const Color(0xFF404040);
 
-    final bool hasTitle = title != null && title!.trim().isNotEmpty;
+    final bool hasTitle =
+        widget.title != null && widget.title!.trim().isNotEmpty;
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final EdgeInsets viewPadding = MediaQuery.of(context).padding;
         final bool isMobile = constraints.maxWidth <= 900;
         final double safeTopInset =
-            anchor == PanelAnchor.topLeft || anchor == PanelAnchor.topRight
+            widget.anchor == PanelAnchor.topLeft ||
+                widget.anchor == PanelAnchor.topRight
             ? viewPadding.top
             : 0;
         final double safeBottomInset =
-            anchor == PanelAnchor.bottomLeft ||
-                anchor == PanelAnchor.bottomRight
+            widget.anchor == PanelAnchor.bottomLeft ||
+                widget.anchor == PanelAnchor.bottomRight
             ? viewPadding.bottom
             : 0;
-        final double availableWidth = constraints.maxWidth - (_margin * 2);
+        final double availableWidth =
+            constraints.maxWidth - (AppModalPanel._margin * 2);
         final double availableHeight =
             constraints.maxHeight -
-            (_margin * 2) -
+            (AppModalPanel._margin * 2) -
             safeTopInset -
             safeBottomInset;
 
-        final double resolvedWidth = isMobile || expandHorizontal
+        final double resolvedWidth = isMobile || widget.expandHorizontal
             ? availableWidth
-            : math.min(width ?? 380, availableWidth);
+            : math.min(widget.width ?? 380, availableWidth);
 
-        final double requestedMaxHeight = maxHeightFactor != null
-            ? availableHeight * maxHeightFactor!
-            : (maxHeight ?? height ?? availableHeight * 0.62);
+        final double? responsiveMaxHeightFactor = isMobile
+            ? widget.mobileMaxHeightFactor ?? widget.maxHeightFactor
+            : widget.desktopMaxHeightFactor ?? widget.maxHeightFactor;
 
-        final double resolvedMaxHeight = expandVertical
+        final double requestedMaxHeight = responsiveMaxHeightFactor != null
+            ? availableHeight * responsiveMaxHeightFactor
+            : (widget.maxHeight ?? widget.height ?? availableHeight * 0.62);
+
+        final double resolvedMaxHeight = widget.expandVertical
             ? availableHeight
             : math.min(requestedMaxHeight, availableHeight);
 
-        final double resolvedFixedHeight = expandVertical
+        final double resolvedFixedHeight = widget.expandVertical
             ? availableHeight
-            : math.min(height ?? resolvedMaxHeight, resolvedMaxHeight);
+            : math.min(widget.height ?? resolvedMaxHeight, resolvedMaxHeight);
+        final double resolvedMinimizedHeight = math.min(
+          widget.minimizedHeight,
+          resolvedFixedHeight,
+        );
+        final double targetPanelHeight = widget.isMinimized
+            ? resolvedMinimizedHeight
+            : resolvedFixedHeight;
 
         final double resolvedTopPadding =
-            contentTopPadding ?? (hasTitle ? 56 : 12);
+            widget.contentTopPadding ?? (hasTitle ? 56 : 12);
 
         final Widget panelBody = Padding(
           padding: EdgeInsets.fromLTRB(
-            _margin,
-            _margin + safeTopInset,
-            _margin,
-            _margin + safeBottomInset,
+            AppModalPanel._margin,
+            AppModalPanel._margin + safeTopInset,
+            AppModalPanel._margin,
+            AppModalPanel._margin + safeBottomInset,
           ),
           child: Align(
-            alignment: _toAlignment(anchor),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minWidth: math.min(300, resolvedWidth),
-                maxWidth: resolvedWidth,
-                minHeight: adaptHeightToContent ? 0 : resolvedFixedHeight,
-                maxHeight: adaptHeightToContent
-                    ? resolvedMaxHeight
-                    : resolvedFixedHeight,
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: panelBackground,
-                  borderRadius: borderRadius,
-                ),
-                child: Stack(
-                  children: [
-                    if (scrollContent)
-                      if (adaptHeightToContent)
-                        _PanelScrollableBody(
-                          topPadding: resolvedTopPadding,
-                          adaptHeightToContent: true,
-                          child: child,
-                        )
-                      else
-                        Positioned.fill(
-                          child: _PanelScrollableBody(
+            alignment: _toAlignment(widget.anchor),
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              alignment: _toAlignment(widget.anchor),
+              child: SizedBox(
+                width: resolvedWidth,
+                height: widget.adaptHeightToContent && !widget.isMinimized
+                    ? null
+                    : targetPanelHeight,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: panelBackground,
+                    borderRadius: widget.borderRadius,
+                  ),
+                  child: Stack(
+                    children: [
+                      if (!widget.isMinimized && widget.scrollContent)
+                        if (widget.adaptHeightToContent)
+                          _PanelScrollableBody(
                             topPadding: resolvedTopPadding,
-                            adaptHeightToContent: false,
-                            child: child,
-                          ),
-                        )
-                    else
-                      Positioned.fill(
-                        child: Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            16,
-                            resolvedTopPadding,
-                            16,
-                            18,
-                          ),
-                          child: child,
-                        ),
-                      ),
-                    if (hasTitle)
-                      Positioned(
-                        top: 14,
-                        left: 56,
-                        right: 56,
-                        child: Text(
-                          title!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: titleColor,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    if (showLoadingIndicator)
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          ignoring: true,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: isDarkMode
-                                  ? const Color(0x55201E1E)
-                                  : const Color(0x55E6E6E6),
-                              borderRadius: borderRadius,
+                            adaptHeightToContent: true,
+                            child: widget.child,
+                          )
+                        else
+                          Positioned.fill(
+                            child: _PanelScrollableBody(
+                              topPadding: resolvedTopPadding,
+                              adaptHeightToContent: false,
+                              child: widget.child,
                             ),
-                            child: const Center(
-                              child: SizedBox(
-                                width: 28,
-                                height: 28,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.5,
-                                  color: Color(0xFF5984BC),
+                          )
+                      else if (!widget.isMinimized)
+                        Positioned.fill(
+                          child: Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              16,
+                              resolvedTopPadding,
+                              16,
+                              18,
+                            ),
+                            child: widget.child,
+                          ),
+                        ),
+                      if (hasTitle)
+                        Positioned(
+                          top: 14,
+                          left: 56,
+                          right: 56,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: widget.canMinimize
+                                ? widget.onToggleMinimize
+                                : null,
+                            child: Text(
+                              widget.title!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: titleColor,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (widget.canMinimize)
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: Center(
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: widget.onToggleMinimize,
+                              child: Container(
+                                width: 42,
+                                height: 14,
+                                alignment: Alignment.topCenter,
+                                child: Container(
+                                  width: 42,
+                                  height: 5,
+                                  decoration: BoxDecoration(
+                                    color: widget.isDarkMode
+                                        ? const Color(0x66FFFFFF)
+                                        : const Color(0x66404040),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
+                      if (widget.showLoadingIndicator)
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            ignoring: true,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: widget.isDarkMode
+                                    ? const Color(0x55201E1E)
+                                    : const Color(0x55E6E6E6),
+                                borderRadius: widget.borderRadius,
+                              ),
+                              child: const Center(
+                                child: SizedBox(
+                                  width: 28,
+                                  height: 28,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    color: Color(0xFF5984BC),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      Positioned(
+                        top: AppModalPanel._floatingTopOffset,
+                        left: 12,
+                        child: _PanelBackOrCloseButton(
+                          showBackIcon: widget.showBackButton,
+                          onPressed: widget.onClosePressed,
+                        ),
                       ),
-                    Positioned(
-                      top: _floatingTopOffset,
-                      left: 12,
-                      child: _PanelBackOrCloseButton(
-                        showBackIcon: showBackButton,
-                        onPressed: onClosePressed,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         );
 
+        if (_hasPlayedEntranceAnimation) {
+          return panelBody;
+        }
+
         return TweenAnimationBuilder<double>(
           tween: Tween<double>(begin: 0, end: 1),
-          duration: animationDuration,
-          curve: animationCurve,
+          duration: widget.animationDuration,
+          curve: widget.animationCurve,
+          onEnd: () {
+            if (mounted && !_hasPlayedEntranceAnimation) {
+              setState(() {
+                _hasPlayedEntranceAnimation = true;
+              });
+            }
+          },
           builder: (BuildContext context, double value, Widget? child) {
             final double offsetY = (1 - value) * 18;
             final double scale = 0.985 + (0.015 * value);

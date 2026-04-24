@@ -11,7 +11,14 @@ extension _MapPageHazardsState on _MapPageState {
     }
     setState(() {
       _isSelectingHazardLocationOnMap = false;
-      _developerHazardLocation = null;
+      _manualHazardLocation = null;
+      _isReportHazardPanelMinimized = false;
+      _hazardDraftPreview = const HazardDraftPreview(
+        location: null,
+        impactRadiusMeters: 10,
+        riskLevelCode: 'undefined',
+        isSelectingOnMap: false,
+      );
     });
     _pushPanel(_buildReportHazardRoute(isDarkMode));
   }
@@ -48,7 +55,9 @@ extension _MapPageHazardsState on _MapPageState {
         }
         if (currentPanel.isReportHazardPanel) {
           _isSelectingHazardLocationOnMap = false;
-          _developerHazardLocation = null;
+          _manualHazardLocation = null;
+          _isReportHazardPanelMinimized = false;
+          _hazardDraftPreview = null;
         }
         if (currentPanel.isHazardDetailsPanel) {
           _selectedHazard = null;
@@ -79,16 +88,59 @@ extension _MapPageHazardsState on _MapPageState {
     _pushPanel(_buildHazardCommentsRoute(isDarkMode, hazard));
   }
 
-  void _startDeveloperHazardMapSelection() {
+  void _startHazardMapSelection() {
     setState(() {
       _isSelectingHazardLocationOnMap = true;
+      _isReportHazardPanelMinimized = true;
     });
   }
 
-  void _clearDeveloperHazardMapSelection() {
+  void _toggleReportHazardPanelMinimized() {
+    setState(() {
+      _isReportHazardPanelMinimized = !_isReportHazardPanelMinimized;
+    });
+  }
+
+  void _useCurrentHazardLocation() {
     setState(() {
       _isSelectingHazardLocationOnMap = false;
-      _developerHazardLocation = null;
+      _manualHazardLocation = null;
+      _isReportHazardPanelMinimized = false;
+      if (_latestUserLocation == null || _userLocationErrorText != null) {
+        _isUserLocationLoading = true;
+        _userLocationErrorText = null;
+        _userLocationRefreshRevision += 1;
+      }
+    });
+  }
+
+  void _handleUserLocationStatusChanged(bool isLoading, String? errorText) {
+    if (_isUserLocationLoading == isLoading &&
+        _userLocationErrorText == errorText) {
+      return;
+    }
+
+    setState(() {
+      _isUserLocationLoading = isLoading;
+      _userLocationErrorText = errorText;
+    });
+  }
+
+  void _updateHazardDraftPreview(HazardDraftPreview preview) {
+    final HazardDraftPreview? currentPreview = _hazardDraftPreview;
+    if (currentPreview != null &&
+        currentPreview.impactRadiusMeters == preview.impactRadiusMeters &&
+        currentPreview.riskLevelCode == preview.riskLevelCode) {
+      return;
+    }
+
+    setState(() {
+      _hazardDraftPreview = HazardDraftPreview(
+        location: currentPreview?.location,
+        impactRadiusMeters: preview.impactRadiusMeters,
+        riskLevelCode: preview.riskLevelCode,
+        isSelectingOnMap: currentPreview?.isSelectingOnMap ?? false,
+      );
     });
   }
 
@@ -97,22 +149,30 @@ extension _MapPageHazardsState on _MapPageState {
       transitionKey: ++_panelTransitionSeed,
       title: 'Reportar Peligro',
       anchor: PanelAnchor.bottomLeft,
-      width: 380,
-      height: 620,
-      maxHeight: 620,
+      width: 340,
+      mobileMaxHeightFactor: 0.5,
+      desktopMaxHeightFactor: 0.5,
       adaptHeightToContent: false,
       expandHorizontal: false,
       expandVertical: false,
       scrollContent: false,
       isReportHazardPanel: true,
+      canMinimize: true,
+      isMinimized: _isReportHazardPanelMinimized,
+      minimizedHeight: 72,
+      onToggleMinimize: _toggleReportHazardPanelMinimized,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
         return ReportHazardPanelContent(
           isDarkMode: isDarkMode,
-          developerSelectedLocation: _developerHazardLocation,
-          isDeveloperSelectingOnMap: _isSelectingHazardLocationOnMap,
-          onStartDeveloperMapSelection: _startDeveloperHazardMapSelection,
-          onClearDeveloperLocation: _clearDeveloperHazardMapSelection,
+          currentDeviceLocation: _latestUserLocation,
+          isLoadingCurrentLocation: _isUserLocationLoading,
+          currentLocationErrorText: _userLocationErrorText,
+          selectedHazardLocation: _manualHazardLocation,
+          isSelectingHazardLocationOnMap: _isSelectingHazardLocationOnMap,
+          onStartMapSelection: _startHazardMapSelection,
+          onUseCurrentLocation: _useCurrentHazardLocation,
+          onPreviewChanged: _updateHazardDraftPreview,
           onReported: () {
             _closeCurrentPanel();
           },

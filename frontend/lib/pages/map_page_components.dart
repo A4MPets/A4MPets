@@ -8,6 +8,8 @@ class _PanelRoute {
   final double? height;
   final double? maxHeight;
   final double? maxHeightFactor;
+  final double? mobileMaxHeightFactor;
+  final double? desktopMaxHeightFactor;
   final bool adaptHeightToContent;
   final bool expandHorizontal;
   final bool expandVertical;
@@ -26,8 +28,12 @@ class _PanelRoute {
   final bool isTripPanel;
   final bool isTripPetSelectionPanel;
   final bool isTripRouteSelectionPanel;
+  final bool canMinimize;
+  final bool isMinimized;
+  final double minimizedHeight;
   final BorderRadius borderRadius;
   final double? contentTopPadding;
+  final VoidCallback? onToggleMinimize;
   final Widget Function(BuildContext context) contentBuilder;
 
   _PanelRoute({
@@ -39,6 +45,8 @@ class _PanelRoute {
     this.height,
     this.maxHeight,
     this.maxHeightFactor,
+    this.mobileMaxHeightFactor,
+    this.desktopMaxHeightFactor,
     this.adaptHeightToContent = false,
     this.expandHorizontal = false,
     this.expandVertical = false,
@@ -57,8 +65,12 @@ class _PanelRoute {
     this.isTripPanel = false,
     this.isTripPetSelectionPanel = false,
     this.isTripRouteSelectionPanel = false,
+    this.canMinimize = false,
+    this.isMinimized = false,
+    this.minimizedHeight = 74,
     this.borderRadius = const BorderRadius.all(Radius.circular(20)),
     this.contentTopPadding,
+    this.onToggleMinimize,
   });
 }
 

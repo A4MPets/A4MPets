@@ -63,12 +63,14 @@ class _MapPageState extends ConsumerState<MapPage> {
 
   // Hazard interaction state.
   bool _isSelectingHazardLocationOnMap = false;
-  LatLng? _developerHazardLocation;
+  LatLng? _manualHazardLocation;
+  HazardDraftPreview? _hazardDraftPreview;
   HazardReportRecord? _selectedHazard;
   int _hazardFocusRevision = 0;
   bool _showLowRiskHazardCircles = true;
   bool _showMediumRiskHazardCircles = true;
   bool _showHighRiskHazardCircles = true;
+  bool _isReportHazardPanelMinimized = false;
 
   // Trip navigation state.
   final Set<int> _selectedTripPetIds = <int>{};
@@ -80,6 +82,9 @@ class _MapPageState extends ConsumerState<MapPage> {
   int _routePolylineRequestVersion = 0;
   String? _tripStartErrorText;
   LatLng? _latestUserLocation;
+  bool _isUserLocationLoading = true;
+  String? _userLocationErrorText;
+  int _userLocationRefreshRevision = 0;
   List<LatLng> _tripRemainingWaypoints = <LatLng>[];
 
   // Auth panel state.
@@ -180,6 +185,12 @@ class _MapPageState extends ConsumerState<MapPage> {
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = ref.watch(themeModeProvider);
+    final _PanelRoute? activePanel = _hasOpenPanels ? _panelStack.last : null;
+    final bool activePanelAnchoredBottom =
+        activePanel != null &&
+        (activePanel.anchor == PanelAnchor.bottomLeft ||
+            activePanel.anchor == PanelAnchor.bottomRight);
+
     return Scaffold(
       body: MapWidget(
         isDarkMode: isDarkMode,
@@ -226,6 +237,24 @@ class _MapPageState extends ConsumerState<MapPage> {
         hazardReports: _visibleHazardCircles,
         visibleHazardCircles: _visibleHazardCircles,
         highlightedHazard: _selectedHazard,
+        hazardDraftLocation:
+            _hasOpenPanels && _panelStack.last.isReportHazardPanel
+            ? (_manualHazardLocation ?? _latestUserLocation)
+            : null,
+        hazardDraftImpactRadiusMeters: _hazardDraftPreview?.impactRadiusMeters,
+        hazardDraftRiskLevelCode: _hazardDraftPreview?.riskLevelCode,
+        isSelectingHazardLocation:
+            _hasOpenPanels &&
+            _panelStack.last.isReportHazardPanel &&
+            _isSelectingHazardLocationOnMap,
+        routeSelectionHintAtTop:
+            activePanel != null &&
+            activePanel.isAddRoutePanel &&
+            activePanelAnchoredBottom,
+        hazardSelectionHintAtTop:
+            activePanel != null &&
+            activePanel.isReportHazardPanel &&
+            activePanelAnchoredBottom,
         onHazardTap: (HazardReportRecord hazard) {
           _openHazardDetailsPanel(isDarkMode, hazard);
         },
@@ -238,6 +267,8 @@ class _MapPageState extends ConsumerState<MapPage> {
         cameraFocusZoom: _selectedHazard == null ? null : 16,
         cameraFocusRevision: _hazardFocusRevision,
         onUserLocationChanged: _handleUserLocationChanged,
+        onUserLocationStatusChanged: _handleUserLocationStatusChanged,
+        locationRefreshRevision: _userLocationRefreshRevision,
         onMapTap: _onMapTap,
         onSettingsTap: () => _openHazardLayersSettingsPanel(isDarkMode),
         onStartTrip: () => _openStartTripPanel(isDarkMode),

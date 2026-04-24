@@ -353,7 +353,17 @@ extension _MapPageTripState on _MapPageState {
   }
 
   void _handleUserLocationChanged(LatLng location) {
-    _latestUserLocation = location;
+    if (_latestUserLocation == null) {
+      setState(() {
+        _latestUserLocation = location;
+      });
+    } else {
+      _latestUserLocation = location;
+    }
+
+    if (_isUserLocationLoading || _userLocationErrorText != null) {
+      _handleUserLocationStatusChanged(false, null);
+    }
 
     if (_tripArrivalHandled || _selectedTripRoute == null) {
       return;

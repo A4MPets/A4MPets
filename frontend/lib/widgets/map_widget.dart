@@ -38,11 +38,20 @@ class MapWidget extends StatefulWidget {
   final List<HazardReportRecord> hazardReports;
   final List<HazardReportRecord> visibleHazardCircles;
   final HazardReportRecord? highlightedHazard;
+  final LatLng? hazardDraftLocation;
+  final int? hazardDraftImpactRadiusMeters;
+  final String? hazardDraftRiskLevelCode;
+  final bool isSelectingHazardLocation;
+  final bool routeSelectionHintAtTop;
+  final bool hazardSelectionHintAtTop;
   final void Function(HazardReportRecord report)? onHazardTap;
   final LatLng? cameraFocusTarget;
   final double? cameraFocusZoom;
   final int cameraFocusRevision;
   final void Function(LatLng location)? onUserLocationChanged;
+  final void Function(bool isLoading, String? errorText)?
+  onUserLocationStatusChanged;
+  final int locationRefreshRevision;
   final LatLng? developerLocationMarker;
   final bool isDeveloperModifyingLocation;
 
@@ -75,11 +84,19 @@ class MapWidget extends StatefulWidget {
     this.hazardReports = const <HazardReportRecord>[],
     this.visibleHazardCircles = const <HazardReportRecord>[],
     this.highlightedHazard,
+    this.hazardDraftLocation,
+    this.hazardDraftImpactRadiusMeters,
+    this.hazardDraftRiskLevelCode,
+    this.isSelectingHazardLocation = false,
+    this.routeSelectionHintAtTop = false,
+    this.hazardSelectionHintAtTop = false,
     this.onHazardTap,
     this.cameraFocusTarget,
     this.cameraFocusZoom,
     this.cameraFocusRevision = 0,
     this.onUserLocationChanged,
+    this.onUserLocationStatusChanged,
+    this.locationRefreshRevision = 0,
     this.developerLocationMarker,
     this.isDeveloperModifyingLocation = false,
   });
@@ -102,6 +119,8 @@ class _MapWidgetState extends State<MapWidget> {
   bool _isCustomPositionMode = false;
   LatLng? _customUserLocation;
   StreamSubscription<Position>? _positionStreamSub;
+  bool _isResolvingLocation = false;
+  String? _userLocationErrorText;
 
   // Color cache for hazard rendering (avoid recalculation every frame)
   final Map<String, Color> _borderColorCache = {};
@@ -128,26 +147,60 @@ class _MapWidgetState extends State<MapWidget> {
   }
 
   Future<void> _requestLocationPermission() async {
+    if (_isResolvingLocation) {
+      return;
+    }
+
+    _emitUserLocationStatus(isLoading: true, errorText: null);
+
     try {
+      _isResolvingLocation = true;
       final bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        setState(() => _hasLocationPermission = false);
+        if (mounted) {
+          setState(() => _hasLocationPermission = false);
+        }
+        _emitUserLocationStatus(
+          isLoading: false,
+          errorText: 'Activa la ubicacion del dispositivo para continuar.',
+        );
         return;
       }
 
       final LocationPermission permission =
           await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        setState(() => _hasLocationPermission = false);
+        if (mounted) {
+          setState(() => _hasLocationPermission = false);
+        }
+        _emitUserLocationStatus(
+          isLoading: false,
+          errorText: 'Debes habilitar los permisos de ubicacion.',
+        );
       } else if (permission == LocationPermission.deniedForever) {
-        setState(() => _hasLocationPermission = false);
+        if (mounted) {
+          setState(() => _hasLocationPermission = false);
+        }
+        _emitUserLocationStatus(
+          isLoading: false,
+          errorText:
+              'Los permisos de ubicacion estan bloqueados. Debes habilitarlos manualmente.',
+        );
       } else {
-        setState(() => _hasLocationPermission = true);
+        if (mounted) {
+          setState(() => _hasLocationPermission = true);
+        }
         await _getCurrentLocationAndHeading();
         _startLocationTracking();
       }
     } catch (e) {
       debugPrint('Error requesting location permission: $e');
+      _emitUserLocationStatus(
+        isLoading: false,
+        errorText: 'No se pudo solicitar la ubicacion actual.',
+      );
+    } finally {
+      _isResolvingLocation = false;
     }
   }
 
@@ -164,6 +217,7 @@ class _MapWidgetState extends State<MapWidget> {
           _userLocation = LatLng(position.latitude, position.longitude);
           _userHeading = position.heading.isNaN ? 0.0 : position.heading;
         });
+        _emitUserLocationStatus(isLoading: false, errorText: null);
         final LatLng? locationToEmit = _effectiveUserLocation;
         if (locationToEmit != null) {
           widget.onUserLocationChanged?.call(locationToEmit);
@@ -171,6 +225,10 @@ class _MapWidgetState extends State<MapWidget> {
       }
     } catch (e) {
       debugPrint('Error getting current location: $e');
+      _emitUserLocationStatus(
+        isLoading: false,
+        errorText: 'No se pudo obtener tu ubicacion actual.',
+      );
     }
   }
 
@@ -200,6 +258,7 @@ class _MapWidgetState extends State<MapWidget> {
               if (!_isCustomPositionMode) {
                 widget.onUserLocationChanged?.call(nextLocation);
               }
+              _emitUserLocationStatus(isLoading: false, errorText: null);
             }
           },
         );
@@ -277,6 +336,15 @@ class _MapWidgetState extends State<MapWidget> {
   void didUpdateWidget(covariant MapWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
 
+    if (widget.locationRefreshRevision != oldWidget.locationRefreshRevision) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+        _requestLocationPermission();
+      });
+    }
+
     if (_isMapReady &&
         widget.cameraFocusTarget != null &&
         widget.cameraFocusRevision != oldWidget.cameraFocusRevision) {
@@ -299,6 +367,20 @@ class _MapWidgetState extends State<MapWidget> {
     } catch (error) {
       debugPrint('Map move skipped due to runtime state: $error');
     }
+  }
+
+  void _emitUserLocationStatus({
+    required bool isLoading,
+    required String? errorText,
+  }) {
+    if (_userLocationErrorText == errorText &&
+        _isResolvingLocation == isLoading) {
+      return;
+    }
+
+    _isResolvingLocation = isLoading;
+    _userLocationErrorText = errorText;
+    widget.onUserLocationStatusChanged?.call(isLoading, errorText);
   }
 
   // Zoom In
@@ -336,10 +418,11 @@ class _MapWidgetState extends State<MapWidget> {
     widget.onSettingsTap?.call();
   }
 
-  Color _hazardBorderColor(HazardReportRecord report) {
-    final String key = '${report.riskLevelCode}_border';
+  Color _hazardBorderColorForRiskLevel(String? riskLevelCode) {
+    final String normalizedRiskLevel = riskLevelCode ?? 'undefined';
+    final String key = '${normalizedRiskLevel}_border';
     return _borderColorCache.putIfAbsent(key, () {
-      switch (report.riskLevelCode) {
+      switch (normalizedRiskLevel) {
         case 'low':
           return AppPalette.dangerYellow;
         case 'medium':
@@ -350,10 +433,11 @@ class _MapWidgetState extends State<MapWidget> {
     });
   }
 
-  Color _hazardFillColor(HazardReportRecord report) {
-    final String key = '${report.riskLevelCode}_fill';
+  Color _hazardFillColorForRiskLevel(String? riskLevelCode) {
+    final String normalizedRiskLevel = riskLevelCode ?? 'undefined';
+    final String key = '${normalizedRiskLevel}_fill';
     return _fillColorCache.putIfAbsent(key, () {
-      switch (report.riskLevelCode) {
+      switch (normalizedRiskLevel) {
         case 'low':
           return AppPalette.dangerYellow40;
         case 'medium':
@@ -362,6 +446,14 @@ class _MapWidgetState extends State<MapWidget> {
           return AppPalette.dangerRed40;
       }
     });
+  }
+
+  Color _hazardBorderColor(HazardReportRecord report) {
+    return _hazardBorderColorForRiskLevel(report.riskLevelCode);
+  }
+
+  Color _hazardFillColor(HazardReportRecord report) {
+    return _hazardFillColorForRiskLevel(report.riskLevelCode);
   }
 
   LatLng _applyPixelDeltaToLatLng({
@@ -524,6 +616,26 @@ class _MapWidgetState extends State<MapWidget> {
                       .toList(growable: false),
                 ),
               ),
+            if (widget.hazardDraftLocation != null &&
+                widget.hazardDraftImpactRadiusMeters != null)
+              RepaintBoundary(
+                child: CircleLayer(
+                  circles: [
+                    CircleMarker(
+                      point: widget.hazardDraftLocation!,
+                      color: _hazardFillColorForRiskLevel(
+                        widget.hazardDraftRiskLevelCode,
+                      ),
+                      borderColor: _hazardBorderColorForRiskLevel(
+                        widget.hazardDraftRiskLevelCode,
+                      ),
+                      borderStrokeWidth: 1.5,
+                      useRadiusInMeter: true,
+                      radius: widget.hazardDraftImpactRadiusMeters!.toDouble(),
+                    ),
+                  ],
+                ),
+              ),
             if (widget.visibleHazardCircles.isNotEmpty)
               RepaintBoundary(
                 child: MarkerLayer(
@@ -545,6 +657,23 @@ class _MapWidgetState extends State<MapWidget> {
                         );
                       })
                       .toList(growable: false),
+                ),
+              ),
+            if (widget.hazardDraftLocation != null)
+              RepaintBoundary(
+                child: MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: widget.hazardDraftLocation!,
+                      width: 24,
+                      height: 24,
+                      child: _HazardMarkerWidget(
+                        color: _hazardBorderColorForRiskLevel(
+                          widget.hazardDraftRiskLevelCode,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             if (widget.routePolylinePoints.length >= 2)
@@ -954,46 +1083,32 @@ class _MapWidgetState extends State<MapWidget> {
             ),
           ),
         ),
-        if (widget.isSelectingRoutePoint)
-          Positioned(
-            bottom: isWeb ? 24 : 20,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: AppPalette.primaryBlue,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.25),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.touch_app, color: Colors.white, size: 16),
-                    SizedBox(width: 6),
-                    Text(
-                      'Toca el mapa para agregar el punto',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+        _buildSelectionHintPositioned(
+          isWeb: isWeb,
+          topSystemInset: topSystemInset,
+          anchorTop: widget.routeSelectionHintAtTop,
+          bottomOffset: isWeb ? 24 : 20,
+          visible: widget.isSelectingRoutePoint,
+          child: _buildSelectionHint(
+            color: AppPalette.primaryBlue,
+            icon: Icons.touch_app,
+            text: 'Toca el mapa para agregar el punto',
           ),
+        ),
+        _buildSelectionHintPositioned(
+          isWeb: isWeb,
+          topSystemInset: topSystemInset,
+          anchorTop: widget.hazardSelectionHintAtTop,
+          bottomOffset: isWeb ? 72 : 68,
+          visible: widget.isSelectingHazardLocation,
+          child: _buildSelectionHint(
+            color: _hazardBorderColorForRiskLevel(
+              widget.hazardDraftRiskLevelCode,
+            ),
+            icon: Icons.place_rounded,
+            text: 'Toca el mapa para ubicar el peligro',
+          ),
+        ),
         if (widget.panelOverlay != null)
           Positioned.fill(child: widget.panelOverlay!),
       ],
@@ -1037,6 +1152,74 @@ class _MapWidgetState extends State<MapWidget> {
           duration: const Duration(milliseconds: 50),
           curve: Curves.linear,
           child: child,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSelectionHint({
+    required Color color,
+    required IconData icon,
+    required String text,
+  }) {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.25),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Colors.white, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              text,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSelectionHintPositioned({
+    required bool isWeb,
+    required double topSystemInset,
+    required bool anchorTop,
+    required double bottomOffset,
+    required bool visible,
+    required Widget child,
+  }) {
+    return Positioned(
+      top: anchorTop ? topSystemInset + (isWeb ? 44 : 40) : null,
+      bottom: anchorTop ? null : bottomOffset,
+      left: 0,
+      right: 0,
+      child: IgnorePointer(
+        ignoring: !visible,
+        child: AnimatedOpacity(
+          opacity: visible ? 1 : 0,
+          duration: const Duration(milliseconds: 90),
+          curve: Curves.easeOut,
+          child: AnimatedSlide(
+            offset: visible ? Offset.zero : Offset(0, anchorTop ? -0.05 : 0.05),
+            duration: const Duration(milliseconds: 90),
+            curve: Curves.easeOut,
+            child: child,
+          ),
         ),
       ),
     );

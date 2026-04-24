@@ -79,7 +79,9 @@ extension _MapPagePanelsState on _MapPageState {
       }
       if (currentPanel.isReportHazardPanel) {
         _isSelectingHazardLocationOnMap = false;
-        _developerHazardLocation = null;
+        _manualHazardLocation = null;
+        _hazardDraftPreview = null;
+        _isReportHazardPanelMinimized = false;
       }
       if (currentPanel.isHazardDetailsPanel) {
         _selectedHazard = null;
@@ -118,6 +120,15 @@ extension _MapPagePanelsState on _MapPageState {
   Widget _buildOpenedPanelOverlay(bool isDarkMode) {
     final _PanelRoute currentPanel = _panelStack.last;
     final bool panelLoading = _isPanelLoading(currentPanel);
+    final bool panelCanMinimize = currentPanel.isReportHazardPanel
+        ? true
+        : currentPanel.canMinimize;
+    final bool panelIsMinimized = currentPanel.isReportHazardPanel
+        ? _isReportHazardPanelMinimized
+        : currentPanel.isMinimized;
+    final VoidCallback? panelToggleMinimize = currentPanel.isReportHazardPanel
+        ? _toggleReportHazardPanelMinimized
+        : currentPanel.onToggleMinimize;
 
     return Stack(
       key: ValueKey<int>(currentPanel.transitionKey),
@@ -130,6 +141,8 @@ extension _MapPagePanelsState on _MapPageState {
           height: currentPanel.height,
           maxHeight: currentPanel.maxHeight,
           maxHeightFactor: currentPanel.maxHeightFactor,
+          mobileMaxHeightFactor: currentPanel.mobileMaxHeightFactor,
+          desktopMaxHeightFactor: currentPanel.desktopMaxHeightFactor,
           adaptHeightToContent: currentPanel.adaptHeightToContent,
           expandHorizontal: currentPanel.expandHorizontal,
           expandVertical: currentPanel.expandVertical,
@@ -143,6 +156,10 @@ extension _MapPagePanelsState on _MapPageState {
               !currentPanel.isTripPetSelectionPanel &&
               !currentPanel.isTripRouteSelectionPanel,
           showLoadingIndicator: panelLoading,
+          canMinimize: panelCanMinimize,
+          isMinimized: panelIsMinimized,
+          minimizedHeight: currentPanel.minimizedHeight,
+          onToggleMinimize: panelToggleMinimize,
           onClosePressed: _closeCurrentPanel,
           child: currentPanel.contentBuilder(context),
         ),
@@ -181,6 +198,10 @@ extension _MapPagePanelsState on _MapPageState {
         hazardReportsControllerProvider,
       );
       loading = loading || hazardsValue.isLoading;
+    }
+
+    if (panel.isReportHazardPanel) {
+      loading = loading || _isUserLocationLoading;
     }
 
     return loading;

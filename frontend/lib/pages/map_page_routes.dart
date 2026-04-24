@@ -359,8 +359,9 @@ extension _MapPageRoutesState on _MapPageState {
         _panelStack.last.isReportHazardPanel &&
         _isSelectingHazardLocationOnMap) {
       setState(() {
-        _developerHazardLocation = point;
+        _manualHazardLocation = point;
         _isSelectingHazardLocationOnMap = false;
+        _isReportHazardPanelMinimized = false;
       });
       return;
     }
