@@ -94,33 +94,47 @@ class LocalDatabaseManager {
 
   Future<LocalUserProfile> getLocalUserProfile() async {
     final Database db = await database;
-    final List<Map<String, Object?>> rows = await db.query(
-      _userTable,
-      limit: 1,
-    );
+    final List<Map<String, Object?>> rows = await db.query(_userTable);
+    if (rows.isEmpty) {
+      await db.insert(_userTable, LocalUserProfile.guest().toMap());
+      return LocalUserProfile.guest();
+    }
+
+    if (rows.length > 1) {
+      await db.delete(_userTable);
+      final LocalUserProfile normalized = LocalUserProfile.fromMap(rows.last);
+      await db.insert(_userTable, normalized.toMap());
+      return normalized;
+    }
 
     return LocalUserProfile.fromMap(rows.first);
   }
 
   Future<void> saveLocalUserProfile(LocalUserProfile profile) async {
     final Database db = await database;
-    await db.insert(
-      _userTable,
-      profile.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.transaction((Transaction txn) async {
+      await txn.delete(_userTable);
+      await txn.insert(
+        _userTable,
+        profile.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    });
   }
 
   Future<void> clearUserSessionData() async {
     final Database db = await database;
     await db.delete(_petsTable);
     await db.delete(_routesTable);
-    await db.update(
-      _userTable,
-      LocalUserProfile.guest().toMap(),
-      where: 'id = ?',
-      whereArgs: <Object?>[LocalUserProfile.guest().id],
-    );
+    await db.delete('route_cache');
+    await db.transaction((Transaction txn) async {
+      await txn.delete(_userTable);
+      await txn.insert(
+        _userTable,
+        LocalUserProfile.guest().toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    });
   }
 
   Future<List<PetRecord>> getPets() async {

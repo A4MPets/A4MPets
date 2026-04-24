@@ -122,6 +122,8 @@ class UserLocalRepository {
         .getLocalUserProfile();
     final String? token = profile.accessToken;
 
+    syncCoordinator.discardQueuedSyncWork();
+
     if (token != null && token.isNotEmpty) {
       await _apiClient.postWithFallback(
         '/auth/logout',

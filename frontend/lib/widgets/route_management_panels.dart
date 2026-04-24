@@ -97,7 +97,7 @@ class ManageRoutesPanelContent extends ConsumerWidget {
                     },
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
-                    error: (_, __) => Center(
+                    error: (_, _) => Center(
                       child: Text(
                         'No se pudieron cargar las rutas',
                         style: TextStyle(
@@ -310,6 +310,7 @@ class AddRoutePanelContent extends ConsumerStatefulWidget {
   final bool isEditingExistingRoute;
   final String? initialRouteName;
   final int? routeId;
+  final Future<void> Function(String name) onSaveRoute;
   final VoidCallback onSavedComplete;
 
   const AddRoutePanelContent({
@@ -328,6 +329,7 @@ class AddRoutePanelContent extends ConsumerStatefulWidget {
     this.isEditingExistingRoute = false,
     this.initialRouteName,
     this.routeId,
+    required this.onSaveRoute,
     required this.onSavedComplete,
   });
 
@@ -378,23 +380,8 @@ class _AddRoutePanelContentState extends ConsumerState<AddRoutePanelContent> {
     });
     setState(() => _isSaving = true);
 
-    final List<RoutePoint> points = widget.points
-        .map(
-          (LatLng ll) =>
-              RoutePoint(latitude: ll.latitude, longitude: ll.longitude),
-        )
-        .toList();
-
     try {
-      if (widget.isEditingExistingRoute && widget.routeId != null) {
-        await ref
-            .read(routesControllerProvider.notifier)
-            .updateRoute(routeId: widget.routeId!, name: name, points: points);
-      } else {
-        await ref
-            .read(routesControllerProvider.notifier)
-            .addRoute(name: name, points: points);
-      }
+      await widget.onSaveRoute(name);
       if (!mounted) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) {

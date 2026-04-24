@@ -199,6 +199,7 @@ extension _MapPageRoutesState on _MapPageState {
           isEditingExistingRoute: isEditing,
           routeId: _editingRouteId,
           initialRouteName: _editingRouteName,
+          onSaveRoute: _persistDraftRoute,
           onSavedComplete: () {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!mounted) {
@@ -394,6 +395,42 @@ extension _MapPageRoutesState on _MapPageState {
       _draftRoutePoints = updated;
     });
     _refreshDraftRoutePolyline(updated);
+  }
+
+  Future<void> _persistDraftRoute(String name) async {
+    final String resolvedName = name.trim().isEmpty ? 'Ruta' : name.trim();
+    final List<RoutePoint> points = _draftRoutePoints
+        .map(
+          (LatLng ll) =>
+              RoutePoint(latitude: ll.latitude, longitude: ll.longitude),
+        )
+        .toList(growable: false);
+
+    if (points.isEmpty) {
+      throw StateError('No hay puntos para guardar la ruta.');
+    }
+
+    if (_editingRouteId != null) {
+      await ref
+          .read(routesControllerProvider.notifier)
+          .updateRoute(
+            routeId: _editingRouteId!,
+            name: resolvedName,
+            points: points,
+          );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _editingRouteName = resolvedName;
+        _selectedRouteId = _editingRouteId;
+      });
+      return;
+    }
+
+    await ref
+        .read(routesControllerProvider.notifier)
+        .addRoute(name: resolvedName, points: points);
   }
 
   Future<void> _refreshDraftRoutePolyline(

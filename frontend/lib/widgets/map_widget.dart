@@ -133,6 +133,11 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
   static const Color white = AppPalette.white;
   static const Color contentGray = AppPalette.charcoal;
   static const Color translucentWhite = Color(0xCCFFFFFF);
+  static const double _userFocusZoom = 17.5;
+  static final LatLngBounds _caliBounds = LatLngBounds(
+    const LatLng(3.289, -76.639),
+    const LatLng(3.518, -76.445),
+  );
 
   LatLng? get _effectiveUserLocation {
     return _isCustomPositionMode ? _customUserLocation : _userLocation;
@@ -494,6 +499,41 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
     _safeMove(mapController.camera.center, nextZoom);
   }
 
+  void _centerOnUserLocation() {
+    final LatLng? location = _effectiveUserLocation;
+    if (!_isMapReady || location == null) {
+      return;
+    }
+
+    _cancelCameraAnimation();
+    final double targetZoom = math
+        .max(mapController.camera.zoom, _userFocusZoom)
+        .clamp(11.0, 22.0);
+    _animateCameraFocus(location, targetZoom);
+  }
+
+  void _resetMapRotation() {
+    if (!_isMapReady) {
+      return;
+    }
+
+    final double currentRotation = mapController.camera.rotation;
+    if (currentRotation.abs() < 0.01) {
+      return;
+    }
+
+    try {
+      mapController.moveAndRotate(
+        mapController.camera.center,
+        mapController.camera.zoom,
+        0,
+        id: 'reset-map-rotation',
+      );
+    } catch (error) {
+      debugPrint('Map rotation reset skipped due to runtime state: $error');
+    }
+  }
+
   // Report Danger - Ready to add functionality
   void _onReportarPeligro() {
     widget.onReportDangerTap?.call();
@@ -604,6 +644,11 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
         controlsVisible || widget.keepReportDangerVisible;
     final bool modifyLocationVisible =
         controlsVisible || widget.keepModifyLocationVisible;
+    final bool isMobileTripOverlayActive =
+        !controlsVisible && widget.keepReportDangerVisible;
+    final double mobileBottomActionsOffset = isMobileTripOverlayActive
+        ? 156
+        : 16;
 
     return Stack(
       children: [
@@ -613,6 +658,9 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
           options: MapOptions(
             initialCenter: widget.center,
             initialZoom: widget.zoom,
+            cameraConstraint: CameraConstraint.containCenter(
+              bounds: _caliBounds,
+            ),
             onMapReady: () {
               if (_isMapReady || !mounted) {
                 return;
@@ -873,7 +921,7 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
           Positioned(
             left: 16,
             right: 16,
-            bottom: 16,
+            bottom: mobileBottomActionsOffset,
             child: SafeArea(
               child: _buildAnimatedControl(
                 visible: reportDangerVisible,
@@ -960,6 +1008,31 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
                       icon: Icons.remove,
                       onPressed: _zoomOut,
                       isTop: false,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          Positioned(
+            left: 16,
+            bottom: 160,
+            child: SafeArea(
+              child: _buildAnimatedControl(
+                visible: controlsVisible,
+                hiddenOffset: const Offset(-0.06, 0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildMapActionButton(
+                      icon: Icons.my_location,
+                      onPressed: _centerOnUserLocation,
+                    ),
+                    const SizedBox(height: 8),
+                    _buildMapActionButton(
+                      icon: Icons.explore_outlined,
+                      onPressed: _resetMapRotation,
                     ),
                   ],
                 ),
@@ -1114,6 +1187,29 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
             ),
           ),
 
+          Positioned(
+            left: 16,
+            bottom: 84,
+            child: _buildAnimatedControl(
+              visible: controlsVisible,
+              hiddenOffset: const Offset(-0.06, 0.06),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildMapActionButton(
+                    icon: Icons.my_location,
+                    onPressed: _centerOnUserLocation,
+                  ),
+                  const SizedBox(height: 8),
+                  _buildMapActionButton(
+                    icon: Icons.explore_outlined,
+                    onPressed: _resetMapRotation,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
           // User profile button - Web (top left corner)
           Positioned(
             top: 16 + topSystemInset,
@@ -1232,11 +1328,10 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
     );
   }
 
-  // Reusable widget for zoom buttons
-  Widget _buildZoomButton({
+  // Reusable widget for map action buttons
+  Widget _buildMapActionButton({
     required IconData icon,
     required VoidCallback onPressed,
-    required bool isTop,
   }) {
     return SizedBox(
       width: 48,
@@ -1251,6 +1346,14 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
         child: Icon(icon, size: 20),
       ),
     );
+  }
+
+  Widget _buildZoomButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    required bool isTop,
+  }) {
+    return _buildMapActionButton(icon: icon, onPressed: onPressed);
   }
 
   Widget _buildAnimatedControl({

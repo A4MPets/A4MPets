@@ -678,58 +678,73 @@ class _HazardLocationCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 38,
-                  child: OutlinedButton.icon(
-                    onPressed: onStartSelection,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppPalette.primaryBlue,
-                      side: const BorderSide(
-                        color: AppPalette.primaryBlue,
-                        width: 1,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+          LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final Widget markOnMapButton = SizedBox(
+                height: 38,
+                child: OutlinedButton.icon(
+                  onPressed: onStartSelection,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppPalette.primaryBlue,
+                    side: const BorderSide(
+                      color: AppPalette.primaryBlue,
+                      width: 1,
                     ),
-                    icon: const Icon(Icons.place_rounded, size: 16),
-                    label: const Text(
-                      'Marcar en el mapa',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: SizedBox(
-                  height: 38,
-                  child: TextButton.icon(
-                    onPressed: onUseCurrentLocation,
-                    style: TextButton.styleFrom(
-                      foregroundColor: textColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    icon: const Icon(Icons.my_location_rounded, size: 16),
-                    label: const Text(
-                      'Usar ubicacion actual',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                  icon: const Icon(Icons.place_rounded, size: 16),
+                  label: const Text(
+                    'Marcar en el mapa',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                   ),
                 ),
-              ),
-            ],
+              );
+
+              final Widget useCurrentLocationButton = SizedBox(
+                height: 38,
+                child: TextButton.icon(
+                  onPressed: onUseCurrentLocation,
+                  style: TextButton.styleFrom(
+                    foregroundColor: textColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: const Icon(Icons.my_location_rounded, size: 16),
+                  label: const Text(
+                    'Usar ubicacion actual',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              );
+
+              if (constraints.maxWidth < 310) {
+                return Column(
+                  children: [
+                    SizedBox(width: double.infinity, child: markOnMapButton),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: useCurrentLocationButton,
+                    ),
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  Expanded(child: markOnMapButton),
+                  const SizedBox(width: 8),
+                  Expanded(child: useCurrentLocationButton),
+                ],
+              );
+            },
           ),
         ],
       ),

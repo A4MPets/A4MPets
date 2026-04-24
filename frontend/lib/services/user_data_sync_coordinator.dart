@@ -63,6 +63,11 @@ class UserDataSyncCoordinator {
     _log('auto-sync detenido.');
   }
 
+  void discardQueuedSyncWork() {
+    _syncQueued = false;
+    _log('cola de sincronizacion descartada manualmente.');
+  }
+
   List<String> get _apiBaseUrls {
     return _apiGateway.baseUrls;
   }
@@ -74,6 +79,16 @@ class UserDataSyncCoordinator {
       return profile.accessToken;
     } catch (_) {
       return null;
+    }
+  }
+
+  Future<bool> _hasAuthenticatedUser() async {
+    try {
+      final LocalUserProfile profile = await _databaseManager
+          .getLocalUserProfile();
+      return profile.isAuthenticated;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -354,6 +369,11 @@ class UserDataSyncCoordinator {
   }
 
   Future<void> _pushLocalPets() async {
+    if (!await _hasAuthenticatedUser()) {
+      _log('push pets omitido: usuario guest.');
+      return;
+    }
+
     final List<PetRecord> pending = await _databaseManager.getPetsNeedingSync();
     _log('push pets: pendientes=${pending.length}');
 
@@ -433,7 +453,8 @@ class UserDataSyncCoordinator {
     }
 
     for (final PetRecord pet in transferablePets) {
-      final String pseudoLocalId = 'pt_${pet.id}_${pet.createdAt.millisecondsSinceEpoch}';
+      final String pseudoLocalId =
+          'pt_${pet.id}_${pet.createdAt.millisecondsSinceEpoch}';
       final String? newlyAssignedRemoteId = remoteIdMap[pseudoLocalId];
       final String? finalRemoteId = pet.remoteId ?? newlyAssignedRemoteId;
 
@@ -447,6 +468,11 @@ class UserDataSyncCoordinator {
   }
 
   Future<void> _pushLocalRoutes() async {
+    if (!await _hasAuthenticatedUser()) {
+      _log('push routes omitido: usuario guest.');
+      return;
+    }
+
     final List<RouteRecord> pending = await _databaseManager
         .getRoutesNeedingSync();
     _log('push routes: pendientes=${pending.length}');
@@ -461,7 +487,8 @@ class UserDataSyncCoordinator {
         'routes': pending
             .map(
               (RouteRecord route) => <String, Object?>{
-                'local_id': 'rt_${route.id}_${route.createdAt.millisecondsSinceEpoch}',
+                'local_id':
+                    'rt_${route.id}_${route.createdAt.millisecondsSinceEpoch}',
                 'remote_id': route.remoteId,
                 'name': route.name,
                 'points_json': jsonEncode(
@@ -503,7 +530,8 @@ class UserDataSyncCoordinator {
     }
 
     for (final RouteRecord route in pending) {
-      final String pseudoLocalId = 'rt_${route.id}_${route.createdAt.millisecondsSinceEpoch}';
+      final String pseudoLocalId =
+          'rt_${route.id}_${route.createdAt.millisecondsSinceEpoch}';
       final String? newlyAssignedRemoteId = remoteIdMap[pseudoLocalId];
       final String? finalRemoteId = route.remoteId ?? newlyAssignedRemoteId;
 
@@ -517,6 +545,11 @@ class UserDataSyncCoordinator {
   }
 
   Future<void> _pullRemotePets() async {
+    if (!await _hasAuthenticatedUser()) {
+      _log('pull pets omitido: usuario guest.');
+      return;
+    }
+
     int page = 1;
 
     while (true) {
@@ -569,6 +602,11 @@ class UserDataSyncCoordinator {
   }
 
   Future<void> _pullRemoteRoutes() async {
+    if (!await _hasAuthenticatedUser()) {
+      _log('pull routes omitido: usuario guest.');
+      return;
+    }
+
     int page = 1;
 
     while (true) {
@@ -785,21 +823,14 @@ class UserDataSyncCoordinator {
     required Object body,
     String? bearerToken,
   }) async {
-    return _apiGateway.post(
-      path: path,
-      body: body,
-      bearerToken: bearerToken,
-    );
+    return _apiGateway.post(path: path, body: body, bearerToken: bearerToken);
   }
 
   Future<http.Response?> _getWithFallback({
     required String path,
     String? bearerToken,
   }) async {
-    return _apiGateway.get(
-      path: path,
-      bearerToken: bearerToken,
-    );
+    return _apiGateway.get(path: path, bearerToken: bearerToken);
   }
 
   Future<http.Response?> _putWithFallback({
@@ -807,11 +838,7 @@ class UserDataSyncCoordinator {
     required Object body,
     String? bearerToken,
   }) async {
-    return _apiGateway.put(
-      path: path,
-      body: body,
-      bearerToken: bearerToken,
-    );
+    return _apiGateway.put(path: path, body: body, bearerToken: bearerToken);
   }
 
   bool _isRemoteImageUrl(String source) {
