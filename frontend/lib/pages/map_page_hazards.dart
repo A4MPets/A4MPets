@@ -3,6 +3,29 @@
 part of 'map_page.dart';
 
 extension _MapPageHazardsState on _MapPageState {
+  double _hazardFocusZoomFor(HazardReportRecord hazard) {
+    final int radiusMeters = hazard.impactRadiusMeters;
+    if (radiusMeters <= 5) {
+      return 18.4;
+    }
+    if (radiusMeters <= 10) {
+      return 18.0;
+    }
+    if (radiusMeters <= 25) {
+      return 17.5;
+    }
+    if (radiusMeters <= 50) {
+      return 17.0;
+    }
+    if (radiusMeters <= 100) {
+      return 16.4;
+    }
+    if (radiusMeters <= 300) {
+      return 15.8;
+    }
+    return 15.2;
+  }
+
   void _openReportHazardPanel(bool isDarkMode) {
     if (_hasOpenPanels &&
         !_panelStack.last.isTripPanel &&
@@ -237,11 +260,11 @@ extension _MapPageHazardsState on _MapPageState {
   ) {
     return _PanelRoute(
       transitionKey: ++_panelTransitionSeed,
-      title: 'Detalle de Peligro',
+      title: 'Detalles del Peligro',
       anchor: PanelAnchor.bottomLeft,
       width: 380,
-      height: 560,
-      maxHeight: 620,
+      height: 400,
+      maxHeight: 500,
       adaptHeightToContent: false,
       expandHorizontal: false,
       expandVertical: false,

@@ -32,6 +32,7 @@ extension _MapPagePanelsState on _MapPageState {
     if (currentPanel.isTripStartPanel) {
       setState(() {
         _clearTripSetupState();
+        _isTripStartPanelMinimized = false;
         _panelStack.removeWhere(
           (_PanelRoute route) =>
               route.isTripStartPanel ||
@@ -73,6 +74,9 @@ extension _MapPagePanelsState on _MapPageState {
     setState(() {
       if (currentPanel.isAddRoutePanel) {
         _clearDraftRouteVisuals();
+      }
+      if (currentPanel.isTripStartPanel) {
+        _isTripStartPanelMinimized = false;
       }
       if (currentPanel.isManageRoutesPanel) {
         _clearDraftRouteVisuals();
@@ -120,15 +124,20 @@ extension _MapPagePanelsState on _MapPageState {
   Widget _buildOpenedPanelOverlay(bool isDarkMode) {
     final _PanelRoute currentPanel = _panelStack.last;
     final bool panelLoading = _isPanelLoading(currentPanel);
-    final bool panelCanMinimize = currentPanel.isReportHazardPanel
+    final bool panelCanMinimize =
+        currentPanel.isReportHazardPanel || currentPanel.isTripStartPanel
         ? true
         : currentPanel.canMinimize;
     final bool panelIsMinimized = currentPanel.isReportHazardPanel
         ? _isReportHazardPanelMinimized
-        : currentPanel.isMinimized;
+        : (currentPanel.isTripStartPanel
+              ? _isTripStartPanelMinimized
+              : currentPanel.isMinimized);
     final VoidCallback? panelToggleMinimize = currentPanel.isReportHazardPanel
         ? _toggleReportHazardPanelMinimized
-        : currentPanel.onToggleMinimize;
+        : (currentPanel.isTripStartPanel
+              ? _toggleTripStartPanelMinimized
+              : currentPanel.onToggleMinimize);
 
     return Stack(
       key: ValueKey<int>(currentPanel.transitionKey),

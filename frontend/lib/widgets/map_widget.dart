@@ -105,8 +105,9 @@ class MapWidget extends StatefulWidget {
   State<MapWidget> createState() => _MapWidgetState();
 }
 
-class _MapWidgetState extends State<MapWidget> {
+class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
   late MapController mapController;
+  AnimationController? _cameraAnimationController;
   bool _isMapReady = false;
   bool _isDraggingRoutePoint = false;
   int? _draggingRoutePointIndex;
@@ -327,6 +328,7 @@ class _MapWidgetState extends State<MapWidget> {
 
   @override
   void dispose() {
+    _disposeCameraAnimation();
     _positionStreamSub?.cancel();
     mapController.dispose();
     super.dispose();
@@ -352,9 +354,104 @@ class _MapWidgetState extends State<MapWidget> {
       final double nextZoom =
           widget.cameraFocusZoom ?? mapController.camera.zoom;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _safeMove(focusTarget, nextZoom);
+        _animateCameraFocus(focusTarget, nextZoom);
       });
     }
+  }
+
+  void _animateCameraFocus(LatLng center, double zoom) {
+    if (!_isMapReady || !mounted) {
+      return;
+    }
+
+    final LatLng startCenter = mapController.camera.center;
+    final double startZoom = mapController.camera.zoom;
+    final bool sameCenter =
+        (startCenter.latitude - center.latitude).abs() < 0.000001 &&
+        (startCenter.longitude - center.longitude).abs() < 0.000001;
+    final bool sameZoom = (startZoom - zoom).abs() < 0.01;
+
+    if (sameCenter && sameZoom) {
+      _safeMove(center, zoom);
+      return;
+    }
+
+    _disposeCameraAnimation();
+
+    final Tween<double> latTween = Tween<double>(
+      begin: startCenter.latitude,
+      end: center.latitude,
+    );
+    final Tween<double> lngTween = Tween<double>(
+      begin: startCenter.longitude,
+      end: center.longitude,
+    );
+    final Tween<double> zoomTween = Tween<double>(begin: startZoom, end: zoom);
+    final AnimationController controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 340),
+    );
+    final Animation<double> animation = CurvedAnimation(
+      parent: controller,
+      curve: Curves.easeOutCubic,
+    );
+    bool hasTriggeredMove = false;
+
+    _cameraAnimationController = controller;
+
+    controller.addListener(() {
+      if (!mounted || _cameraAnimationController != controller) {
+        return;
+      }
+
+      final String moveId;
+      if (animation.value == 1.0) {
+        moveId = 'hazard-focus-finished';
+      } else if (!hasTriggeredMove) {
+        moveId =
+            'hazard-focus-start#${center.latitude},${center.longitude},$zoom';
+      } else {
+        moveId = 'hazard-focus-progress';
+      }
+
+      hasTriggeredMove |= mapController.move(
+        LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
+        zoomTween.evaluate(animation),
+        id: moveId,
+      );
+    });
+
+    controller.addStatusListener((AnimationStatus status) {
+      if (_cameraAnimationController != controller) {
+        return;
+      }
+
+      if (status == AnimationStatus.completed ||
+          status == AnimationStatus.dismissed) {
+        _disposeCameraAnimation(controller);
+      }
+    });
+
+    controller.forward();
+  }
+
+  void _cancelCameraAnimation() {
+    _disposeCameraAnimation();
+  }
+
+  void _disposeCameraAnimation([AnimationController? controller]) {
+    final AnimationController? activeController =
+        controller ?? _cameraAnimationController;
+    if (activeController == null) {
+      return;
+    }
+
+    if (_cameraAnimationController == activeController) {
+      _cameraAnimationController = null;
+    }
+
+    activeController.stop();
+    activeController.dispose();
   }
 
   void _safeMove(LatLng center, double zoom) {
@@ -475,6 +572,21 @@ class _MapWidgetState extends State<MapWidget> {
     return LatLng(source.latitude + deltaLat, source.longitude + deltaLng);
   }
 
+  bool _shouldCancelCameraAnimationForEvent(MapEvent event) {
+    switch (event.source) {
+      case MapEventSource.dragStart:
+      case MapEventSource.onDrag:
+      case MapEventSource.multiFingerGestureStart:
+      case MapEventSource.onMultiFinger:
+      case MapEventSource.scrollWheel:
+      case MapEventSource.flingAnimationController:
+      case MapEventSource.doubleTapZoomAnimationController:
+        return true;
+      default:
+        return false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final String tileUrl = widget.isDarkMode
@@ -517,6 +629,11 @@ class _MapWidgetState extends State<MapWidget> {
                   ? InteractiveFlag.none
                   : InteractiveFlag.all,
             ),
+            onMapEvent: (MapEvent event) {
+              if (_shouldCancelCameraAnimationForEvent(event)) {
+                _cancelCameraAnimation();
+              }
+            },
             onTap: (TapPosition tapPosition, LatLng point) {
               if (_isCustomPositionMode) {
                 setState(() {

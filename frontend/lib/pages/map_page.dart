@@ -82,10 +82,12 @@ class _MapPageState extends ConsumerState<MapPage> {
   int _routePolylineRequestVersion = 0;
   String? _tripStartErrorText;
   LatLng? _latestUserLocation;
+  int _tripUserFocusRevision = 0;
   bool _isUserLocationLoading = true;
   String? _userLocationErrorText;
   int _userLocationRefreshRevision = 0;
   List<LatLng> _tripRemainingWaypoints = <LatLng>[];
+  bool _isTripStartPanelMinimized = false;
 
   // Auth panel state.
   bool _isAuthRequestLoading = false;
@@ -190,6 +192,13 @@ class _MapPageState extends ConsumerState<MapPage> {
         activePanel != null &&
         (activePanel.anchor == PanelAnchor.bottomLeft ||
             activePanel.anchor == PanelAnchor.bottomRight);
+    final LatLng? tripFocusTarget = _isTripActive ? _latestUserLocation : null;
+    final LatLng? hazardFocusTarget = _selectedHazard == null
+        ? null
+        : LatLng(
+            _selectedHazard!.incidentLatitude,
+            _selectedHazard!.incidentLongitude,
+          );
 
     return Scaffold(
       body: MapWidget(
@@ -258,14 +267,15 @@ class _MapPageState extends ConsumerState<MapPage> {
         onHazardTap: (HazardReportRecord hazard) {
           _openHazardDetailsPanel(isDarkMode, hazard);
         },
-        cameraFocusTarget: _selectedHazard == null
+        cameraFocusTarget: tripFocusTarget ?? hazardFocusTarget,
+        cameraFocusZoom: tripFocusTarget != null
             ? null
-            : LatLng(
-                _selectedHazard!.incidentLatitude,
-                _selectedHazard!.incidentLongitude,
-              ),
-        cameraFocusZoom: _selectedHazard == null ? null : 16,
-        cameraFocusRevision: _hazardFocusRevision,
+            : (_selectedHazard == null
+                  ? null
+                  : _hazardFocusZoomFor(_selectedHazard!)),
+        cameraFocusRevision: tripFocusTarget != null
+            ? _tripUserFocusRevision
+            : _hazardFocusRevision,
         onUserLocationChanged: _handleUserLocationChanged,
         onUserLocationStatusChanged: _handleUserLocationStatusChanged,
         locationRefreshRevision: _userLocationRefreshRevision,

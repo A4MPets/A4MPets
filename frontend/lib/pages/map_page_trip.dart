@@ -29,6 +29,9 @@ extension _MapPageTripState on _MapPageState {
     if (_hasOpenPanels) {
       return;
     }
+    setState(() {
+      _isTripStartPanelMinimized = false;
+    });
     _pushPanel(_buildStartTripRoute(isDarkMode));
   }
 
@@ -61,6 +64,7 @@ extension _MapPageTripState on _MapPageState {
       _selectedRouteId = route.id;
       _tripRemainingWaypoints = List<LatLng>.from(selectedRoutePoints);
       _tripStartErrorText = null;
+      _isTripStartPanelMinimized = false;
       if (_hasOpenPanels && _panelStack.last.isTripRouteSelectionPanel) {
         _panelStack.removeLast();
         if (!_hasOpenPanels || !_panelStack.last.isTripStartPanel) {
@@ -107,10 +111,14 @@ extension _MapPageTripState on _MapPageState {
       _isTripActive = true;
       _tripArrivalHandled = false;
       _tripRemainingWaypoints = List<LatLng>.from(routePoints);
+      _isTripStartPanelMinimized = false;
       if (_hasOpenPanels) {
         _panelStack.removeLast();
       }
       _panelStack.add(_buildTripActiveRoute(isDarkMode));
+      if (_latestUserLocation != null) {
+        _tripUserFocusRevision += 1;
+      }
     });
 
     final LatLng? origin = _latestUserLocation;
@@ -177,6 +185,7 @@ extension _MapPageTripState on _MapPageState {
       _tripArrivalHandled = false;
       _selectedTripRoute = null;
       _tripRemainingWaypoints = <LatLng>[];
+      _isTripStartPanelMinimized = false;
       _selectedTripPetIds.clear();
       _selectedTripTransport = _TripTransportMethod.walking;
       _shouldAvoidHazardsInRouting = true;
@@ -202,6 +211,7 @@ extension _MapPageTripState on _MapPageState {
       _isTripActive = false;
       _selectedTripRoute = null;
       _tripRemainingWaypoints = <LatLng>[];
+      _isTripStartPanelMinimized = false;
       _selectedTripPetIds.clear();
       _selectedTripTransport = _TripTransportMethod.walking;
       _shouldAvoidHazardsInRouting = true;
@@ -221,6 +231,7 @@ extension _MapPageTripState on _MapPageState {
       _tripArrivalHandled = false;
       _selectedTripRoute = null;
       _tripRemainingWaypoints = <LatLng>[];
+      _isTripStartPanelMinimized = false;
       _selectedTripPetIds.clear();
       _selectedTripTransport = _TripTransportMethod.walking;
       _shouldAvoidHazardsInRouting = true;
@@ -257,6 +268,7 @@ extension _MapPageTripState on _MapPageState {
   void _clearTripSetupState() {
     _selectedTripRoute = null;
     _tripRemainingWaypoints = <LatLng>[];
+    _isTripStartPanelMinimized = false;
     _tripRerouteController.reset();
     _selectedTripPetIds.clear();
     _selectedTripTransport = _TripTransportMethod.walking;
@@ -317,6 +329,7 @@ extension _MapPageTripState on _MapPageState {
 
   void _returnToTripStartPanel(bool isDarkMode) {
     setState(() {
+      _isTripStartPanelMinimized = false;
       _panelStack.removeWhere(
         (_PanelRoute route) =>
             route.isTripPetSelectionPanel || route.isTripRouteSelectionPanel,
@@ -352,8 +365,19 @@ extension _MapPageTripState on _MapPageState {
     }
   }
 
+  void _toggleTripStartPanelMinimized() {
+    setState(() {
+      _isTripStartPanelMinimized = !_isTripStartPanelMinimized;
+    });
+  }
+
   void _handleUserLocationChanged(LatLng location) {
-    if (_latestUserLocation == null) {
+    if (_isTripActive) {
+      setState(() {
+        _latestUserLocation = location;
+        _tripUserFocusRevision += 1;
+      });
+    } else if (_latestUserLocation == null) {
       setState(() {
         _latestUserLocation = location;
       });
@@ -500,6 +524,10 @@ extension _MapPageTripState on _MapPageState {
       expandVertical: false,
       scrollContent: false,
       isTripStartPanel: true,
+      canMinimize: true,
+      isMinimized: _isTripStartPanelMinimized,
+      minimizedHeight: 72,
+      onToggleMinimize: _toggleTripStartPanelMinimized,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
         return _TripStartPanelContent(
