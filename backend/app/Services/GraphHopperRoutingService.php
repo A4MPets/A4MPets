@@ -208,14 +208,14 @@ class GraphHopperRoutingService
         $mode = strtolower(trim($travelMode));
 
         if (in_array($mode, ['walking', 'walk', 'on_foot', 'foot'], true)) {
-            return ['foot', 'car'];
+            return ['foot'];
         }
 
         if (in_array($mode, ['vehicle', 'driving', 'car'], true)) {
             return ['car'];
         }
 
-        return ['car', 'foot'];
+        return ['car'];
     }
 
     private function buildCirclePolygon(float $lat, float $lng, float $radiusMeters, int $segments): array

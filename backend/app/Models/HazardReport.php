@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Carbon\Carbon;
 
@@ -12,6 +13,9 @@ class HazardReport extends Model
         'incident_latitude',
         'incident_longitude',
         'impact_radius_meters',
+        'risk_level_id',
+        'category_id',
+        'estimated_duration_id',
         'risk_level_code',
         'category_code',
         'estimated_duration_code',
@@ -32,11 +36,21 @@ class HazardReport extends Model
         'incident_latitude' => 'float',
         'incident_longitude' => 'float',
         'impact_radius_meters' => 'float',
+        'risk_level_id' => 'integer',
+        'category_id' => 'integer',
+        'estimated_duration_id' => 'integer',
         'reported_at' => 'datetime',
         'last_modified_at' => 'datetime',
         'synced_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+    ];
+
+    protected $appends = [
+        'risk_level_code',
+        'category_code',
+        'estimated_duration_code',
+        'comments_json',
     ];
 
     /**
@@ -45,6 +59,96 @@ class HazardReport extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(HazardComment::class)->orderBy('commented_at')->orderBy('id');
+    }
+
+    public function riskLevel(): BelongsTo
+    {
+        return $this->belongsTo(HazardRiskLevel::class, 'risk_level_id');
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(HazardCategory::class, 'category_id');
+    }
+
+    public function estimatedDuration(): BelongsTo
+    {
+        return $this->belongsTo(HazardEstimatedDuration::class, 'estimated_duration_id');
+    }
+
+    public function getRiskLevelCodeAttribute(): string
+    {
+        return (string) ($this->riskLevel?->code ?? 'undefined');
+    }
+
+    public function getCategoryCodeAttribute(): string
+    {
+        return (string) ($this->category?->code ?? 'undefined');
+    }
+
+    public function getEstimatedDurationCodeAttribute(): string
+    {
+        return (string) ($this->estimatedDuration?->code ?? 'undefined');
+    }
+
+    public function setRiskLevelCodeAttribute(?string $value): void
+    {
+        $code = $this->normalizeCode((string) $value, ['low', 'medium', 'high', 'undefined']);
+        $this->attributes['risk_level_id'] = HazardRiskLevel::idByCode($code);
+    }
+
+    public function setCategoryCodeAttribute(?string $value): void
+    {
+        $code = $this->normalizeCode((string) $value, [
+            'contagious_disease',
+            'stagnant_water',
+            'waste_accumulation',
+            'aggressive_animals',
+            'undefined',
+        ]);
+        $this->attributes['category_id'] = HazardCategory::idByCode($code);
+    }
+
+    public function setEstimatedDurationCodeAttribute(?string $value): void
+    {
+        $code = $this->normalizeCode((string) $value, [
+            '1_day',
+            '3_days',
+            '1_week',
+            '2_weeks',
+            '1_month',
+            '3_months',
+            '6_months',
+            '1_year',
+            'undefined',
+        ]);
+        $this->attributes['estimated_duration_id'] = HazardEstimatedDuration::idByCode($code);
+    }
+
+    public function getCommentsJsonAttribute(): string
+    {
+        $comments = $this->relationLoaded('comments')
+            ? $this->comments
+            : $this->comments()->get();
+
+        return $comments->values()->map(static function (HazardComment $comment): array {
+            $commentedAt = $comment->commented_at ?? $comment->created_at ?? now();
+            $timestampMs = ($commentedAt->getTimestamp() * 1000)
+                + (int) floor(((int) $commentedAt->format('u')) / 1000);
+
+            return [
+                'author_username' => $comment->author_name,
+                'author_avatar_url' => $comment->author_avatar_url,
+                'is_anonymous' => $comment->is_anonymous,
+                'comment_text' => $comment->comment_text,
+                'created_at' => $timestampMs,
+            ];
+        })->toJson();
     }
 
     /**
@@ -90,8 +194,10 @@ class HazardReport extends Model
      */
     public function scopeUnsynced($query)
     {
-        return $query->where('status', '=', 'created')
-                     ->orWhereColumn('synced_at', '<', 'updated_at');
+        return $query->where(function ($builder): void {
+            $builder->where('status', '=', 'created')
+                ->orWhereColumn('synced_at', '<', 'updated_at');
+        });
     }
 
     /**
@@ -120,7 +226,11 @@ class HazardReport extends Model
      */
     public function scopeByRiskLevel($query, string $riskLevel)
     {
-        return $query->where('risk_level_code', '=', $riskLevel);
+        $normalizedRisk = $this->normalizeCode($riskLevel, ['low', 'medium', 'high', 'undefined']);
+
+        return $query->whereHas('riskLevel', function ($builder) use ($normalizedRisk): void {
+            $builder->where('code', '=', $normalizedRisk);
+        });
     }
 
     /**
@@ -131,5 +241,15 @@ class HazardReport extends Model
     {
         // El que tiene timestamp más reciente gana
         return $this->last_modified_at->greaterThanOrEqualTo($other->last_modified_at);
+    }
+
+    private function normalizeCode(string $value, array $allowed): string
+    {
+        $normalized = strtolower(trim($value));
+        if ($normalized === '' || $normalized === 'unknown' || $normalized === 'unspecified') {
+            return 'undefined';
+        }
+
+        return in_array($normalized, $allowed, true) ? $normalized : 'undefined';
     }
 }

@@ -3,6 +3,9 @@ class LocalUserProfile {
   final String username;
   final String? avatarPath;
   final bool isAuthenticated;
+  final int? backendUserId;
+  final String? email;
+  final String? accessToken;
   final DateTime? lastSyncedAt;
 
   const LocalUserProfile({
@@ -10,6 +13,9 @@ class LocalUserProfile {
     required this.username,
     this.avatarPath,
     required this.isAuthenticated,
+    this.backendUserId,
+    this.email,
+    this.accessToken,
     this.lastSyncedAt,
   });
 
@@ -19,6 +25,9 @@ class LocalUserProfile {
       username: 'Usuario',
       avatarPath: null,
       isAuthenticated: false,
+      backendUserId: null,
+      email: null,
+      accessToken: null,
     );
   }
 
@@ -28,6 +37,9 @@ class LocalUserProfile {
       username: map['username'] as String,
       avatarPath: map['avatar_path'] as String?,
       isAuthenticated: (map['is_authenticated'] as int? ?? 0) == 1,
+      backendUserId: map['backend_user_id'] as int?,
+      email: map['email'] as String?,
+      accessToken: map['access_token'] as String?,
       lastSyncedAt: map['last_synced_at'] == null
           ? null
           : DateTime.fromMillisecondsSinceEpoch(map['last_synced_at'] as int),
@@ -40,6 +52,9 @@ class LocalUserProfile {
       'username': username,
       'avatar_path': avatarPath,
       'is_authenticated': isAuthenticated ? 1 : 0,
+      'backend_user_id': backendUserId,
+      'email': email,
+      'access_token': accessToken,
       'last_synced_at': lastSyncedAt?.millisecondsSinceEpoch,
     };
   }
@@ -49,6 +64,9 @@ class LocalUserProfile {
     String? username,
     String? avatarPath,
     bool? isAuthenticated,
+    int? backendUserId,
+    String? email,
+    String? accessToken,
     DateTime? lastSyncedAt,
   }) {
     return LocalUserProfile(
@@ -56,6 +74,9 @@ class LocalUserProfile {
       username: username ?? this.username,
       avatarPath: avatarPath ?? this.avatarPath,
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
+      backendUserId: backendUserId ?? this.backendUserId,
+      email: email ?? this.email,
+      accessToken: accessToken ?? this.accessToken,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
     );
   }

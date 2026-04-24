@@ -6,8 +6,8 @@ services:
     container_name: a4mpets-graphhopper
     restart: unless-stopped
     ports:
-      - "8989:8989"
-      - "8990:8990"
+      - "${GRAPHHOPPER_PORT:-8989}:8989"
+      - "${GRAPHHOPPER_ADMIN_PORT:-8990}:8990"
     volumes:
       - ./backend/graphhopper/data/map.osm.pbf:/data/map.osm.pbf:ro
       - graphhopper_cache:/data/graph-cache
@@ -35,7 +35,7 @@ services:
       APP_ENV: local
       APP_KEY: base64:wQoPdz7KfnHMZbLyL+2sb0l0mE6EdxpmXiYSK6bhL2Q=
       APP_DEBUG: "true"
-      APP_URL: http://localhost:8000
+      APP_URL: ${BACKEND_PUBLIC_URL:-http://localhost:8000}
       DB_CONNECTION: sqlite
       DB_DATABASE: /data/database.sqlite
       SESSION_DRIVER: database
@@ -44,7 +44,7 @@ services:
       GRAPHHOPPER_BASE_URL: http://graphhopper:8989
       GRAPHHOPPER_API_KEY: ""
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     volumes:
       - backend_sqlite_data:/data
 
@@ -53,14 +53,14 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        API_BASE_URL: http://localhost:8000/api
+        API_BASE_URL: ${FRONTEND_API_BASE_URL:-http://localhost:8000/api}
     container_name: a4mpets-frontend
     restart: unless-stopped
     depends_on:
       backend:
         condition: service_started
     ports:
-      - "8080:80"
+      - "${FRONTEND_PORT:-8080}:80"
 
 volumes:
   backend_sqlite_data:

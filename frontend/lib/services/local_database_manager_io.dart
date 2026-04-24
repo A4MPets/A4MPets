@@ -11,6 +11,7 @@ import '../models/local_user_profile.dart';
 import '../models/hazard_report_record.dart';
 import '../models/pet_record.dart';
 import '../models/route_record.dart';
+import 'local_database_schema.dart';
 
 class LocalDatabaseManager {
   LocalDatabaseManager();
@@ -57,163 +58,25 @@ class LocalDatabaseManager {
 
     return openDatabase(
       databasePath,
-      version: 6,
+      version: 7,
       onCreate: (Database db, int version) async {
-        await db.execute('''
-          CREATE TABLE $_userTable (
-            id INTEGER PRIMARY KEY,
-            username TEXT NOT NULL,
-            avatar_path TEXT,
-            is_authenticated INTEGER NOT NULL DEFAULT 0,
-            last_synced_at INTEGER
-          )
-        ''');
-
-        await db.execute('''
-          CREATE TABLE $_petsTable (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            photo_path TEXT,
-            created_at INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL,
-            needs_sync INTEGER NOT NULL DEFAULT 1
-          )
-        ''');
-
-        await db.execute('''
-          CREATE TABLE $_routesTable (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            points_json TEXT NOT NULL DEFAULT '[]',
-            created_at INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL,
-            needs_sync INTEGER NOT NULL DEFAULT 1
-          )
-        ''');
-
-        await db.execute('''
-          CREATE TABLE $_hazardsTable (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            local_uuid TEXT NOT NULL UNIQUE,
-            remote_id TEXT,
-            sync_status TEXT NOT NULL DEFAULT 'created',
-            last_modified_at INTEGER NOT NULL,
-            incident_latitude REAL NOT NULL,
-            incident_longitude REAL NOT NULL,
-            impact_radius_meters INTEGER NOT NULL,
-            category_code TEXT NOT NULL,
-            narrative_description TEXT NOT NULL,
-            reported_at INTEGER NOT NULL,
-            estimated_duration_code TEXT NOT NULL,
-            risk_level_code TEXT NOT NULL,
-            evidence_photo_url TEXT,
-            reported_by_username TEXT NOT NULL DEFAULT 'Anónimo',
-            comments_json TEXT NOT NULL DEFAULT '[]',
-            created_at INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL,
-            needs_sync INTEGER NOT NULL DEFAULT 1
-          )
-        ''');
-
-        await db.execute('''
-          CREATE TABLE route_cache (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            waypoints_hash TEXT NOT NULL UNIQUE,
-            polyline_json TEXT NOT NULL,
-            distance_meters REAL NOT NULL,
-            duration_seconds REAL NOT NULL,
-            cached_at INTEGER NOT NULL
-          )
-        ''');
+        await LocalDatabaseSchema.createTables(
+          db: db,
+          userTable: _userTable,
+          petsTable: _petsTable,
+          routesTable: _routesTable,
+          hazardsTable: _hazardsTable,
+        );
       },
       onUpgrade: (Database db, int oldVersion, int newVersion) async {
-        if (oldVersion < 2) {
-          await db.execute('''
-            CREATE TABLE IF NOT EXISTS $_routesTable (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              name TEXT NOT NULL,
-              points_json TEXT NOT NULL DEFAULT '[]',
-              created_at INTEGER NOT NULL,
-              updated_at INTEGER NOT NULL,
-              needs_sync INTEGER NOT NULL DEFAULT 1
-            )
-          ''');
-        }
-
-        if (oldVersion < 3) {
-          await db.execute('''
-            CREATE TABLE IF NOT EXISTS $_hazardsTable (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              local_uuid TEXT NOT NULL UNIQUE,
-              remote_id TEXT,
-              sync_status TEXT NOT NULL DEFAULT 'created',
-              last_modified_at INTEGER NOT NULL,
-              incident_latitude REAL NOT NULL,
-              incident_longitude REAL NOT NULL,
-              impact_radius_meters INTEGER NOT NULL,
-              category_code TEXT NOT NULL,
-              narrative_description TEXT NOT NULL,
-              reported_at INTEGER NOT NULL,
-              estimated_duration_code TEXT NOT NULL,
-              risk_level_code TEXT NOT NULL,
-              evidence_photo_url TEXT,
-              reported_by_username TEXT NOT NULL DEFAULT 'Anónimo',
-              comments_json TEXT NOT NULL DEFAULT '[]',
-              created_at INTEGER NOT NULL,
-              updated_at INTEGER NOT NULL,
-              needs_sync INTEGER NOT NULL DEFAULT 1
-            )
-          ''');
-        }
-
-        if (oldVersion < 4) {
-          await db.execute(
-            'ALTER TABLE $_hazardsTable ADD COLUMN reported_by_username TEXT NOT NULL DEFAULT "Anónimo"',
-          );
-          await db.execute(
-            'ALTER TABLE $_hazardsTable ADD COLUMN comments_json TEXT NOT NULL DEFAULT "[]"',
-          );
-        }
-
-        if (oldVersion < 5) {
-          await db.execute('''
-            CREATE TABLE IF NOT EXISTS route_cache (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              waypoints_hash TEXT NOT NULL UNIQUE,
-              polyline_json TEXT NOT NULL,
-              distance_meters REAL NOT NULL,
-              duration_seconds REAL NOT NULL,
-              cached_at INTEGER NOT NULL
-            )
-          ''');
-        }
-
-        if (oldVersion < 6) {
-          await db.execute(
-            'ALTER TABLE $_hazardsTable ADD COLUMN local_uuid TEXT',
-          );
-          await db.execute(
-            'ALTER TABLE $_hazardsTable ADD COLUMN remote_id TEXT',
-          );
-          await db.execute(
-            'ALTER TABLE $_hazardsTable ADD COLUMN sync_status TEXT NOT NULL DEFAULT "created"',
-          );
-          await db.execute(
-            'ALTER TABLE $_hazardsTable ADD COLUMN last_modified_at INTEGER',
-          );
-          await db.execute(
-            'UPDATE $_hazardsTable SET local_uuid = COALESCE(local_uuid, "legacy-" || id)',
-          );
-          await db.execute(
-            'UPDATE $_hazardsTable SET last_modified_at = COALESCE(last_modified_at, updated_at, created_at)',
-          );
-          await db.execute(
-            'CREATE UNIQUE INDEX IF NOT EXISTS idx_hazards_local_uuid ON $_hazardsTable(local_uuid)',
-          );
-          await db.execute(
-            'CREATE INDEX IF NOT EXISTS idx_hazards_remote_id ON $_hazardsTable(remote_id)',
-          );
-        }
+        await LocalDatabaseSchema.applyMigrations(
+          db: db,
+          oldVersion: oldVersion,
+          userTable: _userTable,
+          petsTable: _petsTable,
+          routesTable: _routesTable,
+          hazardsTable: _hazardsTable,
+        );
       },
     );
   }
@@ -231,56 +94,85 @@ class LocalDatabaseManager {
 
   Future<LocalUserProfile> getLocalUserProfile() async {
     final Database db = await database;
-    final List<Map<String, Object?>> rows = await db.query(
-      _userTable,
-      limit: 1,
-    );
+    final List<Map<String, Object?>> rows = await db.query(_userTable);
+    if (rows.isEmpty) {
+      await db.insert(_userTable, LocalUserProfile.guest().toMap());
+      return LocalUserProfile.guest();
+    }
+
+    if (rows.length > 1) {
+      await db.delete(_userTable);
+      final LocalUserProfile normalized = LocalUserProfile.fromMap(rows.last);
+      await db.insert(_userTable, normalized.toMap());
+      return normalized;
+    }
 
     return LocalUserProfile.fromMap(rows.first);
   }
 
   Future<void> saveLocalUserProfile(LocalUserProfile profile) async {
     final Database db = await database;
-    await db.insert(
-      _userTable,
-      profile.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.transaction((Transaction txn) async {
+      await txn.delete(_userTable);
+      await txn.insert(
+        _userTable,
+        profile.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    });
+  }
+
+  Future<void> clearUserSessionData() async {
+    final Database db = await database;
+    await db.delete(_petsTable);
+    await db.delete(_routesTable);
+    await db.delete('route_cache');
+    await db.transaction((Transaction txn) async {
+      await txn.delete(_userTable);
+      await txn.insert(
+        _userTable,
+        LocalUserProfile.guest().toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    });
   }
 
   Future<List<PetRecord>> getPets() async {
     final Database db = await database;
     final List<Map<String, Object?>> rows = await db.query(
       _petsTable,
+      where: 'sync_status != ?',
+      whereArgs: <Object?>['deleted'],
       orderBy: 'created_at ASC',
     );
 
     return rows.map(PetRecord.fromMap).toList(growable: false);
   }
 
-  Future<int> addPet({
-    required String name,
-    String? photoPath,
-  }) async {
+  Future<int> addPet({required String name, String? photoPath}) async {
     final Database db = await database;
     final int now = DateTime.now().millisecondsSinceEpoch;
 
-    return db.insert(
-      _petsTable,
-      <String, Object?>{
-        'name': name,
-        'photo_path': photoPath,
-        'created_at': now,
-        'updated_at': now,
-        'needs_sync': 1,
-      },
-    );
+    return db.insert(_petsTable, <String, Object?>{
+      'remote_id': null,
+      'name': name,
+      'photo_path': photoPath,
+      'sync_status': 'created',
+      'last_modified_at': now,
+      'synced_at': null,
+      'created_at': now,
+      'updated_at': now,
+      'needs_sync': 1,
+    });
   }
 
   Future<int> getPetsCount() async {
     final Database db = await database;
     final int? result = Sqflite.firstIntValue(
-      await db.rawQuery('SELECT COUNT(*) FROM $_petsTable'),
+      await db.rawQuery(
+        'SELECT COUNT(*) FROM $_petsTable WHERE sync_status != ?',
+        <Object?>['deleted'],
+      ),
     );
     return result ?? 0;
   }
@@ -292,12 +184,27 @@ class LocalDatabaseManager {
   }) async {
     final Database db = await database;
     final int now = DateTime.now().millisecondsSinceEpoch;
+    final List<Map<String, Object?>> currentRows = await db.query(
+      _petsTable,
+      where: 'id = ?',
+      whereArgs: <Object?>[petId],
+      limit: 1,
+    );
+
+    if (currentRows.isEmpty) {
+      return;
+    }
+
+    final PetRecord current = PetRecord.fromMap(currentRows.first);
 
     await db.update(
       _petsTable,
       <String, Object?>{
         'name': name,
         'photo_path': photoPath,
+        'sync_status': current.syncStatus == 'synced' ? 'synced' : 'created',
+        'last_modified_at': now,
+        'remote_id': current.remoteId,
         'updated_at': now,
         'needs_sync': 1,
       },
@@ -308,8 +215,16 @@ class LocalDatabaseManager {
 
   Future<void> deletePet({required int petId}) async {
     final Database db = await database;
-    await db.delete(
+    final int now = DateTime.now().millisecondsSinceEpoch;
+
+    await db.update(
       _petsTable,
+      <String, Object?>{
+        'sync_status': 'deleted',
+        'last_modified_at': now,
+        'updated_at': now,
+        'needs_sync': 1,
+      },
       where: 'id = ?',
       whereArgs: <Object?>[petId],
     );
@@ -319,6 +234,8 @@ class LocalDatabaseManager {
     final Database db = await database;
     final List<Map<String, Object?>> rows = await db.query(
       _routesTable,
+      where: 'sync_status != ?',
+      whereArgs: <Object?>['deleted'],
       orderBy: 'created_at ASC',
     );
     return rows.map(RouteRecord.fromMap).toList(growable: false);
@@ -332,29 +249,42 @@ class LocalDatabaseManager {
     final int now = DateTime.now().millisecondsSinceEpoch;
     final RouteRecord dummy = RouteRecord(
       id: 0,
+      remoteId: null,
       name: name,
       points: points,
+      syncStatus: 'created',
+      lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
       createdAt: DateTime.fromMillisecondsSinceEpoch(now),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
       needsSync: true,
     );
-    final Map<String, Object?> data = dummy.toMap()
-      ..remove('id');
+    final Map<String, Object?> data = dummy.toMap()..remove('id');
     return db.insert(_routesTable, data);
   }
 
   Future<int> getRoutesCount() async {
     final Database db = await database;
     final int? result = Sqflite.firstIntValue(
-      await db.rawQuery('SELECT COUNT(*) FROM $_routesTable'),
+      await db.rawQuery(
+        'SELECT COUNT(*) FROM $_routesTable WHERE sync_status != ?',
+        <Object?>['deleted'],
+      ),
     );
     return result ?? 0;
   }
 
   Future<void> deleteRoute({required int routeId}) async {
     final Database db = await database;
-    await db.delete(
+    final int now = DateTime.now().millisecondsSinceEpoch;
+
+    await db.update(
       _routesTable,
+      <String, Object?>{
+        'sync_status': 'deleted',
+        'last_modified_at': now,
+        'updated_at': now,
+        'needs_sync': 1,
+      },
       where: 'id = ?',
       whereArgs: <Object?>[routeId],
     );
@@ -367,10 +297,25 @@ class LocalDatabaseManager {
   }) async {
     final Database db = await database;
     final int now = DateTime.now().millisecondsSinceEpoch;
+    final List<Map<String, Object?>> currentRows = await db.query(
+      _routesTable,
+      where: 'id = ?',
+      whereArgs: <Object?>[routeId],
+      limit: 1,
+    );
+
+    if (currentRows.isEmpty) {
+      return;
+    }
+
+    final RouteRecord current = RouteRecord.fromMap(currentRows.first);
     final RouteRecord updated = RouteRecord(
       id: routeId,
+      remoteId: current.remoteId,
       name: name,
       points: points,
+      syncStatus: current.syncStatus == 'synced' ? 'synced' : 'created',
+      lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
       createdAt: DateTime.fromMillisecondsSinceEpoch(now),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
       needsSync: true,
@@ -381,6 +326,8 @@ class LocalDatabaseManager {
       <String, Object?>{
         'name': map['name'],
         'points_json': map['points_json'],
+        'sync_status': map['sync_status'],
+        'last_modified_at': map['last_modified_at'],
         'updated_at': map['updated_at'],
         'needs_sync': 1,
       },
@@ -503,7 +450,8 @@ class LocalDatabaseManager {
         'needs_sync': 0,
         'remote_id': remoteId,
         'sync_status': syncStatus,
-        'last_modified_at': (lastModifiedAt ?? DateTime.now()).millisecondsSinceEpoch,
+        'last_modified_at':
+            (lastModifiedAt ?? DateTime.now()).millisecondsSinceEpoch,
         'updated_at': now,
       },
       where: 'local_uuid = ?',
@@ -526,6 +474,7 @@ class LocalDatabaseManager {
     required DateTime reportedAt,
     required String? evidencePhotoUrl,
     required String reportedByUsername,
+    String? commentsJson,
   }) async {
     final Database db = await database;
     final List<Map<String, Object?>> rows = await db.query(
@@ -539,29 +488,26 @@ class LocalDatabaseManager {
     final int remoteMs = remoteLastModifiedAt.millisecondsSinceEpoch;
 
     if (rows.isEmpty) {
-      await db.insert(
-        _hazardsTable,
-        <String, Object?>{
-          'local_uuid': localUuid,
-          'remote_id': remoteId,
-          'sync_status': syncStatus,
-          'last_modified_at': remoteMs,
-          'incident_latitude': incidentLatitude,
-          'incident_longitude': incidentLongitude,
-          'impact_radius_meters': impactRadiusMeters,
-          'category_code': categoryCode,
-          'narrative_description': narrativeDescription,
-          'reported_at': reportedAt.millisecondsSinceEpoch,
-          'estimated_duration_code': estimatedDurationCode,
-          'risk_level_code': riskLevelCode,
-          'evidence_photo_url': evidencePhotoUrl,
-          'reported_by_username': reportedByUsername,
-          'comments_json': '[]',
-          'created_at': remoteMs,
-          'updated_at': remoteMs,
-          'needs_sync': 0,
-        },
-      );
+      await db.insert(_hazardsTable, <String, Object?>{
+        'local_uuid': localUuid,
+        'remote_id': remoteId,
+        'sync_status': syncStatus,
+        'last_modified_at': remoteMs,
+        'incident_latitude': incidentLatitude,
+        'incident_longitude': incidentLongitude,
+        'impact_radius_meters': impactRadiusMeters,
+        'category_code': categoryCode,
+        'narrative_description': narrativeDescription,
+        'reported_at': reportedAt.millisecondsSinceEpoch,
+        'estimated_duration_code': estimatedDurationCode,
+        'risk_level_code': riskLevelCode,
+        'evidence_photo_url': evidencePhotoUrl,
+        'reported_by_username': reportedByUsername,
+        'comments_json': commentsJson ?? '[]',
+        'created_at': remoteMs,
+        'updated_at': remoteMs,
+        'needs_sync': 0,
+      });
       return;
     }
 
@@ -570,6 +516,11 @@ class LocalDatabaseManager {
     if (local.needsSync && local.lastModifiedAt.isAfter(remoteLastModifiedAt)) {
       return;
     }
+
+    final String? resolvedEvidencePhoto = _preferOfflineImageSource(
+      currentSource: local.evidencePhotoUrl,
+      remoteSource: evidencePhotoUrl,
+    );
 
     await db.update(
       _hazardsTable,
@@ -586,8 +537,229 @@ class LocalDatabaseManager {
         'reported_at': reportedAt.millisecondsSinceEpoch,
         'estimated_duration_code': estimatedDurationCode,
         'risk_level_code': riskLevelCode,
-        'evidence_photo_url': evidencePhotoUrl,
+        'evidence_photo_url': resolvedEvidencePhoto,
         'reported_by_username': reportedByUsername,
+        'comments_json': commentsJson ?? local.toMap()['comments_json'],
+        'updated_at': now,
+        'needs_sync': 0,
+      },
+      where: 'id = ?',
+      whereArgs: <Object?>[local.id],
+    );
+  }
+
+  Future<List<PetRecord>> getPetsNeedingSync() async {
+    final Database db = await database;
+    final List<Map<String, Object?>> rows = await db.query(
+      _petsTable,
+      where: 'needs_sync = ?',
+      whereArgs: <Object?>[1],
+      orderBy: 'last_modified_at ASC',
+    );
+    return rows.map(PetRecord.fromMap).toList(growable: false);
+  }
+
+  Future<void> markPetAsSynced({
+    required int petId,
+    String? remoteId,
+    String syncStatus = 'synced',
+    DateTime? lastModifiedAt,
+  }) async {
+    final Database db = await database;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    await db.update(
+      _petsTable,
+      <String, Object?>{
+        'needs_sync': 0,
+        'remote_id': remoteId,
+        'sync_status': syncStatus,
+        'last_modified_at':
+            (lastModifiedAt ?? DateTime.now()).millisecondsSinceEpoch,
+        'updated_at': now,
+      },
+      where: 'id = ?',
+      whereArgs: <Object?>[petId],
+    );
+  }
+
+  Future<void> upsertPetFromRemote({
+    required String localIdString,
+    required String? remoteId,
+    required String syncStatus,
+    required DateTime remoteLastModifiedAt,
+    required String name,
+    required String? photoPath,
+  }) async {
+    final Database db = await database;
+    List<Map<String, Object?>> rows = await db.query(
+      _petsTable,
+      where: 'remote_id = ?',
+      whereArgs: <Object?>[remoteId],
+      limit: 1,
+    );
+
+    if (rows.isEmpty && localIdString.startsWith('pt_')) {
+      final List<String> parts = localIdString.split('_');
+      if (parts.length >= 3) {
+        final int? parsedId = int.tryParse(parts[1]);
+        final int? parsedCreatedAt = int.tryParse(parts[2]);
+        if (parsedId != null && parsedCreatedAt != null) {
+          rows = await db.query(
+            _petsTable,
+            where: 'id = ? AND created_at = ?',
+            whereArgs: <Object?>[parsedId, parsedCreatedAt],
+            limit: 1,
+          );
+        }
+      }
+    }
+
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    final int remoteMs = remoteLastModifiedAt.millisecondsSinceEpoch;
+
+    if (rows.isEmpty) {
+      await db.insert(_petsTable, <String, Object?>{
+        'remote_id': remoteId,
+        'name': name,
+        'photo_path': photoPath,
+        'sync_status': syncStatus,
+        'last_modified_at': remoteMs,
+        'synced_at': remoteMs,
+        'created_at': remoteMs,
+        'updated_at': remoteMs,
+        'needs_sync': 0,
+      });
+      return;
+    }
+
+    final PetRecord local = PetRecord.fromMap(rows.first);
+    if (local.needsSync && local.lastModifiedAt.isAfter(remoteLastModifiedAt)) {
+      return;
+    }
+
+    final String? resolvedPhotoPath = _preferOfflineImageSource(
+      currentSource: local.photoPath,
+      remoteSource: photoPath,
+    );
+
+    await db.update(
+      _petsTable,
+      <String, Object?>{
+        'remote_id': remoteId,
+        'name': name,
+        'photo_path': resolvedPhotoPath,
+        'sync_status': syncStatus,
+        'last_modified_at': remoteMs,
+        'synced_at': now,
+        'updated_at': now,
+        'needs_sync': 0,
+      },
+      where: 'id = ?',
+      whereArgs: <Object?>[local.id],
+    );
+  }
+
+  Future<List<RouteRecord>> getRoutesNeedingSync() async {
+    final Database db = await database;
+    final List<Map<String, Object?>> rows = await db.query(
+      _routesTable,
+      where: 'needs_sync = ?',
+      whereArgs: <Object?>[1],
+      orderBy: 'last_modified_at ASC',
+    );
+    return rows.map(RouteRecord.fromMap).toList(growable: false);
+  }
+
+  Future<void> markRouteAsSynced({
+    required int routeId,
+    String? remoteId,
+    String syncStatus = 'synced',
+    DateTime? lastModifiedAt,
+  }) async {
+    final Database db = await database;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    await db.update(
+      _routesTable,
+      <String, Object?>{
+        'needs_sync': 0,
+        'remote_id': remoteId,
+        'sync_status': syncStatus,
+        'last_modified_at':
+            (lastModifiedAt ?? DateTime.now()).millisecondsSinceEpoch,
+        'updated_at': now,
+      },
+      where: 'id = ?',
+      whereArgs: <Object?>[routeId],
+    );
+  }
+
+  Future<void> upsertRouteFromRemote({
+    required String localIdString,
+    required String? remoteId,
+    required String syncStatus,
+    required DateTime remoteLastModifiedAt,
+    required String name,
+    required List<RoutePoint> points,
+  }) async {
+    final Database db = await database;
+    List<Map<String, Object?>> rows = await db.query(
+      _routesTable,
+      where: 'remote_id = ?',
+      whereArgs: <Object?>[remoteId],
+      limit: 1,
+    );
+
+    if (rows.isEmpty && localIdString.startsWith('rt_')) {
+      final List<String> parts = localIdString.split('_');
+      if (parts.length >= 3) {
+        final int? parsedId = int.tryParse(parts[1]);
+        final int? parsedCreatedAt = int.tryParse(parts[2]);
+        if (parsedId != null && parsedCreatedAt != null) {
+          rows = await db.query(
+            _routesTable,
+            where: 'id = ? AND created_at = ?',
+            whereArgs: <Object?>[parsedId, parsedCreatedAt],
+            limit: 1,
+          );
+        }
+      }
+    }
+
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    final int remoteMs = remoteLastModifiedAt.millisecondsSinceEpoch;
+    final String pointsJson = jsonEncode(
+      points.map((RoutePoint p) => p.toMap()).toList(),
+    );
+
+    if (rows.isEmpty) {
+      await db.insert(_routesTable, <String, Object?>{
+        'remote_id': remoteId,
+        'name': name,
+        'points_json': pointsJson,
+        'sync_status': syncStatus,
+        'last_modified_at': remoteMs,
+        'synced_at': remoteMs,
+        'created_at': remoteMs,
+        'updated_at': remoteMs,
+        'needs_sync': 0,
+      });
+      return;
+    }
+
+    final RouteRecord local = RouteRecord.fromMap(rows.first);
+    if (local.needsSync && local.lastModifiedAt.isAfter(remoteLastModifiedAt)) {
+      return;
+    }
+
+    await db.update(
+      _routesTable,
+      <String, Object?>{
+        'remote_id': remoteId,
+        'name': name,
+        'points_json': pointsJson,
+        'sync_status': syncStatus,
+        'last_modified_at': remoteMs,
+        'synced_at': now,
         'updated_at': now,
         'needs_sync': 0,
       },
@@ -604,5 +776,38 @@ class LocalDatabaseManager {
 
   Future<void> markUserDataForFutureSync() async {
     await database;
+  }
+
+  String? _preferOfflineImageSource({
+    required String? currentSource,
+    required String? remoteSource,
+  }) {
+    if (currentSource == null || currentSource.isEmpty) {
+      return remoteSource;
+    }
+
+    if (remoteSource == null || remoteSource.isEmpty) {
+      return currentSource;
+    }
+
+    if (_isRemoteUrl(currentSource)) {
+      return remoteSource;
+    }
+
+    // Keep local/base64 source if still available so the app keeps rendering images offline.
+    if (currentSource.startsWith('data:image')) {
+      return currentSource;
+    }
+
+    final File localFile = File(currentSource);
+    if (localFile.existsSync()) {
+      return currentSource;
+    }
+
+    return remoteSource;
+  }
+
+  bool _isRemoteUrl(String value) {
+    return value.startsWith('http://') || value.startsWith('https://');
   }
 }

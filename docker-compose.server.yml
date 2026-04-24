@@ -8,8 +8,8 @@ services:
       - /home/nestor/A4MPets/backend/graphhopper/data:/data
       - /home/nestor/A4MPets/backend/graphhopper/config.yml:/config/config.yml:ro
     ports:
-      - "8989:8989"
-      - "8990:8990"
+      - "${GRAPHHOPPER_PORT:-8989}:8989"
+      - "${GRAPHHOPPER_ADMIN_PORT:-8990}:8990"
     environment:
       - JAVA_OPTS=-Xmx2g -Xms2g
     restart: unless-stopped
@@ -25,13 +25,14 @@ services:
     environment:
       - APP_NAME=A4MPets
       - APP_ENV=production
-      - APP_DEBUG=false
+      - APP_DEBUG=${APP_DEBUG:-false}
+      - APP_URL=${BACKEND_PUBLIC_URL:-http://localhost:8000}
       - DB_CONNECTION=sqlite
       - DB_DATABASE=/data/database.sqlite
       - GRAPHHOPPER_BASE_URL=http://graphhopper:8989
       - LOG_CHANNEL=stack
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     depends_on:
       graphhopper:
         condition: service_started
@@ -48,10 +49,10 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - API_BASE_URL=http://localhost:8000/api
+        - API_BASE_URL=${FRONTEND_API_BASE_URL:-http://localhost:8000/api}
     container_name: a4mpets-frontend
     ports:
-      - "8080:80"
+      - "${FRONTEND_PORT:-8080}:80"
     environment:
       - NGINX_PORT=80
     depends_on:

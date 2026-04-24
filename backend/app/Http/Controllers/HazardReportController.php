@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\HazardComment;
 use App\Models\HazardReport;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -18,6 +19,7 @@ class HazardReportController extends Controller
     public function index(Request $request): JsonResponse
     {
         Log::info('Hazard API index request', [
+            'user_id' => $request->user()?->id,
             'include_archived' => $request->query('include_archived'),
             'risk_level' => $request->query('risk_level'),
             'latitude' => $request->query('latitude'),
@@ -27,7 +29,14 @@ class HazardReportController extends Controller
             'per_page' => $request->query('per_page', 50),
         ]);
 
-        $query = HazardReport::query();
+        // Los peligros son globales y deben ser visibles para todos.
+        $query = HazardReport::with([
+            'comments',
+            'comments.user',
+            'riskLevel',
+            'category',
+            'estimatedDuration',
+        ]);
 
         // Filtro por ubicación (nearby)
         if ($request->has(['latitude', 'longitude'])) {
@@ -63,7 +72,7 @@ class HazardReportController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $hazards->items(),
+            'data' => array_map(fn (HazardReport $hazard) => $this->formatHazard($hazard), $hazards->items()),
             'pagination' => [
                 'total' => $hazards->total(),
                 'per_page' => $hazards->perPage(),
@@ -78,6 +87,8 @@ class HazardReportController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $userId = $request->user()?->id;
+
         $validated = $request->validate([
             'incident_latitude' => 'required|numeric|between:-90,90',
             'incident_longitude' => 'required|numeric|between:-180,180',
@@ -98,12 +109,21 @@ class HazardReportController extends Controller
         $validated['estimated_duration_code'] = $this->normalizeDurationCode($validated['estimated_duration_code'] ?? null);
         $validated['narrative_description'] = $validated['narrative_description'] ?? ($validated['description'] ?? null);
         $validated['description'] = $validated['description'] ?? $validated['narrative_description'];
-        $validated['reported_by_username'] = $validated['reported_by_username'] ?? 'Anónimo';
+        $validated['reported_by_username'] = $validated['reported_by_username'] ?? $request->user()?->name ?? 'Anónimo';
 
         $validated['status'] = 'created';
         $validated['last_modified_at'] = now();
+        $validated['user_id'] = $userId;
 
         $hazard = HazardReport::create($validated);
+        $hazard->update([
+            'remote_id' => $hazard->remote_id ?? (string) $hazard->id,
+        ]);
+
+        if ($request->has('comments')) {
+            $this->syncHazardComments($hazard, (array) $request->input('comments', []));
+        }
+        $hazard->load(['comments', 'comments.user', 'riskLevel', 'category', 'estimatedDuration']);
 
         Log::info('Hazard API store created', [
             'id' => $hazard->id,
@@ -115,7 +135,7 @@ class HazardReportController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Peligro creado exitosamente',
-            'data' => $hazard,
+            'data' => $this->formatHazard($hazard),
         ], 201);
     }
 
@@ -124,9 +144,11 @@ class HazardReportController extends Controller
      */
     public function show(HazardReport $hazardReport): JsonResponse
     {
+        $hazardReport->load(['comments', 'comments.user', 'riskLevel', 'category', 'estimatedDuration']);
+
         return response()->json([
             'success' => true,
-            'data' => $hazardReport,
+            'data' => $this->formatHazard($hazardReport),
         ]);
     }
 
@@ -135,6 +157,15 @@ class HazardReportController extends Controller
      */
     public function update(Request $request, HazardReport $hazardReport): JsonResponse
     {
+        $userId = $request->user()?->id;
+
+        if ($userId && $hazardReport->user_id !== null && (int) $hazardReport->user_id !== (int) $userId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado',
+            ], 403);
+        }
+
         $validated = $request->validate([
             'incident_latitude' => 'numeric|between:-90,90',
             'incident_longitude' => 'numeric|between:-180,180',
@@ -182,11 +213,15 @@ class HazardReportController extends Controller
         }
 
         $hazardReport->update($validated);
+        if ($request->has('comments')) {
+            $this->syncHazardComments($hazardReport, (array) $request->input('comments', []));
+        }
+        $hazardReport->load(['comments', 'comments.user', 'riskLevel', 'category', 'estimatedDuration']);
 
         return response()->json([
             'success' => true,
             'message' => 'Peligro actualizado exitosamente',
-            'data' => $hazardReport,
+            'data' => $this->formatHazard($hazardReport),
         ]);
     }
 
@@ -195,6 +230,15 @@ class HazardReportController extends Controller
      */
     public function destroy(HazardReport $hazardReport): JsonResponse
     {
+        $userId = request()->user()?->id;
+
+        if ($userId && $hazardReport->user_id !== null && (int) $hazardReport->user_id !== (int) $userId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado',
+            ], 403);
+        }
+
         $hazardReport->update([
             'status' => 'archived',
             'last_modified_at' => now(),
@@ -212,6 +256,8 @@ class HazardReportController extends Controller
      */
     public function sync(Request $request): JsonResponse
     {
+        $userId = $request->user()?->id;
+
         try {
             $validated = $request->validate([
                 'hazards' => 'required|array',
@@ -228,6 +274,12 @@ class HazardReportController extends Controller
                 'hazards.*.evidence_photo_url' => 'nullable|string|max:500',
                 'hazards.*.reported_by_username' => 'nullable|string|max:100',
                 'hazards.*.last_modified_at' => 'required|date_format:Y-m-d H:i:s',
+                'hazards.*.comments' => 'sometimes|array',
+                'hazards.*.comments.*.author_username' => 'nullable|string|max:100',
+                'hazards.*.comments.*.author_avatar_url' => 'nullable|string|max:500',
+                'hazards.*.comments.*.is_anonymous' => 'nullable|boolean',
+                'hazards.*.comments.*.comment_text' => 'nullable|string|max:2000',
+                'hazards.*.comments.*.created_at' => 'nullable',
             ]);
         } catch (ValidationException $e) {
             Log::warning('Hazard API sync validation failed', [
@@ -251,6 +303,7 @@ class HazardReportController extends Controller
                 fn ($hazard) => $hazard['local_id'] ?? 'unknown',
                 $validated['hazards']
             ),
+                'user_id' => $userId,
         ]);
 
         foreach ($validated['hazards'] as $hazardData) {
@@ -261,9 +314,19 @@ class HazardReportController extends Controller
                 $hazardData['narrative_description'] = $hazardData['narrative_description'] ?? ($hazardData['description'] ?? null);
                 $hazardData['description'] = $hazardData['description'] ?? $hazardData['narrative_description'];
                 $hazardData['reported_by_username'] = $hazardData['reported_by_username'] ?? 'Anónimo';
+                $hasComments = array_key_exists('comments', $hazardData);
+                $commentsData = $hasComments ? (array) $hazardData['comments'] : [];
 
                 // Buscar si ya existe este peligro localmente
-                $existing = HazardReport::where('local_id', $hazardData['local_id'])->first();
+                $existing = HazardReport::query()
+                    ->where(function ($query) use ($hazardData): void {
+                        if (!empty($hazardData['remote_id'])) {
+                            $query->where('remote_id', $hazardData['remote_id'])
+                                  ->orWhere('id', $hazardData['remote_id']);
+                        }
+                        $query->orWhere('local_id', $hazardData['local_id']);
+                    })
+                    ->first();
                 $remoteTimestamp = Carbon::parse($hazardData['last_modified_at']);
 
                 if ($existing) {
@@ -276,8 +339,12 @@ class HazardReportController extends Controller
                                 'status' => 'synced',
                                 'remote_id' => $hazardData['remote_id'] ?? $existing->remote_id,
                                 'synced_at' => now(),
+                                'user_id' => $existing->user_id ?? $userId,
                             ]
                         ));
+                        if ($hasComments) {
+                            $this->syncHazardComments($existing, $commentsData);
+                        }
                         $syncResults['synced']++;
                         Log::info('Hazard API sync updated existing', [
                             'local_id' => $hazardData['local_id'],
@@ -308,8 +375,15 @@ class HazardReportController extends Controller
                             'status' => 'synced',
                             'remote_id' => $hazardData['remote_id'] ?? null,
                             'synced_at' => now(),
+                            'user_id' => $userId,
                         ]
                     ));
+                    $created->update([
+                        'remote_id' => $created->remote_id ?? (string) $created->id,
+                    ]);
+                    if ($hasComments) {
+                        $this->syncHazardComments($created, $commentsData);
+                    }
                     $syncResults['synced']++;
 
                     Log::info('Hazard API sync created new', [
@@ -351,13 +425,79 @@ class HazardReportController extends Controller
         ]);
     }
 
+    public function comments(HazardReport $hazardReport): JsonResponse
+    {
+        $hazardReport->load(['comments', 'comments.user', 'riskLevel', 'category', 'estimatedDuration']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $hazardReport->comments->map(fn (HazardComment $comment) => $this->formatComment($comment))->values(),
+        ]);
+    }
+
+    public function storeComment(Request $request, HazardReport $hazardReport): JsonResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'comment_text' => ['required', 'string', 'max:2000'],
+            'author_name' => ['nullable', 'string', 'max:100'],
+            'author_avatar_url' => ['nullable', 'string', 'max:500'],
+            'is_anonymous' => ['sometimes', 'boolean'],
+            'created_at' => ['nullable'],
+        ]);
+
+        $isAnonymous = (bool) ($validated['is_anonymous'] ?? false);
+        $authorName = trim((string) ($validated['author_name'] ?? ''));
+        if ($authorName === '') {
+            $authorName = $user && !$isAnonymous ? $user->name : 'Anónimo';
+        }
+
+        $commentedAt = $this->parseCommentTimestamp($validated['created_at'] ?? null);
+
+        $payload = [
+            'hazard_report_id' => $hazardReport->id,
+            'user_id' => $user && !$isAnonymous ? $user->id : null,
+            'author_name' => $authorName,
+            'author_avatar_url' => $validated['author_avatar_url'] ?? null,
+            'is_anonymous' => $isAnonymous || $user === null,
+            'comment_text' => $validated['comment_text'],
+            'commented_at' => $commentedAt,
+            'last_modified_at' => $commentedAt,
+            'synced_at' => now(),
+        ];
+        $payload['content_hash'] = HazardComment::makeContentHash($payload);
+
+        $comment = HazardComment::updateOrCreate(
+            [
+                'hazard_report_id' => $hazardReport->id,
+                'content_hash' => $payload['content_hash'],
+            ],
+            $payload
+        );
+
+        $hazardReport->update([
+            'last_modified_at' => now(),
+        ]);
+
+        $hazardReport->load(['comments', 'comments.user']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Comentario agregado exitosamente',
+            'data' => $this->formatComment($comment),
+        ], 201);
+    }
+
     /**
      * GET /api/hazards/unsynced - Obtener peligros locales no sincronizados
      * Para que el cliente pueda ver qué necesita sincronizar
      */
     public function getUnsynced(): JsonResponse
     {
-        $unsynced = HazardReport::unsynced()->get();
+        $unsynced = HazardReport::query()
+            ->unsynced()
+            ->get();
 
         return response()->json([
             'success' => true,
@@ -422,5 +562,176 @@ class HazardReportController extends Controller
         }
 
         return 'undefined';
+    }
+
+    private function syncHazardComments(HazardReport $hazardReport, array $commentsData): void
+    {
+        if ($commentsData === []) {
+            return;
+        }
+
+        foreach ($commentsData as $commentData) {
+            if (!is_array($commentData)) {
+                continue;
+            }
+
+            $commentText = trim((string) ($commentData['comment_text'] ?? ''));
+            if ($commentText === '') {
+                continue;
+            }
+
+            $authorName = trim((string) ($commentData['author_username'] ?? $commentData['author_name'] ?? ''));
+            $commentedAt = $commentData['created_at'] ?? $commentData['commented_at'] ?? null;
+            $commentedAtValue = $this->parseCommentTimestamp($commentedAt);
+            $isAnonymous = (bool) ($commentData['is_anonymous'] ?? ($authorName === '' || $authorName === 'Anónimo'));
+
+            $payload = [
+                'hazard_report_id' => $hazardReport->id,
+                'user_id' => $commentData['user_id'] ?? null,
+                'author_name' => $authorName !== '' ? $authorName : 'Anónimo',
+                'author_avatar_url' => $commentData['author_avatar_url'] ?? null,
+                'is_anonymous' => $isAnonymous,
+                'comment_text' => $commentText,
+                'commented_at' => $commentedAtValue,
+                'last_modified_at' => now(),
+                'synced_at' => now(),
+            ];
+            $payload['content_hash'] = HazardComment::makeContentHash($payload);
+
+            $existingByHash = HazardComment::query()
+                ->where('hazard_report_id', $hazardReport->id)
+                ->where('content_hash', $payload['content_hash'])
+                ->first();
+
+            if ($existingByHash) {
+                $existingByHash->update($payload);
+                continue;
+            }
+
+            $equivalent = $this->findEquivalentComment($hazardReport->id, $payload);
+            if ($equivalent) {
+                // Conservar el hash histórico evita crear duplicados para datos previos.
+                $payload['content_hash'] = $equivalent->content_hash;
+                $equivalent->update($payload);
+                continue;
+            }
+
+            HazardComment::create($payload);
+        }
+
+        $this->pruneDuplicateComments($hazardReport->id);
+
+        $hazardReport->update([
+            'last_modified_at' => now(),
+        ]);
+    }
+
+    private function formatComment(HazardComment $comment): array
+    {
+        return [
+            'id' => $comment->id,
+            'hazard_report_id' => $comment->hazard_report_id,
+            'user_id' => $comment->user_id,
+            'author_username' => $comment->author_name,
+            'author_avatar_url' => $comment->author_avatar_url,
+            'is_anonymous' => $comment->is_anonymous,
+            'comment_text' => $comment->comment_text,
+            'created_at' => optional($comment->commented_at ?? $comment->created_at)?->toIso8601String(),
+            'last_modified_at' => optional($comment->last_modified_at)?->toIso8601String(),
+        ];
+    }
+
+    private function formatHazard(HazardReport $hazard): array
+    {
+        return [
+            'id' => $hazard->id,
+            'incident_latitude' => $hazard->incident_latitude,
+            'incident_longitude' => $hazard->incident_longitude,
+            'impact_radius_meters' => $hazard->impact_radius_meters,
+            'risk_level_code' => $hazard->risk_level_code,
+            'category_code' => $hazard->category_code,
+            'estimated_duration_code' => $hazard->estimated_duration_code,
+            'description' => $hazard->description,
+            'narrative_description' => $hazard->narrative_description,
+            'reported_at' => optional($hazard->reported_at)?->toIso8601String(),
+            'evidence_photo_url' => $hazard->evidence_photo_url,
+            'reported_by_username' => $hazard->reported_by_username,
+            'user_id' => $hazard->user_id,
+            'status' => $hazard->status,
+            'local_id' => $hazard->local_id,
+            'remote_id' => $hazard->remote_id,
+            'last_modified_at' => optional($hazard->last_modified_at)?->toIso8601String(),
+            'synced_at' => optional($hazard->synced_at)?->toIso8601String(),
+            'comments_json' => $hazard->comments_json,
+        ];
+    }
+
+    private function parseCommentTimestamp(mixed $value): Carbon
+    {
+        if ($value instanceof Carbon) {
+            return $value;
+        }
+
+        if (is_int($value) || is_float($value) || (is_string($value) && ctype_digit($value))) {
+            return Carbon::createFromTimestampMs((int) $value);
+        }
+
+        if (is_string($value) && trim($value) !== '') {
+            return Carbon::parse($value);
+        }
+
+        return now();
+    }
+
+    private function findEquivalentComment(int $hazardId, array $payload): ?HazardComment
+    {
+        $query = HazardComment::query()
+            ->where('hazard_report_id', $hazardId)
+            ->where('author_name', (string) ($payload['author_name'] ?? ''))
+            ->where('is_anonymous', (bool) ($payload['is_anonymous'] ?? false))
+            ->where('comment_text', (string) ($payload['comment_text'] ?? ''));
+
+        if (array_key_exists('user_id', $payload) && $payload['user_id'] !== null) {
+            $query->where('user_id', (int) $payload['user_id']);
+        } else {
+            $query->whereNull('user_id');
+        }
+
+        $commentedAt = $payload['commented_at'] ?? null;
+        if ($commentedAt instanceof Carbon) {
+            $start = $commentedAt->copy()->startOfSecond();
+            $end = $start->copy()->addSecond();
+            $query->whereBetween('commented_at', [$start, $end]);
+        }
+
+        return $query->orderBy('id')->first();
+    }
+
+    private function pruneDuplicateComments(int $hazardId): void
+    {
+        $seen = [];
+
+        $comments = HazardComment::query()
+            ->where('hazard_report_id', $hazardId)
+            ->orderBy('id')
+            ->get();
+
+        foreach ($comments as $comment) {
+            $key = implode('|', [
+                $hazardId,
+                $comment->user_id ?? 'null',
+                $comment->author_name,
+                (int) $comment->is_anonymous,
+                $comment->comment_text,
+                optional($comment->commented_at)->format('Y-m-d H:i:s') ?? '',
+            ]);
+
+            if (isset($seen[$key])) {
+                $comment->delete();
+                continue;
+            }
+
+            $seen[$key] = true;
+        }
     }
 }

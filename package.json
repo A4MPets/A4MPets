@@ -1,8 +1,9 @@
 {
   "private": true,
   "scripts": {
-    "frontend": "cd frontend && flutter run -d chrome",
-    "backend": "cd backend && php artisan serve",
+    "frontend": "cd frontend && flutter run -d chrome --web-hostname localhost --web-port 7357 --dart-define-from-file=env/local.json",
+    "frontend:android": "cd frontend && flutter run --dart-define-from-file=env/local.json",
+    "backend": "cd backend && php artisan serve --host=0.0.0.0 --port=8000",
     "graphhopper": "docker compose up -d graphhopper",
     "dev": "docker compose up -d --build"
   },

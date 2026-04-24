@@ -92,6 +92,34 @@ POST /api/hazards
 }
 ```
 
+#### Comentarios de un peligro
+``` 
+GET /api/hazards/{id}/comments
+POST /api/hazards/{id}/comments
+```
+
+Un comentario puede ser publicado por un usuario autenticado o por un usuario anónimo. El backend guarda:
+- `hazard_report_id`
+- `user_id` nullable
+- `author_name`
+- `author_avatar_url` nullable
+- `is_anonymous`
+- `comment_text`
+- `commented_at`
+- `content_hash`
+- `last_modified_at`
+- `synced_at`
+
+Ejemplo de creación:
+```json
+{
+  "comment_text": "La zona sigue activa, recomiendo evitarla.",
+  "author_name": "Anónimo",
+  "is_anonymous": true,
+  "created_at": 1713523200000
+}
+```
+
 #### Obtener peligro específico
 ```
 GET /api/hazards/{id}
@@ -128,7 +156,8 @@ POST /api/hazards/sync
       "risk_level_code": "high",
       "description": "Primera lluvia, calles inundadas",
       "last_modified_at": "2024-01-15 10:30:45",
-      "remote_id": null
+      "remote_id": null,
+      "comments": []
     }
   ]
 }

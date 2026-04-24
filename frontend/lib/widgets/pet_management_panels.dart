@@ -24,8 +24,12 @@ class ManagePetsPanelContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<LocalUserProfile> userProfile = ref.watch(localUserProfileProvider);
-    final AsyncValue<List<PetRecord>> petsValue = ref.watch(petsControllerProvider);
+    final AsyncValue<LocalUserProfile> userProfile = ref.watch(
+      localUserProfileProvider,
+    );
+    final AsyncValue<List<PetRecord>> petsValue = ref.watch(
+      petsControllerProvider,
+    );
 
     final Color cardBorder = AppPalette.border(isDarkMode);
     final Color textColor = AppPalette.textPrimary(isDarkMode);
@@ -84,12 +88,13 @@ class ManagePetsPanelContent extends ConsumerWidget {
                     }
 
                     return GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 0.78,
-                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 0.78,
+                          ),
                       itemCount: pets.length,
                       itemBuilder: (BuildContext context, int index) {
                         final PetRecord pet = pets[index];
@@ -101,7 +106,8 @@ class ManagePetsPanelContent extends ConsumerWidget {
                       },
                     );
                   },
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
                   error: (Object error, StackTrace stackTrace) {
                     return Center(
                       child: Text(
@@ -132,10 +138,7 @@ class ManagePetsPanelContent extends ConsumerWidget {
                 ),
                 child: const Text(
                   'Agregar mascota',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                 ),
               ),
             ),
@@ -183,7 +186,9 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
 
   Future<void> _loadDefaultPetName() async {
     try {
-      final int nextNumber = await ref.read(petsControllerProvider.notifier).getNextDefaultPetNumber();
+      final int nextNumber = await ref
+          .read(petsControllerProvider.notifier)
+          .getNextDefaultPetNumber();
       if (!mounted) {
         return;
       }
@@ -209,7 +214,9 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
     });
 
     try {
-      final String? storedPath = await ref.read(localMediaStorageServiceProvider).pickAndStorePetPhoto();
+      final String? storedPath = await ref
+          .read(localMediaStorageServiceProvider)
+          .pickAndStorePetPhoto();
 
       if (!mounted) {
         return;
@@ -245,10 +252,9 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
         : _nameController.text.trim();
 
     try {
-      await ref.read(petsControllerProvider.notifier).addPet(
-        name: resolvedName,
-        photoPath: _storedPhotoPath,
-      );
+      await ref
+          .read(petsControllerProvider.notifier)
+          .addPet(name: resolvedName, photoPath: _storedPhotoPath);
 
       if (!mounted) {
         return;
@@ -276,82 +282,98 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
   Widget build(BuildContext context) {
     final Color borderColor = AppPalette.border(widget.isDarkMode);
     final Color textColor = AppPalette.textPrimary(widget.isDarkMode);
+    final double keyboardInset = MediaQuery.of(context).viewInsets.bottom;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _PetPhotoEditor(
-          photoPath: _storedPhotoPath,
-          borderColor: borderColor,
-          isBusy: _isPickingPhoto,
-          onEditPressed: _pickPhoto,
-        ),
-        const SizedBox(height: 16),
-        ValueListenableBuilder<TextEditingValue>(
-          valueListenable: _nameController,
-          builder: (BuildContext context, TextEditingValue value, Widget? child) {
-            final String previewName = value.text.trim().isEmpty
-                ? _defaultPetName
-                : value.text.trim();
-            return Text(
-              previewName,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: textColor,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
-            );
-          },
-        ),
-        const Spacer(),
-        _PetNameField(
-          isDarkMode: widget.isDarkMode,
-          controller: _nameController,
-        ),
-        if (_errorText != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            _errorText!,
-            style: const TextStyle(
-              color: AppPalette.dangerRed,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(0, 8, 0, 12 + keyboardInset),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _PetPhotoEditor(
+              photoPath: _storedPhotoPath,
+              borderColor: borderColor,
+              isBusy: _isPickingPhoto,
+              onEditPressed: _pickPhoto,
             ),
-          ),
-        ],
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 48,
-          child: ElevatedButton(
-            onPressed: _isSaving ? null : _savePet,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppPalette.primaryBlue,
-              foregroundColor: AppPalette.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+            const SizedBox(height: 16),
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _nameController,
+              builder:
+                  (
+                    BuildContext context,
+                    TextEditingValue value,
+                    Widget? child,
+                  ) {
+                    final String previewName = value.text.trim().isEmpty
+                        ? _defaultPetName
+                        : value.text.trim();
+                    return Text(
+                      previewName,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    );
+                  },
             ),
-            child: _isSaving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppPalette.white,
-                    ),
-                  )
-                : const Text(
-                    'Guardar Mascota',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
+            const SizedBox(height: 24),
+            _PetNameField(
+              isDarkMode: widget.isDarkMode,
+              controller: _nameController,
+              onSubmitted: (_) {
+                if (!_isSaving) {
+                  _savePet();
+                }
+              },
+            ),
+            if (_errorText != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _errorText!,
+                style: const TextStyle(
+                  color: AppPalette.dangerRed,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 48,
+              child: ElevatedButton(
+                onPressed: _isSaving ? null : _savePet,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppPalette.primaryBlue,
+                  foregroundColor: AppPalette.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-          ),
+                ),
+                child: _isSaving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppPalette.white,
+                        ),
+                      )
+                    : const Text(
+                        'Guardar Mascota',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
@@ -392,7 +414,8 @@ class _PetCard extends StatelessWidget {
                     child: InkWell(
                       onTap: onEditPressed,
                       child: SizedBox.expand(
-                        child: pet.photoPath != null && pet.photoPath!.isNotEmpty
+                        child:
+                            pet.photoPath != null && pet.photoPath!.isNotEmpty
                             ? buildLocalImageWidget(
                                 source: pet.photoPath,
                                 fit: BoxFit.cover,
@@ -537,10 +560,12 @@ class _PetPhotoEditor extends StatelessWidget {
 class _PetNameField extends StatelessWidget {
   final bool isDarkMode;
   final TextEditingController controller;
+  final ValueChanged<String>? onSubmitted;
 
   const _PetNameField({
     required this.isDarkMode,
     required this.controller,
+    this.onSubmitted,
   });
 
   @override
@@ -550,6 +575,8 @@ class _PetNameField extends StatelessWidget {
 
     return TextField(
       controller: controller,
+      textInputAction: TextInputAction.done,
+      onSubmitted: onSubmitted,
       style: TextStyle(
         color: textColor,
         fontSize: 14,
@@ -564,7 +591,10 @@ class _PetNameField extends StatelessWidget {
         ),
         filled: true,
         fillColor: fieldBackground,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -596,11 +626,7 @@ class _PetPlaceholder extends StatelessWidget {
     return Container(
       color: backgroundColor,
       child: Center(
-        child: Icon(
-          Icons.pets,
-          size: iconSize,
-          color: AppPalette.iconGray,
-        ),
+        child: Icon(Icons.pets, size: iconSize, color: AppPalette.iconGray),
       ),
     );
   }
@@ -619,7 +645,8 @@ class EditPetPanelContent extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<EditPetPanelContent> createState() => _EditPetPanelContentState();
+  ConsumerState<EditPetPanelContent> createState() =>
+      _EditPetPanelContentState();
 }
 
 class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
@@ -652,7 +679,9 @@ class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
     });
 
     try {
-      final String? storedPath = await ref.read(localMediaStorageServiceProvider).pickAndStorePetPhoto();
+      final String? storedPath = await ref
+          .read(localMediaStorageServiceProvider)
+          .pickAndStorePetPhoto();
 
       if (!mounted) {
         return;
@@ -688,11 +717,13 @@ class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
         : _nameController.text.trim();
 
     try {
-      await ref.read(petsControllerProvider.notifier).updatePet(
-        petId: widget.pet.id,
-        name: resolvedName,
-        photoPath: _storedPhotoPath,
-      );
+      await ref
+          .read(petsControllerProvider.notifier)
+          .updatePet(
+            petId: widget.pet.id,
+            name: resolvedName,
+            photoPath: _storedPhotoPath,
+          );
 
       if (!mounted) {
         return;
@@ -722,7 +753,9 @@ class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
     });
 
     try {
-      await ref.read(petsControllerProvider.notifier).deletePet(petId: widget.pet.id);
+      await ref
+          .read(petsControllerProvider.notifier)
+          .deletePet(petId: widget.pet.id);
 
       if (!mounted) {
         return;
@@ -815,25 +848,31 @@ class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
         const SizedBox(height: 16),
         ValueListenableBuilder<TextEditingValue>(
           valueListenable: _nameController,
-          builder: (BuildContext context, TextEditingValue value, Widget? child) {
-            final String previewName = value.text.trim().isEmpty
-                ? widget.pet.name
-                : value.text.trim();
-            return Text(
-              previewName,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: textColor,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
-            );
-          },
+          builder:
+              (BuildContext context, TextEditingValue value, Widget? child) {
+                final String previewName = value.text.trim().isEmpty
+                    ? widget.pet.name
+                    : value.text.trim();
+                return Text(
+                  previewName,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
+                );
+              },
         ),
         const Spacer(),
         _PetNameField(
           isDarkMode: widget.isDarkMode,
           controller: _nameController,
+          onSubmitted: (_) {
+            if (!_isSaving && !_isDeleting) {
+              _updatePet();
+            }
+          },
         ),
         if (_errorText != null) ...[
           const SizedBox(height: 8),
@@ -853,12 +892,16 @@ class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
               child: SizedBox(
                 height: 48,
                 child: ElevatedButton(
-                  onPressed: _isDeleting || _isSaving ? null : _showDeleteConfirmation,
+                  onPressed: _isDeleting || _isSaving
+                      ? null
+                      : _showDeleteConfirmation,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppPalette.dangerRed,
                     foregroundColor: AppPalette.white,
                     elevation: 0,
-                    disabledBackgroundColor: AppPalette.dangerRed.withValues(alpha: 0.6),
+                    disabledBackgroundColor: AppPalette.dangerRed.withValues(
+                      alpha: 0.6,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),

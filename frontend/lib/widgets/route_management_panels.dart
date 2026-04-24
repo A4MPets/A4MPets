@@ -30,8 +30,9 @@ class ManageRoutesPanelContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<RouteRecord>> routesValue =
-        ref.watch(routesControllerProvider);
+    final AsyncValue<List<RouteRecord>> routesValue = ref.watch(
+      routesControllerProvider,
+    );
 
     final Color cardBorder = AppPalette.border(isDarkMode);
     final Color textColor = AppPalette.textPrimary(isDarkMode);
@@ -72,11 +73,11 @@ class ManageRoutesPanelContent extends ConsumerWidget {
                       return GridView.builder(
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 0.78,
-                        ),
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: 0.78,
+                            ),
                         itemCount: routes.length,
                         itemBuilder: (BuildContext context, int index) {
                           return _RouteCard(
@@ -85,24 +86,25 @@ class ManageRoutesPanelContent extends ConsumerWidget {
                             isSelected: selectedRouteId == routes[index].id,
                             onPressed: () => onRoutePressed(routes[index]),
                             onEditPressed: onEditRoutePressed == null
-                              ? null
-                              : () => onEditRoutePressed!(routes[index]),
+                                ? null
+                                : () => onEditRoutePressed!(routes[index]),
                             onDeletePressed: onDeleteRoutePressed == null
-                              ? null
-                              : () => onDeleteRoutePressed!(routes[index]),
+                                ? null
+                                : () => onDeleteRoutePressed!(routes[index]),
                           );
                         },
                       );
                     },
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
-                    error: (_, __) => Center(
+                    error: (_, _) => Center(
                       child: Text(
                         'No se pudieron cargar las rutas',
                         style: TextStyle(
-                            color: textColor,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600),
+                          color: textColor,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
@@ -119,12 +121,12 @@ class ManageRoutesPanelContent extends ConsumerWidget {
                   foregroundColor: AppPalette.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: const Text(
                   'Agregar ruta',
-                  style:
-                      TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                 ),
               ),
             ),
@@ -165,9 +167,7 @@ class _RouteCard extends StatelessWidget {
           color: itemBackground,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected
-                ? AppPalette.primaryBlue
-                : Colors.transparent,
+            color: isSelected ? AppPalette.primaryBlue : Colors.transparent,
             width: isSelected ? 2 : 0,
           ),
         ),
@@ -182,7 +182,8 @@ class _RouteCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     child: SizedBox.expand(
                       child: _RouteCardPlaceholder(
-                          pointCount: route.points.length),
+                        pointCount: route.points.length,
+                      ),
                     ),
                   ),
                   Positioned(
@@ -271,8 +272,7 @@ class _RouteCardPlaceholder extends StatelessWidget {
             bottom: 6,
             right: 6,
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
                 color: AppPalette.primaryBlue,
                 borderRadius: BorderRadius.circular(8),
@@ -310,6 +310,7 @@ class AddRoutePanelContent extends ConsumerStatefulWidget {
   final bool isEditingExistingRoute;
   final String? initialRouteName;
   final int? routeId;
+  final Future<void> Function(String name) onSaveRoute;
   final VoidCallback onSavedComplete;
 
   const AddRoutePanelContent({
@@ -328,6 +329,7 @@ class AddRoutePanelContent extends ConsumerStatefulWidget {
     this.isEditingExistingRoute = false,
     this.initialRouteName,
     this.routeId,
+    required this.onSaveRoute,
     required this.onSavedComplete,
   });
 
@@ -378,26 +380,15 @@ class _AddRoutePanelContentState extends ConsumerState<AddRoutePanelContent> {
     });
     setState(() => _isSaving = true);
 
-    final List<RoutePoint> points = widget.points
-        .map((LatLng ll) =>
-            RoutePoint(latitude: ll.latitude, longitude: ll.longitude))
-        .toList();
-
     try {
-      if (widget.isEditingExistingRoute && widget.routeId != null) {
-        await ref.read(routesControllerProvider.notifier).updateRoute(
-          routeId: widget.routeId!,
-          name: name,
-          points: points,
-        );
-      } else {
-        await ref.read(routesControllerProvider.notifier).addRoute(
-          name: name,
-          points: points,
-        );
-      }
+      await widget.onSaveRoute(name);
       if (!mounted) return;
-      widget.onSavedComplete();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+        widget.onSavedComplete();
+      });
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -409,11 +400,10 @@ class _AddRoutePanelContentState extends ConsumerState<AddRoutePanelContent> {
   }
 
   Future<void> _showNameDialogAndSave() async {
-    final TextEditingController dialogController = TextEditingController(
-      text: _nameController.text.trim().isEmpty
-          ? _defaultRouteName
-          : _nameController.text.trim(),
-    );
+    final String initialName = _nameController.text.trim().isEmpty
+        ? _defaultRouteName
+        : _nameController.text.trim();
+    String pendingName = initialName;
 
     final String? name = await showDialog<String>(
       context: context,
@@ -425,15 +415,27 @@ class _AddRoutePanelContentState extends ConsumerState<AddRoutePanelContent> {
             side: BorderSide(color: AppPalette.border(widget.isDarkMode)),
           ),
           title: Text(
-            widget.isEditingExistingRoute ? 'Editar nombre de ruta' : 'Nombre de ruta',
+            widget.isEditingExistingRoute
+                ? 'Editar nombre de ruta'
+                : 'Nombre de ruta',
             style: TextStyle(
               color: AppPalette.dialogTitle(widget.isDarkMode),
               fontWeight: FontWeight.w700,
             ),
           ),
-          content: TextField(
-            controller: dialogController,
+          content: TextFormField(
+            initialValue: initialName,
             autofocus: true,
+            textInputAction: TextInputAction.done,
+            onChanged: (String value) {
+              pendingName = value;
+            },
+            onFieldSubmitted: (_) {
+              final String resolved = pendingName.trim().isEmpty
+                  ? _defaultRouteName
+                  : pendingName.trim();
+              Navigator.of(dialogContext).pop(resolved);
+            },
             style: TextStyle(color: AppPalette.textPrimary(widget.isDarkMode)),
             decoration: InputDecoration(
               hintText: _defaultRouteName,
@@ -467,9 +469,9 @@ class _AddRoutePanelContentState extends ConsumerState<AddRoutePanelContent> {
             ),
             TextButton(
               onPressed: () {
-                final String resolved = dialogController.text.trim().isEmpty
+                final String resolved = pendingName.trim().isEmpty
                     ? _defaultRouteName
-                    : dialogController.text.trim();
+                    : pendingName.trim();
                 Navigator.of(dialogContext).pop(resolved);
               },
               child: const Text(
@@ -484,8 +486,6 @@ class _AddRoutePanelContentState extends ConsumerState<AddRoutePanelContent> {
         );
       },
     );
-
-    dialogController.dispose();
 
     if (name == null || !mounted) {
       return;
@@ -506,21 +506,24 @@ class _AddRoutePanelContentState extends ConsumerState<AddRoutePanelContent> {
         // Section header
         Row(
           children: [
-            const Icon(Icons.location_on,
-                size: 15, color: AppPalette.primaryBlue),
+            const Icon(
+              Icons.location_on,
+              size: 15,
+              color: AppPalette.primaryBlue,
+            ),
             const SizedBox(width: 6),
             Text(
               'Puntos de la ruta',
               style: TextStyle(
-                  color: textColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700),
+                color: textColor,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             if (widget.points.isNotEmpty) ...[
               const SizedBox(width: 6),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
                   color: AppPalette.primaryBlue,
                   borderRadius: BorderRadius.circular(8),
@@ -528,9 +531,10 @@ class _AddRoutePanelContentState extends ConsumerState<AddRoutePanelContent> {
                 child: Text(
                   '${widget.points.length}',
                   style: const TextStyle(
-                      color: AppPalette.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700),
+                    color: AppPalette.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
@@ -572,9 +576,9 @@ class _AddRoutePanelContentState extends ConsumerState<AddRoutePanelContent> {
 
         const SizedBox(height: 8),
         Divider(
-            height: 1,
-            color: AppPalette.border(widget.isDarkMode)
-                .withValues(alpha: 0.4)),
+          height: 1,
+          color: AppPalette.border(widget.isDarkMode).withValues(alpha: 0.4),
+        ),
         const SizedBox(height: 8),
         if (_saveErrorText != null) ...[
           Text(
@@ -592,28 +596,32 @@ class _AddRoutePanelContentState extends ConsumerState<AddRoutePanelContent> {
         SizedBox(
           height: 48,
           child: ElevatedButton(
-            onPressed:
-                (_isSaving || widget.points.isEmpty) ? null : _showNameDialogAndSave,
+            onPressed: (_isSaving || widget.points.isEmpty)
+                ? null
+                : _showNameDialogAndSave,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppPalette.primaryBlue,
               foregroundColor: AppPalette.white,
               elevation: 0,
-              disabledBackgroundColor:
-                  AppPalette.primaryBlue.withValues(alpha: 0.45),
+              disabledBackgroundColor: AppPalette.primaryBlue.withValues(
+                alpha: 0.45,
+              ),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             child: _isSaving
                 ? const SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppPalette.white),
+                      strokeWidth: 2,
+                      color: AppPalette.white,
+                    ),
                   )
                 : Text(
-                  'Guardar ${widget.isEditingExistingRoute ? 'Cambios' : 'Ruta'}',
-                    style: TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w700),
+                    'Guardar ${widget.isEditingExistingRoute ? 'Cambios' : 'Ruta'}',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                   ),
           ),
         ),
@@ -653,8 +661,7 @@ class _RoutePointTile extends StatelessWidget {
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 4),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(10),
@@ -705,8 +712,11 @@ class _RoutePointTile extends StatelessWidget {
               onTap: onRemove,
               child: Padding(
                 padding: const EdgeInsets.all(4),
-                child: Icon(Icons.close,
-                    size: 14, color: AppPalette.textMutedDark),
+                child: Icon(
+                  Icons.close,
+                  size: 14,
+                  color: AppPalette.textMutedDark,
+                ),
               ),
             ),
           ],
@@ -759,24 +769,21 @@ class _RoutePointsContainer extends StatelessWidget {
               buildDefaultDragHandles: false,
               itemCount: points.length,
               onReorder: onReorderPoints,
-              proxyDecorator: (
-                Widget child,
-                int index,
-                Animation<double> animation,
-              ) {
-                return Material(
-                  color: Colors.transparent,
-                  child: AnimatedBuilder(
-                    animation: animation,
-                    builder: (BuildContext context, Widget? childWidget) {
-                      return Transform.scale(
-                        scale: 1.0 + (animation.value * 0.03),
-                        child: child,
-                      );
-                    },
-                  ),
-                );
-              },
+              proxyDecorator:
+                  (Widget child, int index, Animation<double> animation) {
+                    return Material(
+                      color: Colors.transparent,
+                      child: AnimatedBuilder(
+                        animation: animation,
+                        builder: (BuildContext context, Widget? childWidget) {
+                          return Transform.scale(
+                            scale: 1.0 + (animation.value * 0.03),
+                            child: child,
+                          );
+                        },
+                      ),
+                    );
+                  },
               itemBuilder: (BuildContext context, int index) {
                 return _RoutePointTile(
                   key: ValueKey<String>(
@@ -878,9 +885,7 @@ class _MethodButton extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 68),
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
         decoration: BoxDecoration(
-          color: isActive
-              ? AppPalette.primaryBlue.withValues(alpha: 0.1)
-              : bg,
+          color: isActive ? AppPalette.primaryBlue.withValues(alpha: 0.1) : bg,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isActive
