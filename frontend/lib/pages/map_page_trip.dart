@@ -1,6 +1,4 @@
-// ignore_for_file: invalid_use_of_protected_member
-
-part of 'map_page.dart';
+﻿part of 'map_page.dart';
 
 extension _MapPageTripState on _MapPageState {
   void _refreshTripRoutePreviewForPreferences() {
@@ -29,7 +27,7 @@ extension _MapPageTripState on _MapPageState {
     if (_hasOpenPanels) {
       return;
     }
-    setState(() {
+    _updatePageState(() {
       _isTripStartPanelMinimized = false;
     });
     _pushPanel(_buildStartTripRoute(isDarkMode));
@@ -46,7 +44,7 @@ extension _MapPageTripState on _MapPageState {
   }
 
   void _openAddRoutePanelFromTrip(bool isDarkMode) {
-    setState(() {
+    _updatePageState(() {
       _clearDraftRouteVisuals();
     });
     _pushPanel(
@@ -59,7 +57,7 @@ extension _MapPageTripState on _MapPageState {
         .map((RoutePoint p) => p.toLatLng())
         .toList(growable: false);
 
-    setState(() {
+    _updatePageState(() {
       _selectedTripRoute = route;
       _selectedRouteId = route.id;
       _tripRemainingWaypoints = List<LatLng>.from(selectedRoutePoints);
@@ -95,9 +93,9 @@ extension _MapPageTripState on _MapPageState {
 
   void _startTrip(bool isDarkMode) {
     if (_selectedTripRoute == null || _selectedTripRoute!.points.length < 2) {
-      setState(() {
+      _updatePageState(() {
         _tripStartErrorText =
-            'Selecciona una ruta válida para iniciar el viaje.';
+            'Selecciona una ruta vÃ¡lida para iniciar el viaje.';
       });
       return;
     }
@@ -106,7 +104,7 @@ extension _MapPageTripState on _MapPageState {
         .map((RoutePoint p) => p.toLatLng())
         .toList(growable: false);
 
-    setState(() {
+    _updatePageState(() {
       _tripStartErrorText = null;
       _isTripActive = true;
       _tripArrivalHandled = false;
@@ -147,7 +145,7 @@ extension _MapPageTripState on _MapPageState {
             ),
           ),
           content: Text(
-            '¿Estás seguro de terminar el viaje?',
+            'Â¿EstÃ¡s seguro de terminar el viaje?',
             style: TextStyle(color: AppPalette.dialogBody(isDarkMode)),
           ),
           actions: <Widget>[
@@ -180,7 +178,7 @@ extension _MapPageTripState on _MapPageState {
       return;
     }
 
-    setState(() {
+    _updatePageState(() {
       _isTripActive = false;
       _tripArrivalHandled = false;
       _selectedTripRoute = null;
@@ -206,7 +204,7 @@ extension _MapPageTripState on _MapPageState {
     }
 
     final bool isDarkMode = ref.read(themeModeProvider);
-    setState(() {
+    _updatePageState(() {
       _tripArrivalHandled = true;
       _isTripActive = false;
       _selectedTripRoute = null;
@@ -227,7 +225,7 @@ extension _MapPageTripState on _MapPageState {
   }
 
   void _acknowledgeTripArrival() {
-    setState(() {
+    _updatePageState(() {
       _tripArrivalHandled = false;
       _selectedTripRoute = null;
       _tripRemainingWaypoints = <LatLng>[];
@@ -308,7 +306,7 @@ extension _MapPageTripState on _MapPageState {
       return;
     }
 
-    setState(() {
+    _updatePageState(() {
       _selectedTripRoute = resolvedRoute;
       _selectedRouteId = resolvedRoute!.id;
       _tripRemainingWaypoints = List<LatLng>.from(points);
@@ -328,7 +326,7 @@ extension _MapPageTripState on _MapPageState {
   }
 
   void _returnToTripStartPanel(bool isDarkMode) {
-    setState(() {
+    _updatePageState(() {
       _isTripStartPanelMinimized = false;
       _panelStack.removeWhere(
         (_PanelRoute route) =>
@@ -355,7 +353,7 @@ extension _MapPageTripState on _MapPageState {
         _panelStack.length > 1 &&
         _panelStack[_panelStack.length - 2].isTripRouteSelectionPanel;
 
-    setState(() {
+    _updatePageState(() {
       _clearDraftRouteVisuals();
       _panelStack.removeLast();
     });
@@ -366,19 +364,19 @@ extension _MapPageTripState on _MapPageState {
   }
 
   void _toggleTripStartPanelMinimized() {
-    setState(() {
+    _updatePageState(() {
       _isTripStartPanelMinimized = !_isTripStartPanelMinimized;
     });
   }
 
   void _handleUserLocationChanged(LatLng location) {
     if (_isTripActive) {
-      setState(() {
+      _updatePageState(() {
         _latestUserLocation = location;
         _tripUserFocusRevision += 1;
       });
     } else if (_latestUserLocation == null) {
-      setState(() {
+      _updatePageState(() {
         _latestUserLocation = location;
       });
     } else {
@@ -424,7 +422,7 @@ extension _MapPageTripState on _MapPageState {
     final bool changed = waypointProgress.hasChanges;
 
     if (changed) {
-      setState(() {
+      _updatePageState(() {
         _tripRemainingWaypoints = nextRemaining;
       });
     }
@@ -459,7 +457,7 @@ extension _MapPageTripState on _MapPageState {
       return;
     }
 
-    setState(() {
+    _updatePageState(() {
       final List<LatLng> updated = List<LatLng>.from(_draftRoutePolyline);
       updated[0] = location;
       _draftRoutePolyline = updated;
@@ -544,13 +542,13 @@ extension _MapPageTripState on _MapPageState {
               ? null
               : () => _openEditSelectedTripRoutePanel(isDarkMode),
           onTransportChanged: (_TripTransportMethod method) {
-            setState(() {
+            _updatePageState(() {
               _selectedTripTransport = method;
             });
             _refreshTripRoutePreviewForPreferences();
           },
           onAvoidHazardsChanged: (bool value) {
-            setState(() {
+            _updatePageState(() {
               _shouldAvoidHazardsInRouting = value;
             });
             _refreshTripRoutePreviewForPreferences();
@@ -587,7 +585,7 @@ extension _MapPageTripState on _MapPageState {
               selectedPetIds: _selectedTripPetIds,
               onAddPetPressed: () => _openAddPetPanelFromTrip(isDarkMode),
               onTogglePet: (int petId) {
-                setState(() {
+                _updatePageState(() {
                   if (_selectedTripPetIds.contains(petId)) {
                     _selectedTripPetIds.remove(petId);
                   } else {

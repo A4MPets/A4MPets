@@ -1,5 +1,6 @@
 import 'package:latlong2/latlong.dart';
 
+/// Result returned after trimming reached waypoints from an active trip.
 class WaypointProgressResult {
   const WaypointProgressResult({
     required this.remainingWaypoints,
@@ -16,6 +17,7 @@ class WaypointProgressResult {
 class TripWaypointProgressor {
   const TripWaypointProgressor._();
 
+  /// Removes any leading waypoints already reached by the current location.
   static WaypointProgressResult consumeReachedWaypoints({
     required LatLng currentLocation,
     required List<LatLng> currentWaypoints,
@@ -74,6 +76,7 @@ class TripRerouteController {
 
   bool get isInFlight => _inFlight;
 
+  /// Clears active and queued reroute state for a fresh trip session.
   void reset() {
     _lastRerouteLocation = null;
     _lastRerouteAt = null;
@@ -82,6 +85,7 @@ class TripRerouteController {
     _queuedWaypoints = null;
   }
 
+  /// Decides whether a reroute should run immediately or can be deferred.
   bool shouldTrigger({required LatLng location, required bool force}) {
     if (force || _lastRerouteLocation == null || _lastRerouteAt == null) {
       return true;
@@ -96,17 +100,20 @@ class TripRerouteController {
     return movedMeters >= _minDistanceMeters || elapsed >= _minInterval;
   }
 
+  /// Stores the latest reroute request while another reroute is in flight.
   void queue({required LatLng location, required List<LatLng> waypoints}) {
     _queuedLocation = location;
     _queuedWaypoints = List<LatLng>.from(waypoints);
   }
 
+  /// Marks a reroute as started and updates the last reroute checkpoint.
   void markStarted(LatLng location) {
     _inFlight = true;
     _lastRerouteLocation = location;
     _lastRerouteAt = DateTime.now();
   }
 
+  /// Finishes the current reroute and returns any queued reroute request.
   QueuedTripReroute? completeAndTakeQueued() {
     _inFlight = false;
 

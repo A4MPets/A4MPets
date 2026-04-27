@@ -60,12 +60,11 @@ class _ProfileMenuPanelState extends ConsumerState<ProfileMenuPanel> {
         _actionErrorText = 'No se pudo actualizar la foto de perfil.';
       });
     } finally {
-      if (!mounted) {
-        return;
+      if (mounted) {
+        setState(() {
+          _isPickingAvatar = false;
+        });
       }
-      setState(() {
-        _isPickingAvatar = false;
-      });
     }
   }
 

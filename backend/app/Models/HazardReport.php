@@ -3,9 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class HazardReport extends Model
 {
@@ -225,7 +224,7 @@ class HazardReport extends Model
         $lonDelta = $radiusKm / (111.0 * cos(deg2rad($latitude)));
 
         return $query->whereBetween('incident_latitude', [$latitude - $latDelta, $latitude + $latDelta])
-                     ->whereBetween('incident_longitude', [$longitude - $lonDelta, $longitude + $lonDelta]);
+            ->whereBetween('incident_longitude', [$longitude - $lonDelta, $longitude + $lonDelta]);
     }
 
     /**

@@ -2,17 +2,18 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/hazard_report_record.dart';
-import '../models/lost_pet_report_record.dart';
 import '../models/found_pet_report_record.dart';
 import '../models/generic_report_record.dart';
+import '../models/hazard_report_record.dart';
 import '../models/local_user_profile.dart';
+import '../models/lost_pet_report_record.dart';
 import '../models/pet_record.dart';
 import '../models/route_record.dart';
 import '../repositories/user_local_repository.dart';
 import '../services/local_database_manager.dart';
 import '../services/local_media_storage_service.dart';
 import '../services/user_data_sync_coordinator.dart';
+import 'async_list_controller.dart';
 
 final localDatabaseManagerProvider = Provider<LocalDatabaseManager>((ref) {
   return LocalDatabaseManager();
@@ -49,25 +50,21 @@ final localUserProfileProvider = FutureProvider<LocalUserProfile>((ref) async {
   return repository.getUserProfile();
 });
 
+/// Exposes CRUD helpers for locally stored pets.
 final petsControllerProvider =
     AsyncNotifierProvider<PetsController, List<PetRecord>>(PetsController.new);
 
-class PetsController extends AsyncNotifier<List<PetRecord>> {
+class PetsController extends AsyncListController<PetRecord> {
   UserLocalRepository get _repository => ref.read(userLocalRepositoryProvider);
 
   @override
-  Future<List<PetRecord>> build() {
+  Future<List<PetRecord>> loadItems() {
     return _repository.getPets();
   }
 
   Future<int> getNextDefaultPetNumber() async {
     final int count = await _repository.getPetsCount();
     return count + 1;
-  }
-
-  Future<void> reload() async {
-    state = const AsyncLoading<List<PetRecord>>().copyWithPrevious(state);
-    state = await AsyncValue.guard(_repository.getPets);
   }
 
   Future<void> addPet({required String name, String? photoPath}) async {
@@ -90,27 +87,23 @@ class PetsController extends AsyncNotifier<List<PetRecord>> {
   }
 }
 
+/// Exposes CRUD helpers for locally stored travel routes.
 final routesControllerProvider =
     AsyncNotifierProvider<RoutesController, List<RouteRecord>>(
       RoutesController.new,
     );
 
-class RoutesController extends AsyncNotifier<List<RouteRecord>> {
+class RoutesController extends AsyncListController<RouteRecord> {
   UserLocalRepository get _repository => ref.read(userLocalRepositoryProvider);
 
   @override
-  Future<List<RouteRecord>> build() {
+  Future<List<RouteRecord>> loadItems() {
     return _repository.getRoutes();
   }
 
   Future<int> getNextDefaultRouteNumber() async {
     final int count = await _repository.getRoutesCount();
     return count + 1;
-  }
-
-  Future<void> reload() async {
-    state = const AsyncLoading<List<RouteRecord>>().copyWithPrevious(state);
-    state = await AsyncValue.guard(_repository.getRoutes);
   }
 
   Future<void> addRoute({
@@ -136,52 +129,26 @@ class RoutesController extends AsyncNotifier<List<RouteRecord>> {
   }
 }
 
+/// Manages hazard lists with periodic refresh and background sync.
 final hazardReportsControllerProvider =
     AsyncNotifierProvider<HazardReportsController, List<HazardReportRecord>>(
       HazardReportsController.new,
     );
 
-class HazardReportsController extends AsyncNotifier<List<HazardReportRecord>> {
+class HazardReportsController extends AsyncListController<HazardReportRecord> {
   UserLocalRepository get _repository => ref.read(userLocalRepositoryProvider);
-  Timer? _refreshTimer;
-  bool _isDisposed = false;
 
-  void _ensureAutoRefresh() {
-    _refreshTimer ??= Timer.periodic(const Duration(seconds: 3), (_) async {
-      if (_isDisposed) {
-        return;
-      }
+  @override
+  Duration get refreshInterval => const Duration(seconds: 3);
 
-      try {
-        final List<HazardReportRecord> latest = await _repository
-            .getHazardReports();
-        state = AsyncData<List<HazardReportRecord>>(latest);
-      } catch (_) {
-        // Evitar ruido en UI: el siguiente tick volverá a intentar.
-      }
-    });
-
-    ref.onDispose(() {
-      _isDisposed = true;
-      _refreshTimer?.cancel();
-      _refreshTimer = null;
-    });
+  @override
+  Future<void> runInitialSync() async {
+    unawaited(_repository.syncHazardsNow());
   }
 
   @override
-  Future<List<HazardReportRecord>> build() async {
-    _ensureAutoRefresh();
-
-    // Disparar sincronización en segundo plano sin bloquear la carga local.
-    unawaited(_repository.syncHazardsNow());
+  Future<List<HazardReportRecord>> loadItems() {
     return _repository.getHazardReports();
-  }
-
-  Future<void> reload() async {
-    state = const AsyncLoading<List<HazardReportRecord>>().copyWithPrevious(
-      state,
-    );
-    state = await AsyncValue.guard(_repository.getHazardReports);
   }
 
   Future<void> addHazardReport({
@@ -208,10 +175,11 @@ class HazardReportsController extends AsyncNotifier<List<HazardReportRecord>> {
       evidencePhotoUrl: evidencePhotoUrl,
       reportedByUsername: reportedByUsername,
     );
+
     try {
       await reload();
     } catch (_) {
-      // El guardado local ya ocurrió; no bloquear UX por refresco/sync.
+      // The local save already succeeded; avoid blocking the UI on refresh.
     }
   }
 
@@ -229,49 +197,27 @@ class HazardReportsController extends AsyncNotifier<List<HazardReportRecord>> {
   }
 }
 
+/// Manages lost-pet reports with periodic refresh and background sync.
 final lostPetReportsControllerProvider =
     AsyncNotifierProvider<LostPetReportsController, List<LostPetReportRecord>>(
       LostPetReportsController.new,
     );
 
 class LostPetReportsController
-    extends AsyncNotifier<List<LostPetReportRecord>> {
+    extends AsyncListController<LostPetReportRecord> {
   UserLocalRepository get _repository => ref.read(userLocalRepositoryProvider);
-  Timer? _refreshTimer;
-  bool _isDisposed = false;
 
-  void _ensureAutoRefresh() {
-    _refreshTimer ??= Timer.periodic(const Duration(seconds: 3), (_) async {
-      if (_isDisposed) {
-        return;
-      }
+  @override
+  Duration get refreshInterval => const Duration(seconds: 3);
 
-      try {
-        final List<LostPetReportRecord> latest = await _repository
-            .getLostPetReports();
-        state = AsyncData<List<LostPetReportRecord>>(latest);
-      } catch (_) {}
-    });
-
-    ref.onDispose(() {
-      _isDisposed = true;
-      _refreshTimer?.cancel();
-      _refreshTimer = null;
-    });
+  @override
+  Future<void> runInitialSync() async {
+    unawaited(_repository.syncLostPetReportsNow());
   }
 
   @override
-  Future<List<LostPetReportRecord>> build() async {
-    _ensureAutoRefresh();
-    unawaited(_repository.syncLostPetReportsNow());
+  Future<List<LostPetReportRecord>> loadItems() {
     return _repository.getLostPetReports();
-  }
-
-  Future<void> reload() async {
-    state = const AsyncLoading<List<LostPetReportRecord>>().copyWithPrevious(
-      state,
-    );
-    state = await AsyncValue.guard(_repository.getLostPetReports);
   }
 
   Future<void> addLostPetReport({
@@ -292,6 +238,7 @@ class LostPetReportsController
       photoUrl: photoUrl,
       phone: phone,
     );
+
     try {
       await reload();
     } catch (_) {}
@@ -303,6 +250,7 @@ class LostPetReportsController
   }
 }
 
+/// Manages found-pet reports with periodic refresh and background sync.
 final foundPetReportsControllerProvider =
     AsyncNotifierProvider<
       FoundPetReportsController,
@@ -310,43 +258,20 @@ final foundPetReportsControllerProvider =
     >(FoundPetReportsController.new);
 
 class FoundPetReportsController
-    extends AsyncNotifier<List<FoundPetReportRecord>> {
+    extends AsyncListController<FoundPetReportRecord> {
   UserLocalRepository get _repository => ref.read(userLocalRepositoryProvider);
-  Timer? _refreshTimer;
-  bool _isDisposed = false;
 
-  void _ensureAutoRefresh() {
-    _refreshTimer ??= Timer.periodic(const Duration(seconds: 3), (_) async {
-      if (_isDisposed) {
-        return;
-      }
+  @override
+  Duration get refreshInterval => const Duration(seconds: 3);
 
-      try {
-        final List<FoundPetReportRecord> latest = await _repository
-            .getFoundPetReports();
-        state = AsyncData<List<FoundPetReportRecord>>(latest);
-      } catch (_) {}
-    });
-
-    ref.onDispose(() {
-      _isDisposed = true;
-      _refreshTimer?.cancel();
-      _refreshTimer = null;
-    });
+  @override
+  Future<void> runInitialSync() async {
+    unawaited(_repository.syncFoundPetReportsNow());
   }
 
   @override
-  Future<List<FoundPetReportRecord>> build() async {
-    _ensureAutoRefresh();
-    unawaited(_repository.syncFoundPetReportsNow());
+  Future<List<FoundPetReportRecord>> loadItems() {
     return _repository.getFoundPetReports();
-  }
-
-  Future<void> reload() async {
-    state = const AsyncLoading<List<FoundPetReportRecord>>().copyWithPrevious(
-      state,
-    );
-    state = await AsyncValue.guard(_repository.getFoundPetReports);
   }
 
   Future<void> addFoundPetReport({
@@ -365,6 +290,7 @@ class FoundPetReportsController
       photoUrl: photoUrl,
       phone: phone,
     );
+
     try {
       await reload();
     } catch (_) {}
@@ -376,49 +302,27 @@ class FoundPetReportsController
   }
 }
 
+/// Manages generic reports with periodic refresh and background sync.
 final genericReportsControllerProvider =
     AsyncNotifierProvider<GenericReportsController, List<GenericReportRecord>>(
       GenericReportsController.new,
     );
 
 class GenericReportsController
-    extends AsyncNotifier<List<GenericReportRecord>> {
+    extends AsyncListController<GenericReportRecord> {
   UserLocalRepository get _repository => ref.read(userLocalRepositoryProvider);
-  Timer? _refreshTimer;
-  bool _isDisposed = false;
 
-  void _ensureAutoRefresh() {
-    _refreshTimer ??= Timer.periodic(const Duration(seconds: 3), (_) async {
-      if (_isDisposed) {
-        return;
-      }
+  @override
+  Duration get refreshInterval => const Duration(seconds: 3);
 
-      try {
-        final List<GenericReportRecord> latest = await _repository
-            .getGenericReports();
-        state = AsyncData<List<GenericReportRecord>>(latest);
-      } catch (_) {}
-    });
-
-    ref.onDispose(() {
-      _isDisposed = true;
-      _refreshTimer?.cancel();
-      _refreshTimer = null;
-    });
+  @override
+  Future<void> runInitialSync() async {
+    unawaited(_repository.syncGenericReportsNow());
   }
 
   @override
-  Future<List<GenericReportRecord>> build() async {
-    _ensureAutoRefresh();
-    unawaited(_repository.syncGenericReportsNow());
+  Future<List<GenericReportRecord>> loadItems() {
     return _repository.getGenericReports();
-  }
-
-  Future<void> reload() async {
-    state = const AsyncLoading<List<GenericReportRecord>>().copyWithPrevious(
-      state,
-    );
-    state = await AsyncValue.guard(_repository.getGenericReports);
   }
 
   Future<void> addGenericReport({
@@ -437,6 +341,7 @@ class GenericReportsController
       riskLevelCode: riskLevelCode,
       photoUrl: photoUrl,
     );
+
     try {
       await reload();
     } catch (_) {}

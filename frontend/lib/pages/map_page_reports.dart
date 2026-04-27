@@ -1,6 +1,4 @@
-// ignore_for_file: invalid_use_of_protected_member
-
-part of 'map_page.dart';
+﻿part of 'map_page.dart';
 
 extension _MapPageReportsState on _MapPageState {
   List<LostPetReportRecord> get _visibleLostPetReports {
@@ -53,7 +51,7 @@ extension _MapPageReportsState on _MapPageState {
   }
 
   void _openLostPetReportPanel(bool isDarkMode) {
-    setState(() {
+    _updatePageState(() {
       _manualLostPetLocation = null;
       _activeReportSelectionContext = null;
     });
@@ -61,7 +59,7 @@ extension _MapPageReportsState on _MapPageState {
   }
 
   void _openFoundPetReportPanel(bool isDarkMode) {
-    setState(() {
+    _updatePageState(() {
       _manualFoundPetLocation = null;
       _activeReportSelectionContext = null;
     });
@@ -69,7 +67,7 @@ extension _MapPageReportsState on _MapPageState {
   }
 
   void _openGenericReportPanel(bool isDarkMode) {
-    setState(() {
+    _updatePageState(() {
       _manualGenericReportLocation = null;
       _activeReportSelectionContext = null;
     });
@@ -85,25 +83,25 @@ extension _MapPageReportsState on _MapPageState {
   }
 
   void _startLostPetMapSelection() {
-    setState(() {
+    _updatePageState(() {
       _activeReportSelectionContext = _ReportMapSelectionContext.lostPet;
     });
   }
 
   void _startFoundPetMapSelection() {
-    setState(() {
+    _updatePageState(() {
       _activeReportSelectionContext = _ReportMapSelectionContext.foundPet;
     });
   }
 
   void _startGenericReportMapSelection() {
-    setState(() {
+    _updatePageState(() {
       _activeReportSelectionContext = _ReportMapSelectionContext.generic;
     });
   }
 
   void _useCurrentLostPetLocation() {
-    setState(() {
+    _updatePageState(() {
       _manualLostPetLocation = null;
       _activeReportSelectionContext = null;
       if (_latestUserLocation == null || _userLocationErrorText != null) {
@@ -115,7 +113,7 @@ extension _MapPageReportsState on _MapPageState {
   }
 
   void _useCurrentFoundPetLocation() {
-    setState(() {
+    _updatePageState(() {
       _manualFoundPetLocation = null;
       _activeReportSelectionContext = null;
       if (_latestUserLocation == null || _userLocationErrorText != null) {
@@ -127,7 +125,7 @@ extension _MapPageReportsState on _MapPageState {
   }
 
   void _useCurrentGenericReportLocation() {
-    setState(() {
+    _updatePageState(() {
       _manualGenericReportLocation = null;
       _activeReportSelectionContext = null;
       if (_latestUserLocation == null || _userLocationErrorText != null) {

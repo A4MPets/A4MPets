@@ -13,6 +13,8 @@ import '../models/lost_pet_report_record.dart';
 import '../models/colored_route_segment.dart';
 import '../theme/app_palette.dart';
 
+/// Interactive map shell that renders user location, routes, hazards, and
+/// report overlays while delegating workflow decisions to parent callbacks.
 class MapWidget extends StatefulWidget {
   final bool isDarkMode;
   final LatLng center;
@@ -561,18 +563,14 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
     }
   }
 
-  // Report Danger - Ready to add functionality
   void _onReportarPeligro() {
     widget.onReportDangerTap?.call();
   }
 
-  // Start Trip - Ready to add functionality
   void _onIniciarViaje() {
-    // TODO: Implement logic to start trip
     widget.onStartTrip?.call();
   }
 
-  // Profile - Ready to add functionality
   void _onProfileTap() {
     widget.onProfileTap?.call();
   }

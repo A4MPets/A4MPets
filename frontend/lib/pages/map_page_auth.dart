@@ -1,6 +1,4 @@
-// ignore_for_file: invalid_use_of_protected_member
-
-part of 'map_page.dart';
+﻿part of 'map_page.dart';
 
 void _invalidateUserScopedData(WidgetRef ref) {
   ref.invalidate(localUserProfileProvider);
@@ -39,7 +37,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
 
   Future<void> _handleLogin(String login, String password) async {
     if (mounted) {
-      setState(() {
+      _updatePageState(() {
         _isAuthRequestLoading = true;
       });
     }
@@ -56,12 +54,12 @@ extension _MapPageAuthAndProfileState on _MapPageState {
         return;
       }
 
-      setState(() {
+      _updatePageState(() {
         _panelStack.clear();
       });
     } finally {
       if (mounted) {
-        setState(() {
+        _updatePageState(() {
           _isAuthRequestLoading = false;
         });
       }
@@ -75,7 +73,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
     String passwordConfirmation,
   ) async {
     if (mounted) {
-      setState(() {
+      _updatePageState(() {
         _isAuthRequestLoading = true;
       });
     }
@@ -96,12 +94,12 @@ extension _MapPageAuthAndProfileState on _MapPageState {
         return;
       }
 
-      setState(() {
+      _updatePageState(() {
         _panelStack.clear();
       });
     } finally {
       if (mounted) {
-        setState(() {
+        _updatePageState(() {
           _isAuthRequestLoading = false;
         });
       }
@@ -110,7 +108,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
 
   Future<String?> _handleLogout() async {
     if (mounted) {
-      setState(() {
+      _updatePageState(() {
         _isAuthRequestLoading = true;
       });
     }
@@ -125,7 +123,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
         return null;
       }
 
-      setState(() {
+      _updatePageState(() {
         _panelStack.clear();
         _clearDraftRouteVisuals();
         _clearTripSetupState();
@@ -133,10 +131,10 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       });
       return null;
     } catch (error) {
-      return 'No se pudo cerrar sesión: $error';
+      return 'No se pudo cerrar sesiÃ³n: $error';
     } finally {
       if (mounted) {
-        setState(() {
+        _updatePageState(() {
           _isAuthRequestLoading = false;
         });
       }
@@ -189,7 +187,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
   _PanelRoute _buildLoginRoute(bool isDarkMode) {
     return _PanelRoute(
       transitionKey: ++_panelTransitionSeed,
-      title: 'Iniciar Sesión',
+      title: 'Iniciar SesiÃ³n',
       anchor: PanelAnchor.topLeft,
       width: 360,
       height: 430,

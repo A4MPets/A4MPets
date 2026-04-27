@@ -16,7 +16,7 @@ class HazardEstimatedDuration extends Model
     {
         static $cache = [];
 
-        if (!array_key_exists($code, $cache)) {
+        if (! array_key_exists($code, $cache)) {
             $cache[$code] = self::query()->where('code', $code)->value('id');
         }
 

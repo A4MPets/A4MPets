@@ -125,6 +125,14 @@ class _MapPageState extends ConsumerState<MapPage> {
 
   bool get _hasOpenPanels => _panelStack.isNotEmpty;
 
+  void _updatePageState(VoidCallback mutation) {
+    if (!mounted) {
+      return;
+    }
+
+    setState(mutation);
+  }
+
   bool get _isTripNavigationContext {
     if (_selectedTripRoute == null) {
       return false;

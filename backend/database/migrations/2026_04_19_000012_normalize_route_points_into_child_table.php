@@ -91,19 +91,19 @@ return new class extends Migration
     private function decodePoints(string $json): array
     {
         $decoded = json_decode($json, true);
-        if (!is_array($decoded)) {
+        if (! is_array($decoded)) {
             return [];
         }
 
         $points = [];
         foreach ($decoded as $item) {
-            if (!is_array($item)) {
+            if (! is_array($item)) {
                 continue;
             }
 
             $lat = $item['lat'] ?? $item['latitude'] ?? null;
             $lng = $item['lng'] ?? $item['longitude'] ?? null;
-            if (!is_numeric($lat) || !is_numeric($lng)) {
+            if (! is_numeric($lat) || ! is_numeric($lng)) {
                 continue;
             }
 

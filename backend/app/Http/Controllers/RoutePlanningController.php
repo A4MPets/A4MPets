@@ -12,8 +12,7 @@ class RoutePlanningController extends Controller
 {
     public function __construct(
         private readonly GraphHopperRoutingService $routingService
-    ) {
-    }
+    ) {}
 
     public function plan(Request $request): JsonResponse
     {
@@ -49,7 +48,7 @@ class RoutePlanningController extends Controller
                 'meta' => [
                     'travel_mode' => $travelMode,
                     // Recibimos configuración completa de viaje para compatibilidad futura.
-                    'trip_config' => $validated['trip_config'] ?? new \stdClass(),
+                    'trip_config' => $validated['trip_config'] ?? new \stdClass,
                 ],
             ]);
         } catch (Throwable $e) {

@@ -211,7 +211,8 @@ class _HazardPhotoPreview extends StatelessWidget {
                 source: photoSource,
                 fit: BoxFit.cover,
                 fallback: const _NoPhotoPlaceholder(),
-                errorBuilder: (_, __, ___) => const _NoPhotoPlaceholder(),
+                errorBuilder: (context, error, stackTrace) =>
+                    const _NoPhotoPlaceholder(),
               )
             : const _NoPhotoPlaceholder(),
       ),

@@ -106,13 +106,13 @@ class TravelRoute extends Model
 
         $normalizedPoints = [];
         foreach ($rawPoints as $point) {
-            if (!is_array($point)) {
+            if (! is_array($point)) {
                 continue;
             }
 
             $lat = $point['lat'] ?? $point['latitude'] ?? null;
             $lng = $point['lng'] ?? $point['longitude'] ?? null;
-            if (!is_numeric($lat) || !is_numeric($lng)) {
+            if (! is_numeric($lat) || ! is_numeric($lng)) {
                 continue;
             }
 

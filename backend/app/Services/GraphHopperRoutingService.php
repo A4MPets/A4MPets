@@ -33,13 +33,13 @@ class GraphHopperRoutingService
                 $query[] = 'ch.disable=true';
             }
             if ($apiKey !== '') {
-                $query[] = 'key=' . urlencode($apiKey);
+                $query[] = 'key='.urlencode($apiKey);
             }
 
             foreach ($baseUrls as $baseUrl) {
-                $requestUrl = $baseUrl . '/route';
-                if (!empty($query)) {
-                    $requestUrl .= '?' . implode('&', $query);
+                $requestUrl = $baseUrl.'/route';
+                if (! empty($query)) {
+                    $requestUrl .= '?'.implode('&', $query);
                 }
 
                 try {
@@ -47,23 +47,25 @@ class GraphHopperRoutingService
                         ->acceptJson()
                         ->post($requestUrl, $payload);
                 } catch (Throwable $e) {
-                    $attempts[] = $profile . '@' . $baseUrl . ': ' . $e->getMessage();
+                    $attempts[] = $profile.'@'.$baseUrl.': '.$e->getMessage();
                     Log::warning('GraphHopper connection attempt failed', [
                         'url' => $requestUrl,
                         'profile' => $profile,
                         'message' => $e->getMessage(),
                     ]);
+
                     continue;
                 }
 
-                if (!$response->successful()) {
-                    $attempts[] = $profile . '@' . $baseUrl . ': HTTP ' . $response->status();
+                if (! $response->successful()) {
+                    $attempts[] = $profile.'@'.$baseUrl.': HTTP '.$response->status();
                     Log::warning('GraphHopper request failed', [
                         'url' => $requestUrl,
                         'profile' => $profile,
                         'status' => $response->status(),
                         'body' => $response->body(),
                     ]);
+
                     continue;
                 }
 
@@ -71,13 +73,15 @@ class GraphHopperRoutingService
                 $firstPath = $body['paths'][0] ?? null;
 
                 if ($firstPath === null) {
-                    $attempts[] = $profile . '@' . $baseUrl . ': sin paths';
+                    $attempts[] = $profile.'@'.$baseUrl.': sin paths';
+
                     continue;
                 }
 
                 $coordinates = $firstPath['points']['coordinates'] ?? [];
-                if (!is_array($coordinates) || count($coordinates) === 0) {
-                    $attempts[] = $profile . '@' . $baseUrl . ': geometria vacia';
+                if (! is_array($coordinates) || count($coordinates) === 0) {
+                    $attempts[] = $profile.'@'.$baseUrl.': geometria vacia';
+
                     continue;
                 }
 
@@ -92,7 +96,7 @@ class GraphHopperRoutingService
         }
 
         throw new RuntimeException(
-            'No se pudo calcular la ruta con GraphHopper. Intentos: ' . implode(' | ', $attempts)
+            'No se pudo calcular la ruta con GraphHopper. Intentos: '.implode(' | ', $attempts)
         );
     }
 
@@ -112,7 +116,7 @@ class GraphHopperRoutingService
             }
 
             $clean = rtrim($url, '/');
-            if (!in_array($clean, $normalized, true)) {
+            if (! in_array($clean, $normalized, true)) {
                 $normalized[] = $clean;
             }
         }
@@ -133,7 +137,7 @@ class GraphHopperRoutingService
             'calc_points' => true,
         ];
 
-        if (!$avoidHazards) {
+        if (! $avoidHazards) {
             return [
                 'payload' => $payload,
                 'hazards_considered' => 0,
@@ -168,7 +172,7 @@ class GraphHopperRoutingService
 
         foreach ($hazards as $hazard) {
             $index++;
-            $areaName = 'hz_' . $index;
+            $areaName = 'hz_'.$index;
 
             $polygon = $this->buildCirclePolygon(
                 (float) $hazard->incident_latitude,
@@ -187,7 +191,7 @@ class GraphHopperRoutingService
             ];
 
             $priorityRules[] = [
-                'if' => 'in_' . $areaName,
+                'if' => 'in_'.$areaName,
                 'multiply_by' => '0.01',
             ];
         }

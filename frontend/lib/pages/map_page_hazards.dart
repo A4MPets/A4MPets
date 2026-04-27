@@ -1,6 +1,4 @@
-// ignore_for_file: invalid_use_of_protected_member
-
-part of 'map_page.dart';
+﻿part of 'map_page.dart';
 
 extension _MapPageHazardsState on _MapPageState {
   double _hazardFocusZoomFor(HazardReportRecord hazard) {
@@ -33,7 +31,7 @@ extension _MapPageHazardsState on _MapPageState {
         !_panelStack.last.isReportSelectorPanel) {
       return;
     }
-    setState(() {
+    _updatePageState(() {
       _isSelectingHazardLocationOnMap = false;
       _activeReportSelectionContext = null;
       _manualHazardLocation = null;
@@ -74,7 +72,7 @@ extension _MapPageHazardsState on _MapPageState {
         return;
       }
 
-      setState(() {
+      _updatePageState(() {
         if (currentPanel.isAddRoutePanel) {
           _clearDraftRouteVisuals();
         }
@@ -91,7 +89,7 @@ extension _MapPageHazardsState on _MapPageState {
       });
     }
 
-    setState(() {
+    _updatePageState(() {
       _selectedHazard = hazard;
       _hazardFocusRevision += 1;
     });
@@ -114,7 +112,7 @@ extension _MapPageHazardsState on _MapPageState {
   }
 
   void _startHazardMapSelection() {
-    setState(() {
+    _updatePageState(() {
       _isSelectingHazardLocationOnMap = true;
       _activeReportSelectionContext = _ReportMapSelectionContext.hazard;
       _isReportHazardPanelMinimized = true;
@@ -122,13 +120,13 @@ extension _MapPageHazardsState on _MapPageState {
   }
 
   void _toggleReportHazardPanelMinimized() {
-    setState(() {
+    _updatePageState(() {
       _isReportHazardPanelMinimized = !_isReportHazardPanelMinimized;
     });
   }
 
   void _useCurrentHazardLocation() {
-    setState(() {
+    _updatePageState(() {
       _isSelectingHazardLocationOnMap = false;
       _activeReportSelectionContext = null;
       _manualHazardLocation = null;
@@ -147,7 +145,7 @@ extension _MapPageHazardsState on _MapPageState {
       return;
     }
 
-    setState(() {
+    _updatePageState(() {
       _isUserLocationLoading = isLoading;
       _userLocationErrorText = errorText;
     });
@@ -161,7 +159,7 @@ extension _MapPageHazardsState on _MapPageState {
       return;
     }
 
-    setState(() {
+    _updatePageState(() {
       _hazardDraftPreview = HazardDraftPreview(
         location: currentPreview?.location,
         impactRadiusMeters: preview.impactRadiusMeters,
@@ -211,7 +209,7 @@ extension _MapPageHazardsState on _MapPageState {
   _PanelRoute _buildHazardLayersSettingsRoute() {
     return _PanelRoute(
       transitionKey: ++_panelTransitionSeed,
-      title: 'Configuración de mapa',
+      title: 'ConfiguraciÃ³n de mapa',
       anchor: PanelAnchor.topRight,
       width: 360,
       height: 360,
@@ -237,35 +235,35 @@ extension _MapPageHazardsState on _MapPageState {
               showFoundPetReports: _showFoundPetReports,
               showGenericReports: _showGenericReports,
               onToggleDarkMode: (bool value) {
-                ref.read(themeModeProvider.notifier).state = value;
+                ref.read(themeModeProvider.notifier).setThemeMode(value);
               },
               onToggleLowRisk: (bool value) {
-                setState(() {
+                _updatePageState(() {
                   _showLowRiskHazardCircles = value;
                 });
               },
               onToggleMediumRisk: (bool value) {
-                setState(() {
+                _updatePageState(() {
                   _showMediumRiskHazardCircles = value;
                 });
               },
               onToggleHighRisk: (bool value) {
-                setState(() {
+                _updatePageState(() {
                   _showHighRiskHazardCircles = value;
                 });
               },
               onToggleLostPetReports: (bool value) {
-                setState(() {
+                _updatePageState(() {
                   _showLostPetReports = value;
                 });
               },
               onToggleFoundPetReports: (bool value) {
-                setState(() {
+                _updatePageState(() {
                   _showFoundPetReports = value;
                 });
               },
               onToggleGenericReports: (bool value) {
-                setState(() {
+                _updatePageState(() {
                   _showGenericReports = value;
                 });
               },

@@ -1,16 +1,14 @@
-// ignore_for_file: invalid_use_of_protected_member
-
-part of 'map_page.dart';
+﻿part of 'map_page.dart';
 
 extension _MapPagePanelsState on _MapPageState {
   void _pushPanel(_PanelRoute route) {
-    setState(() {
+    _updatePageState(() {
       _panelStack.add(route);
     });
   }
 
   void _replaceTopPanel(_PanelRoute route) {
-    setState(() {
+    _updatePageState(() {
       if (_panelStack.isNotEmpty) {
         _panelStack.removeLast();
       }
@@ -30,7 +28,7 @@ extension _MapPagePanelsState on _MapPageState {
         _panelStack[_panelStack.length - 2].isTripRouteSelectionPanel;
 
     if (currentPanel.isTripStartPanel) {
-      setState(() {
+      _updatePageState(() {
         _clearTripSetupState();
         _isTripStartPanelMinimized = false;
         _panelStack.removeWhere(
@@ -61,7 +59,7 @@ extension _MapPagePanelsState on _MapPageState {
         return;
       }
 
-      setState(() {
+      _updatePageState(() {
         _clearDraftRouteVisuals();
         _panelStack.removeLast();
       });
@@ -71,7 +69,7 @@ extension _MapPagePanelsState on _MapPageState {
       return;
     }
 
-    setState(() {
+    _updatePageState(() {
       if (currentPanel.isAddRoutePanel) {
         _clearDraftRouteVisuals();
       }

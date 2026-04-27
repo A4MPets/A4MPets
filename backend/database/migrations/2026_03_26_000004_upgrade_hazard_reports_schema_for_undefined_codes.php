@@ -16,26 +16,27 @@ return new class extends Migration
 
         if ($driver === 'sqlite') {
             $this->rebuildSqliteHazardReportsTable();
+
             return;
         }
 
         Schema::table('hazard_reports', function (Blueprint $table) {
-            if (!Schema::hasColumn('hazard_reports', 'category_code')) {
+            if (! Schema::hasColumn('hazard_reports', 'category_code')) {
                 $table->string('category_code')->default('undefined')->after('risk_level_code');
             }
-            if (!Schema::hasColumn('hazard_reports', 'estimated_duration_code')) {
+            if (! Schema::hasColumn('hazard_reports', 'estimated_duration_code')) {
                 $table->string('estimated_duration_code')->default('undefined')->after('category_code');
             }
-            if (!Schema::hasColumn('hazard_reports', 'narrative_description')) {
+            if (! Schema::hasColumn('hazard_reports', 'narrative_description')) {
                 $table->string('narrative_description')->nullable()->after('description');
             }
-            if (!Schema::hasColumn('hazard_reports', 'reported_at')) {
+            if (! Schema::hasColumn('hazard_reports', 'reported_at')) {
                 $table->timestamp('reported_at')->nullable()->after('narrative_description');
             }
-            if (!Schema::hasColumn('hazard_reports', 'evidence_photo_url')) {
+            if (! Schema::hasColumn('hazard_reports', 'evidence_photo_url')) {
                 $table->string('evidence_photo_url')->nullable()->after('reported_at');
             }
-            if (!Schema::hasColumn('hazard_reports', 'reported_by_username')) {
+            if (! Schema::hasColumn('hazard_reports', 'reported_by_username')) {
                 $table->string('reported_by_username')->default('Anónimo')->after('evidence_photo_url');
             }
         });
@@ -51,7 +52,7 @@ return new class extends Migration
             'risk_level_code' => DB::raw("CASE WHEN LOWER(COALESCE(risk_level_code, '')) IN ('low','medium','high','undefined') THEN LOWER(risk_level_code) ELSE 'undefined' END"),
             'category_code' => DB::raw("CASE WHEN LOWER(COALESCE(category_code, '')) IN ('contagious_disease','stagnant_water','waste_accumulation','aggressive_animals','undefined') THEN LOWER(category_code) ELSE 'undefined' END"),
             'estimated_duration_code' => DB::raw("CASE WHEN LOWER(COALESCE(estimated_duration_code, '')) IN ('1_day','3_days','1_week','2_weeks','1_month','3_months','6_months','1_year','undefined') THEN LOWER(estimated_duration_code) ELSE 'undefined' END"),
-            'narrative_description' => DB::raw("COALESCE(narrative_description, description)")
+            'narrative_description' => DB::raw('COALESCE(narrative_description, description)'),
         ]);
     }
 

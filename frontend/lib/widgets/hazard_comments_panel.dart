@@ -122,7 +122,8 @@ class _HazardCommentsPanelContentState
               thumbVisibility: true,
               child: ListView.separated(
                 itemCount: comments.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 10),
                 itemBuilder: (BuildContext context, int index) {
                   return _CommentTile(
                     isDarkMode: widget.isDarkMode,
@@ -148,7 +149,7 @@ class _HazardCommentsPanelContentState
           },
           child: TextField(
             controller: _commentController,
-            onSubmitted: (_) {
+            onSubmitted: (value) {
               if (!_isSending) {
                 _sendComment();
               }
@@ -279,7 +280,8 @@ class _CommentTile extends StatelessWidget {
                 source: comment.authorAvatarUrl,
                 fit: BoxFit.cover,
                 fallback: _defaultAvatar(),
-                errorBuilder: (_, __, ___) => _defaultAvatar(),
+                errorBuilder: (context, error, stackTrace) =>
+                    _defaultAvatar(),
               ),
             ),
           ),
