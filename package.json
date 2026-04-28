@@ -1,11 +1,17 @@
 {
   "private": true,
   "scripts": {
-    "frontend": "cd frontend && flutter run -d chrome --web-hostname localhost --web-port 7357 --dart-define-from-file=env/local.json",
-    "frontend:android": "cd frontend && flutter run --dart-define-from-file=env/local.json",
+    "frontend": "node scripts/run-frontend.js",
+    "frontend:android": "node scripts/run-frontend.js --android",
     "backend": "cd backend && php artisan serve --host=0.0.0.0 --port=8000",
     "graphhopper": "docker compose up -d graphhopper",
-    "dev": "docker compose up -d --build"
+    "cloudflare": "node scripts/run-frontend.js --cloudflare",
+    "cloudflare:android": "node scripts/run-frontend.js --android --cloudflare",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\" \"npm run graphhopper\"",
+    "dev:android": "concurrently \"npm run backend\" \"npm run frontend:android\" \"npm run graphhopper\"",
+    "dev:cloudflare": "concurrently \"npm run backend\" \"npm run cloudflare\" \"npm run graphhopper\"",
+    "dev:cloudflare:android": "concurrently \"npm run backend\" \"npm run cloudflare:android\" \"npm run graphhopper\"",
+    "dev:docker": "docker compose up -d --build"
   },
   "devDependencies": {
     "concurrently": "^9.0.1"

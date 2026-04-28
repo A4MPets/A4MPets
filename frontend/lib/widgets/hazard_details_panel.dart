@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/hazard_report_record.dart';
 import '../theme/app_palette.dart';
+import 'shared/panel_scroll_view.dart';
 import 'shared/local_image_widget.dart';
 
 class HazardDetailsPanelContent extends StatelessWidget {
@@ -28,7 +29,7 @@ class HazardDetailsPanelContent extends StatelessWidget {
               color: Colors.transparent,
               borderRadius: BorderRadius.circular(14),
             ),
-            child: SingleChildScrollView(
+            child: PanelScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [

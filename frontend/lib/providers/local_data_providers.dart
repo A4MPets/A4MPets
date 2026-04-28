@@ -8,6 +8,7 @@ import '../models/hazard_report_record.dart';
 import '../models/local_user_profile.dart';
 import '../models/lost_pet_report_record.dart';
 import '../models/pet_record.dart';
+import '../models/report_comment_record.dart';
 import '../models/route_record.dart';
 import '../repositories/user_local_repository.dart';
 import '../services/local_database_manager.dart';
@@ -226,8 +227,8 @@ class LostPetReportsController
     required String name,
     required String details,
     required DateTime disappearanceDate,
-    String? photoUrl,
-    String? phone,
+    required String photoUrl,
+    required String phone,
   }) async {
     await _repository.addLostPetReport(
       lastSeenLatitude: lastSeenLatitude,
@@ -246,6 +247,17 @@ class LostPetReportsController
 
   Future<void> syncWithBackend() async {
     await _repository.syncLostPetReportsNow();
+    await reload();
+  }
+
+  Future<void> addCommentToLostPetReport({
+    required int reportId,
+    required ReportCommentRecord comment,
+  }) async {
+    await _repository.addCommentToLostPetReport(
+      reportId: reportId,
+      comment: comment,
+    );
     await reload();
   }
 }
@@ -300,6 +312,17 @@ class FoundPetReportsController
     await _repository.syncFoundPetReportsNow();
     await reload();
   }
+
+  Future<void> addCommentToFoundPetReport({
+    required int reportId,
+    required ReportCommentRecord comment,
+  }) async {
+    await _repository.addCommentToFoundPetReport(
+      reportId: reportId,
+      comment: comment,
+    );
+    await reload();
+  }
 }
 
 /// Manages generic reports with periodic refresh and background sync.
@@ -331,6 +354,7 @@ class GenericReportsController
     required String description,
     required DateTime reportedDate,
     required String riskLevelCode,
+    required int impactRadiusMeters,
     String? photoUrl,
   }) async {
     await _repository.addGenericReport(
@@ -339,6 +363,7 @@ class GenericReportsController
       description: description,
       reportedDate: reportedDate,
       riskLevelCode: riskLevelCode,
+      impactRadiusMeters: impactRadiusMeters,
       photoUrl: photoUrl,
     );
 
@@ -349,6 +374,17 @@ class GenericReportsController
 
   Future<void> syncWithBackend() async {
     await _repository.syncGenericReportsNow();
+    await reload();
+  }
+
+  Future<void> addCommentToGenericReport({
+    required int reportId,
+    required ReportCommentRecord comment,
+  }) async {
+    await _repository.addCommentToGenericReport(
+      reportId: reportId,
+      comment: comment,
+    );
     await reload();
   }
 }

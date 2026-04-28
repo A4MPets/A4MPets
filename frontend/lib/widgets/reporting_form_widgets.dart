@@ -11,6 +11,46 @@ class ReportingSelectionOption {
   const ReportingSelectionOption(this.code, this.label);
 }
 
+Future<DateTime?> showReportingDatePicker({
+  required BuildContext context,
+  required bool isDarkMode,
+  required DateTime initialDate,
+  required DateTime firstDate,
+  required DateTime lastDate,
+}) {
+  final ThemeData baseTheme = Theme.of(context);
+  final Color dialogBackground = AppPalette.dialogBackground(isDarkMode);
+  final Color foregroundColor = AppPalette.textPrimary(isDarkMode);
+
+  return showDatePicker(
+    context: context,
+    initialDate: initialDate,
+    firstDate: firstDate,
+    lastDate: lastDate,
+    builder: (BuildContext context, Widget? child) {
+      return Theme(
+        data: baseTheme.copyWith(
+          colorScheme: baseTheme.colorScheme.copyWith(
+            primary: AppPalette.primaryBlue,
+            onPrimary: AppPalette.white,
+            surface: dialogBackground,
+            onSurface: foregroundColor,
+          ),
+          dialogTheme: baseTheme.dialogTheme.copyWith(
+            backgroundColor: dialogBackground,
+          ),
+          textButtonTheme: TextButtonThemeData(
+            style: TextButton.styleFrom(
+              foregroundColor: AppPalette.primaryBlue,
+            ),
+          ),
+        ),
+        child: child ?? const SizedBox.shrink(),
+      );
+    },
+  );
+}
+
 class ReportingFieldErrorText extends StatelessWidget {
   final String message;
 
@@ -194,6 +234,7 @@ class ReportingPhotoField extends StatelessWidget {
   final String? photoSource;
   final bool isBusy;
   final VoidCallback onPickPressed;
+  final String? errorText;
 
   const ReportingPhotoField({
     super.key,
@@ -201,64 +242,125 @@ class ReportingPhotoField extends StatelessWidget {
     required this.photoSource,
     required this.isBusy,
     required this.onPickPressed,
+    this.errorText,
   });
 
   @override
   Widget build(BuildContext context) {
     final Color borderColor = AppPalette.border(isDarkMode);
 
-    return Container(
-      height: 104,
-      decoration: BoxDecoration(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor),
-      ),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: photoSource != null && photoSource!.isNotEmpty
-                  ? buildLocalImageWidget(
-                      source: photoSource,
-                      fit: BoxFit.cover,
-                      fallback: const _PhotoPlaceholder(),
-                      errorBuilder: (_, _, _) => const _PhotoPlaceholder(),
-                    )
-                  : const _PhotoPlaceholder(),
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          height: 104,
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: borderColor),
           ),
-          Positioned(
-            top: 8,
-            right: 8,
-            child: SizedBox(
-              width: 34,
-              height: 34,
-              child: Material(
-                color: AppPalette.white,
-                shape: const CircleBorder(),
-                child: InkWell(
-                  onTap: isBusy ? null : onPickPressed,
-                  customBorder: const CircleBorder(),
-                  child: isBusy
-                      ? const Padding(
-                          padding: EdgeInsets.all(9),
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppPalette.charcoal,
-                          ),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: photoSource != null && photoSource!.isNotEmpty
+                      ? buildLocalImageWidget(
+                          source: photoSource,
+                          fit: BoxFit.cover,
+                          fallback: const _PhotoPlaceholder(),
+                          errorBuilder: (_, _, _) => const _PhotoPlaceholder(),
                         )
-                      : const Icon(
-                          Icons.edit,
-                          size: 18,
-                          color: AppPalette.charcoal,
-                        ),
+                      : const _PhotoPlaceholder(),
                 ),
               ),
-            ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: SizedBox(
+                  width: 34,
+                  height: 34,
+                  child: Material(
+                    color: AppPalette.white,
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      onTap: isBusy ? null : onPickPressed,
+                      customBorder: const CircleBorder(),
+                      child: isBusy
+                          ? const Padding(
+                              padding: EdgeInsets.all(9),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppPalette.charcoal,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.edit,
+                              size: 18,
+                              color: AppPalette.charcoal,
+                            ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
+        ),
+        if (errorText != null) ...[
+          const SizedBox(height: 6),
+          ReportingFieldErrorText(message: errorText!),
         ],
+      ],
+    );
+  }
+}
+
+class ReportingCheckboxField extends StatelessWidget {
+  final bool isDarkMode;
+  final bool value;
+  final String title;
+  final String subtitle;
+  final ValueChanged<bool> onChanged;
+
+  const ReportingCheckboxField({
+    super.key,
+    required this.isDarkMode,
+    required this.value,
+    required this.title,
+    required this.subtitle,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppPalette.fieldBackground(isDarkMode),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppPalette.border(isDarkMode)),
+      ),
+      child: CheckboxListTile(
+        value: value,
+        controlAffinity: ListTileControlAffinity.leading,
+        activeColor: AppPalette.primaryBlue,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: AppPalette.textPrimary(isDarkMode),
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: const TextStyle(
+            color: AppPalette.textMutedDark,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        onChanged: (bool? nextValue) => onChanged(nextValue ?? false),
       ),
     );
   }

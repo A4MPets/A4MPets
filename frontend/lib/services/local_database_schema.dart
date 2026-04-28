@@ -234,6 +234,27 @@ class LocalDatabaseSchema {
         _createGenericReportsTableSql(genericReportsTable, ifNotExists: true),
       );
     }
+
+    if (oldVersion < 9) {
+      await db.execute(
+        'ALTER TABLE $genericReportsTable ADD COLUMN impact_radius_meters INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute(
+        'UPDATE $genericReportsTable SET impact_radius_meters = 0 WHERE impact_radius_meters IS NULL',
+      );
+    }
+
+    if (oldVersion < 10) {
+      await db.execute(
+        'ALTER TABLE $lostPetReportsTable ADD COLUMN comments_json TEXT NOT NULL DEFAULT "[]"',
+      );
+      await db.execute(
+        'ALTER TABLE $foundPetReportsTable ADD COLUMN comments_json TEXT NOT NULL DEFAULT "[]"',
+      );
+      await db.execute(
+        'ALTER TABLE $genericReportsTable ADD COLUMN comments_json TEXT NOT NULL DEFAULT "[]"',
+      );
+    }
   }
 
   static String _createLostPetReportsTableSql(
@@ -257,6 +278,7 @@ class LocalDatabaseSchema {
         disappearance_date INTEGER NOT NULL,
         photo_url TEXT,
         phone TEXT,
+        comments_json TEXT NOT NULL DEFAULT '[]',
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL,
         needs_sync INTEGER NOT NULL DEFAULT 1
@@ -284,6 +306,7 @@ class LocalDatabaseSchema {
         found_date INTEGER NOT NULL,
         photo_url TEXT,
         phone TEXT,
+        comments_json TEXT NOT NULL DEFAULT '[]',
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL,
         needs_sync INTEGER NOT NULL DEFAULT 1
@@ -310,7 +333,9 @@ class LocalDatabaseSchema {
         description TEXT NOT NULL,
         reported_date INTEGER NOT NULL,
         risk_level_code TEXT NOT NULL,
+        impact_radius_meters INTEGER NOT NULL DEFAULT 0,
         photo_url TEXT,
+        comments_json TEXT NOT NULL DEFAULT '[]',
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL,
         needs_sync INTEGER NOT NULL DEFAULT 1

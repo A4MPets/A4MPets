@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\GenericReport;
 use App\Models\HazardReport;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -146,20 +147,12 @@ class GraphHopperRoutingService
 
         $payload['ch.disable'] = true;
 
-        $hazards = HazardReport::query()
-            ->where('status', '!=', 'archived')
-            ->whereNotNull('incident_latitude')
-            ->whereNotNull('incident_longitude')
-            ->whereNotNull('impact_radius_meters')
-            ->orderByDesc('last_modified_at')
-            ->limit(30)
-            ->get([
-                'incident_latitude',
-                'incident_longitude',
-                'impact_radius_meters',
-            ]);
+        $avoidanceAreas = [
+            ...$this->loadHazardAvoidanceAreas(),
+            ...$this->loadGenericReportAvoidanceAreas(),
+        ];
 
-        if ($hazards->isEmpty()) {
+        if (count($avoidanceAreas) === 0) {
             return [
                 'payload' => $payload,
                 'hazards_considered' => 0,
@@ -170,14 +163,14 @@ class GraphHopperRoutingService
         $priorityRules = [];
         $index = 0;
 
-        foreach ($hazards as $hazard) {
+        foreach ($avoidanceAreas as $area) {
             $index++;
             $areaName = 'hz_'.$index;
 
             $polygon = $this->buildCirclePolygon(
-                (float) $hazard->incident_latitude,
-                (float) $hazard->incident_longitude,
-                max(10.0, (float) $hazard->impact_radius_meters),
+                $area['latitude'],
+                $area['longitude'],
+                max(10.0, $area['impact_radius_meters']),
                 20
             );
 
@@ -205,6 +198,60 @@ class GraphHopperRoutingService
             'payload' => $payload,
             'hazards_considered' => count($priorityRules),
         ];
+    }
+
+    /**
+     * @return array<int, array{latitude: float, longitude: float, impact_radius_meters: float}>
+     */
+    private function loadHazardAvoidanceAreas(): array
+    {
+        $hazards = HazardReport::query()
+            ->where('status', '!=', 'archived')
+            ->whereNotNull('incident_latitude')
+            ->whereNotNull('incident_longitude')
+            ->whereNotNull('impact_radius_meters')
+            ->orderByDesc('last_modified_at')
+            ->limit(30)
+            ->get([
+                'incident_latitude',
+                'incident_longitude',
+                'impact_radius_meters',
+            ]);
+
+        return $hazards
+            ->map(static fn (HazardReport $hazard): array => [
+                'latitude' => (float) $hazard->incident_latitude,
+                'longitude' => (float) $hazard->incident_longitude,
+                'impact_radius_meters' => (float) $hazard->impact_radius_meters,
+            ])
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{latitude: float, longitude: float, impact_radius_meters: float}>
+     */
+    private function loadGenericReportAvoidanceAreas(): array
+    {
+        $reports = GenericReport::query()
+            ->where('sync_status', '!=', 'deleted')
+            ->where('impact_radius_meters', '>', 0)
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->orderByDesc('last_modified_at')
+            ->limit(30)
+            ->get([
+                'latitude',
+                'longitude',
+                'impact_radius_meters',
+            ]);
+
+        return $reports
+            ->map(static fn (GenericReport $report): array => [
+                'latitude' => (float) $report->latitude,
+                'longitude' => (float) $report->longitude,
+                'impact_radius_meters' => (float) $report->impact_radius_meters,
+            ])
+            ->all();
     }
 
     private function mapTravelModeToProfiles(string $travelMode): array

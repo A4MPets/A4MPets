@@ -9,6 +9,7 @@ import '../models/found_pet_report_record.dart';
 import '../models/generic_report_record.dart';
 import '../models/hazard_report_record.dart';
 import '../models/pet_record.dart';
+import '../models/report_comment_record.dart';
 import '../models/route_record.dart';
 
 class LocalDatabaseManager {
@@ -437,6 +438,113 @@ class LocalDatabaseManager {
     await prefs.setString(_hazardsKey, jsonEncode(encoded));
   }
 
+  Future<void> addCommentToLostPetReport({
+    required int reportId,
+    required ReportCommentRecord comment,
+  }) async {
+    await _appendCommentToStoredReports<LostPetReportRecord>(
+      storageKey: _lostPetReportsKey,
+      getReports: getLostPetReports,
+      reportId: reportId,
+      comment: comment,
+      rebuild: (LostPetReportRecord report, List<ReportCommentRecord> comments) {
+        final int now = DateTime.now().millisecondsSinceEpoch;
+        return LostPetReportRecord(
+          id: report.id,
+          localUuid: report.localUuid,
+          remoteId: report.remoteId,
+          syncStatus: report.syncStatus,
+          lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
+          lastSeenLatitude: report.lastSeenLatitude,
+          lastSeenLongitude: report.lastSeenLongitude,
+          name: report.name,
+          details: report.details,
+          disappearanceDate: report.disappearanceDate,
+          photoUrl: report.photoUrl,
+          phone: report.phone,
+          comments: comments,
+          createdAt: report.createdAt,
+          updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+          needsSync: true,
+        );
+      },
+      commentsOf: (LostPetReportRecord report) => report.comments,
+    );
+  }
+
+  Future<void> addCommentToFoundPetReport({
+    required int reportId,
+    required ReportCommentRecord comment,
+  }) async {
+    await _appendCommentToStoredReports<FoundPetReportRecord>(
+      storageKey: _foundPetReportsKey,
+      getReports: getFoundPetReports,
+      reportId: reportId,
+      comment: comment,
+      rebuild: (
+        FoundPetReportRecord report,
+        List<ReportCommentRecord> comments,
+      ) {
+        final int now = DateTime.now().millisecondsSinceEpoch;
+        return FoundPetReportRecord(
+          id: report.id,
+          localUuid: report.localUuid,
+          remoteId: report.remoteId,
+          syncStatus: report.syncStatus,
+          lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
+          latitude: report.latitude,
+          longitude: report.longitude,
+          details: report.details,
+          foundDate: report.foundDate,
+          photoUrl: report.photoUrl,
+          phone: report.phone,
+          comments: comments,
+          createdAt: report.createdAt,
+          updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+          needsSync: true,
+        );
+      },
+      commentsOf: (FoundPetReportRecord report) => report.comments,
+    );
+  }
+
+  Future<void> addCommentToGenericReport({
+    required int reportId,
+    required ReportCommentRecord comment,
+  }) async {
+    await _appendCommentToStoredReports<GenericReportRecord>(
+      storageKey: _genericReportsKey,
+      getReports: getGenericReports,
+      reportId: reportId,
+      comment: comment,
+      rebuild: (
+        GenericReportRecord report,
+        List<ReportCommentRecord> comments,
+      ) {
+        final int now = DateTime.now().millisecondsSinceEpoch;
+        return GenericReportRecord(
+          id: report.id,
+          localUuid: report.localUuid,
+          remoteId: report.remoteId,
+          syncStatus: report.syncStatus,
+          lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
+          latitude: report.latitude,
+          longitude: report.longitude,
+          description: report.description,
+          reportedDate: report.reportedDate,
+          riskLevelCode: report.riskLevelCode,
+          impactRadiusMeters: report.impactRadiusMeters,
+          photoUrl: report.photoUrl,
+          comments: comments,
+          createdAt: report.createdAt,
+          updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+          needsSync: true,
+        );
+      },
+      commentsOf: (GenericReportRecord report) => report.comments,
+    );
+  }
+
   Future<List<PetRecord>> getPetsNeedingSync() async {
     final SharedPreferences prefs = await _prefs;
     await _ensureDefaultUser(prefs);
@@ -829,7 +937,7 @@ class LocalDatabaseManager {
     if (existing == null) {
       final List<HazardCommentRecord> parsedComments = commentsJson == null
           ? const <HazardCommentRecord>[]
-          : _decodeHazardComments(commentsJson);
+          : _decodeReportComments(commentsJson);
 
       final HazardReportRecord inserted = HazardReportRecord(
         id: nextId,
@@ -880,7 +988,7 @@ class LocalDatabaseManager {
           final List<HazardCommentRecord> resolvedComments =
               commentsJson == null
               ? report.comments
-              : _decodeHazardComments(commentsJson);
+              : _decodeReportComments(commentsJson);
 
           return HazardReportRecord(
             id: report.id,
@@ -929,8 +1037,8 @@ class LocalDatabaseManager {
     required String name,
     required String details,
     required DateTime disappearanceDate,
-    String? photoUrl,
-    String? phone,
+    required String photoUrl,
+    required String phone,
   }) async {
     final SharedPreferences prefs = await _prefs;
     await _ensureDefaultUser(prefs);
@@ -956,6 +1064,7 @@ class LocalDatabaseManager {
       disappearanceDate: disappearanceDate,
       photoUrl: photoUrl,
       phone: phone,
+      comments: const <ReportCommentRecord>[],
       createdAt: DateTime.fromMillisecondsSinceEpoch(now),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
       needsSync: true,
@@ -1005,6 +1114,7 @@ class LocalDatabaseManager {
             disappearanceDate: report.disappearanceDate,
             photoUrl: report.photoUrl,
             phone: report.phone,
+            comments: report.comments,
             createdAt: report.createdAt,
             updatedAt: DateTime.now(),
             needsSync: false,
@@ -1027,6 +1137,7 @@ class LocalDatabaseManager {
     required DateTime disappearanceDate,
     required String? photoUrl,
     required String? phone,
+    String? commentsJson,
   }) async {
     final SharedPreferences prefs = await _prefs;
     await _ensureDefaultUser(prefs);
@@ -1049,7 +1160,7 @@ class LocalDatabaseManager {
               1;
 
     if (existing == null) {
-      final LostPetReportRecord inserted = LostPetReportRecord(
+    final LostPetReportRecord inserted = LostPetReportRecord(
         id: nextId,
         localUuid: localUuid,
         remoteId: remoteId,
@@ -1062,6 +1173,9 @@ class LocalDatabaseManager {
         disappearanceDate: disappearanceDate,
         photoUrl: photoUrl,
         phone: phone,
+        comments: _decodeReportComments(
+          report['comments_json']?.toString() ?? '[]',
+        ),
         createdAt: remoteLastModifiedAt,
         updatedAt: remoteLastModifiedAt,
         needsSync: false,
@@ -1101,6 +1215,10 @@ class LocalDatabaseManager {
               remoteSource: photoUrl,
             ),
             phone: phone,
+            comments: _resolveRemoteComments(
+              currentComments: report.comments,
+              commentsJson: commentsJson,
+            ),
             createdAt: report.createdAt,
             updatedAt: DateTime.now(),
             needsSync: false,
@@ -1156,6 +1274,7 @@ class LocalDatabaseManager {
       foundDate: foundDate,
       photoUrl: photoUrl,
       phone: phone,
+      comments: const <ReportCommentRecord>[],
       createdAt: DateTime.fromMillisecondsSinceEpoch(now),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
       needsSync: true,
@@ -1204,6 +1323,7 @@ class LocalDatabaseManager {
             foundDate: report.foundDate,
             photoUrl: report.photoUrl,
             phone: report.phone,
+            comments: report.comments,
             createdAt: report.createdAt,
             updatedAt: DateTime.now(),
             needsSync: false,
@@ -1225,6 +1345,7 @@ class LocalDatabaseManager {
     required DateTime foundDate,
     required String? photoUrl,
     required String? phone,
+    String? commentsJson,
   }) async {
     final SharedPreferences prefs = await _prefs;
     await _ensureDefaultUser(prefs);
@@ -1259,6 +1380,9 @@ class LocalDatabaseManager {
         foundDate: foundDate,
         photoUrl: photoUrl,
         phone: phone,
+        comments: _decodeReportComments(
+          report['comments_json']?.toString() ?? '[]',
+        ),
         createdAt: remoteLastModifiedAt,
         updatedAt: remoteLastModifiedAt,
         needsSync: false,
@@ -1297,6 +1421,10 @@ class LocalDatabaseManager {
               remoteSource: photoUrl,
             ),
             phone: phone,
+            comments: _resolveRemoteComments(
+              currentComments: report.comments,
+              commentsJson: commentsJson,
+            ),
             createdAt: report.createdAt,
             updatedAt: DateTime.now(),
             needsSync: false,
@@ -1327,6 +1455,7 @@ class LocalDatabaseManager {
     required String description,
     required DateTime reportedDate,
     required String riskLevelCode,
+    required int impactRadiusMeters,
     String? photoUrl,
   }) async {
     final SharedPreferences prefs = await _prefs;
@@ -1351,7 +1480,9 @@ class LocalDatabaseManager {
       description: description,
       reportedDate: reportedDate,
       riskLevelCode: riskLevelCode,
+      impactRadiusMeters: impactRadiusMeters,
       photoUrl: photoUrl,
+      comments: const <ReportCommentRecord>[],
       createdAt: DateTime.fromMillisecondsSinceEpoch(now),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
       needsSync: true,
@@ -1399,7 +1530,9 @@ class LocalDatabaseManager {
             description: report.description,
             reportedDate: report.reportedDate,
             riskLevelCode: report.riskLevelCode,
+            impactRadiusMeters: report.impactRadiusMeters,
             photoUrl: report.photoUrl,
+            comments: report.comments,
             createdAt: report.createdAt,
             updatedAt: DateTime.now(),
             needsSync: false,
@@ -1420,7 +1553,9 @@ class LocalDatabaseManager {
     required String description,
     required DateTime reportedDate,
     required String riskLevelCode,
+    required int impactRadiusMeters,
     required String? photoUrl,
+    String? commentsJson,
   }) async {
     final SharedPreferences prefs = await _prefs;
     await _ensureDefaultUser(prefs);
@@ -1454,7 +1589,11 @@ class LocalDatabaseManager {
         description: description,
         reportedDate: reportedDate,
         riskLevelCode: riskLevelCode,
+        impactRadiusMeters: impactRadiusMeters,
         photoUrl: photoUrl,
+        comments: _decodeReportComments(
+          report['comments_json']?.toString() ?? '[]',
+        ),
         createdAt: remoteLastModifiedAt,
         updatedAt: remoteLastModifiedAt,
         needsSync: false,
@@ -1489,9 +1628,14 @@ class LocalDatabaseManager {
             description: description,
             reportedDate: reportedDate,
             riskLevelCode: riskLevelCode,
+            impactRadiusMeters: impactRadiusMeters,
             photoUrl: _preferOfflineImageSource(
               currentSource: report.photoUrl,
               remoteSource: photoUrl,
+            ),
+            comments: _resolveRemoteComments(
+              currentComments: report.comments,
+              commentsJson: commentsJson,
             ),
             createdAt: report.createdAt,
             updatedAt: DateTime.now(),
@@ -1503,18 +1647,58 @@ class LocalDatabaseManager {
     await prefs.setString(_genericReportsKey, jsonEncode(encoded));
   }
 
-  List<HazardCommentRecord> _decodeHazardComments(String commentsJson) {
+  List<ReportCommentRecord> _decodeReportComments(String commentsJson) {
     try {
       final List<dynamic> decoded = jsonDecode(commentsJson) as List<dynamic>;
       return decoded
           .map(
             (dynamic row) =>
-                HazardCommentRecord.fromMap((row as Map<String, dynamic>)),
+                ReportCommentRecord.fromMap((row as Map<String, dynamic>)),
           )
           .toList(growable: false);
     } catch (_) {
-      return const <HazardCommentRecord>[];
+      return const <ReportCommentRecord>[];
     }
+  }
+
+  List<ReportCommentRecord> _resolveRemoteComments({
+    required List<ReportCommentRecord> currentComments,
+    required String? commentsJson,
+  }) {
+    if (commentsJson == null || commentsJson.isEmpty) {
+      return currentComments;
+    }
+
+    return _decodeReportComments(commentsJson);
+  }
+
+  Future<void> _appendCommentToStoredReports<T>({
+    required String storageKey,
+    required Future<List<T>> Function() getReports,
+    required int reportId,
+    required ReportCommentRecord comment,
+    required T Function(T report, List<ReportCommentRecord> comments) rebuild,
+    required List<ReportCommentRecord> Function(T report) commentsOf,
+  }) async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final List<T> current = await getReports();
+
+    final List<Map<String, Object?>> encoded = current.map((T report) {
+      final dynamic dynamicReport = report;
+      if (dynamicReport.id != reportId) {
+        return dynamicReport.toMap() as Map<String, Object?>;
+      }
+
+      final List<ReportCommentRecord> updatedComments = <ReportCommentRecord>[
+        ...commentsOf(report),
+        comment,
+      ];
+      final dynamic updated = rebuild(report, updatedComments);
+      return updated.toMap() as Map<String, Object?>;
+    }).toList(growable: false);
+
+    await prefs.setString(storageKey, jsonEncode(encoded));
   }
 
   String _generateLocalUuid([String prefix = 'hz']) {

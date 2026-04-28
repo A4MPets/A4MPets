@@ -176,16 +176,14 @@ class _AppModalPanelState extends State<AppModalPanel> {
                             ),
                           )
                       else if (!widget.isMinimized)
-                        Positioned.fill(
-                          child: Padding(
-                            padding: EdgeInsets.fromLTRB(
-                              16,
-                              resolvedTopPadding,
-                              16,
-                              18,
-                            ),
-                            child: widget.child,
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            16,
+                            resolvedTopPadding,
+                            16,
+                            18,
                           ),
+                          child: widget.child,
                         ),
                       if (hasTitle)
                         Positioned(
@@ -359,28 +357,40 @@ class _PanelScrollableBodyState extends State<_PanelScrollableBody> {
     final EdgeInsets contentPadding = EdgeInsets.fromLTRB(
       16,
       widget.topPadding,
-      16,
+      8,
       18,
+    );
+    final Widget spacedChild = Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: widget.child,
     );
 
     if (widget.adaptHeightToContent) {
       return Scrollbar(
         controller: _scrollController,
+        thumbVisibility: true,
+        trackVisibility: true,
+        thickness: 8,
+        radius: const Radius.circular(999),
         child: ListView(
           controller: _scrollController,
           padding: contentPadding,
           shrinkWrap: true,
-          children: [widget.child],
+          children: [spacedChild],
         ),
       );
     }
 
     return Scrollbar(
       controller: _scrollController,
+      thumbVisibility: true,
+      trackVisibility: true,
+      thickness: 8,
+      radius: const Radius.circular(999),
       child: SingleChildScrollView(
         controller: _scrollController,
         padding: contentPadding,
-        child: widget.child,
+        child: spacedChild,
       ),
     );
   }

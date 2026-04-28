@@ -16,6 +16,7 @@ class GenericReport extends Model
         'description',
         'reported_date',
         'risk_level_code',
+        'impact_radius_meters',
         'photo_url',
         'sync_status',
         'last_modified_at',
@@ -25,6 +26,7 @@ class GenericReport extends Model
     protected $casts = [
         'latitude' => 'float',
         'longitude' => 'float',
+        'impact_radius_meters' => 'integer',
         'reported_date' => 'datetime',
         'last_modified_at' => 'datetime',
         'synced_at' => 'datetime',

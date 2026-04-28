@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'report_comment_record.dart';
+
 class FoundPetReportRecord {
   final int id;
   final String localUuid;
@@ -10,6 +14,7 @@ class FoundPetReportRecord {
   final DateTime foundDate;
   final String? photoUrl;
   final String? phone;
+  final List<ReportCommentRecord> comments;
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool needsSync;
@@ -26,12 +31,15 @@ class FoundPetReportRecord {
     required this.foundDate,
     required this.photoUrl,
     required this.phone,
+    required this.comments,
     required this.createdAt,
     required this.updatedAt,
     required this.needsSync,
   });
 
   factory FoundPetReportRecord.fromMap(Map<String, Object?> map) {
+    final String commentsJson = map['comments_json'] as String? ?? '[]';
+    final List<dynamic> rawComments = jsonDecode(commentsJson) as List<dynamic>;
     final int nowMs = DateTime.now().millisecondsSinceEpoch;
     final int createdAtMs = (map['created_at'] as num?)?.toInt() ?? nowMs;
     final int updatedAtMs = (map['updated_at'] as num?)?.toInt() ?? createdAtMs;
@@ -52,6 +60,12 @@ class FoundPetReportRecord {
       foundDate: DateTime.fromMillisecondsSinceEpoch(foundDateMs),
       photoUrl: map['photo_url'] as String?,
       phone: map['phone'] as String?,
+      comments: rawComments
+          .map(
+            (dynamic item) =>
+                ReportCommentRecord.fromMap(item as Map<String, dynamic>),
+          )
+          .toList(growable: false),
       createdAt: DateTime.fromMillisecondsSinceEpoch(createdAtMs),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(updatedAtMs),
       needsSync: (map['needs_sync'] as int? ?? 0) == 1,
@@ -71,6 +85,9 @@ class FoundPetReportRecord {
       'found_date': foundDate.millisecondsSinceEpoch,
       'photo_url': photoUrl,
       'phone': phone,
+      'comments_json': jsonEncode(
+        comments.map((ReportCommentRecord c) => c.toMap()).toList(),
+      ),
       'created_at': createdAt.millisecondsSinceEpoch,
       'updated_at': updatedAt.millisecondsSinceEpoch,
       'needs_sync': needsSync ? 1 : 0,

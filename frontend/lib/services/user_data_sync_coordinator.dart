@@ -415,6 +415,9 @@ class UserDataSyncCoordinator {
         'disappearance_date': _toBackendDateTime(report.disappearanceDate),
         'photo_url': photoUrl,
         'phone': report.phone,
+        'comments': report.comments
+            .map((comment) => comment.toMap())
+            .toList(growable: false),
         'sync_status': report.syncStatus,
         'last_modified_at': _toBackendDateTime(report.lastModifiedAt),
       });
@@ -506,6 +509,9 @@ class UserDataSyncCoordinator {
           ),
           photoUrl: report['photo_url']?.toString(),
           phone: report['phone']?.toString(),
+          commentsJson:
+              report['comments_json']?.toString() ??
+              jsonEncode(report['comments'] ?? <dynamic>[]),
         );
       }
 
@@ -560,6 +566,9 @@ class UserDataSyncCoordinator {
         'found_date': _toBackendDateTime(report.foundDate),
         'photo_url': photoUrl,
         'phone': report.phone,
+        'comments': report.comments
+            .map((comment) => comment.toMap())
+            .toList(growable: false),
         'sync_status': report.syncStatus,
         'last_modified_at': _toBackendDateTime(report.lastModifiedAt),
       });
@@ -646,6 +655,9 @@ class UserDataSyncCoordinator {
           foundDate: _parseBackendDateTime(report['found_date']),
           photoUrl: report['photo_url']?.toString(),
           phone: report['phone']?.toString(),
+          commentsJson:
+              report['comments_json']?.toString() ??
+              jsonEncode(report['comments'] ?? <dynamic>[]),
         );
       }
 
@@ -699,7 +711,11 @@ class UserDataSyncCoordinator {
         'description': report.description,
         'reported_date': _toBackendDateTime(report.reportedDate),
         'risk_level_code': _normalizeRiskLevelCode(report.riskLevelCode),
+        'impact_radius_meters': report.impactRadiusMeters,
         'photo_url': photoUrl,
+        'comments': report.comments
+            .map((comment) => comment.toMap())
+            .toList(growable: false),
         'sync_status': report.syncStatus,
         'last_modified_at': _toBackendDateTime(report.lastModifiedAt),
       });
@@ -787,7 +803,12 @@ class UserDataSyncCoordinator {
           riskLevelCode: _normalizeRiskLevelCode(
             report['risk_level_code']?.toString(),
           ),
+          impactRadiusMeters:
+              (report['impact_radius_meters'] as num?)?.round() ?? 0,
           photoUrl: report['photo_url']?.toString(),
+          commentsJson:
+              report['comments_json']?.toString() ??
+              jsonEncode(report['comments'] ?? <dynamic>[]),
         );
       }
 

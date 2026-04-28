@@ -35,6 +35,7 @@ class GenericReportService
                 'description' => $validated['description'],
                 'reported_date' => $validated['reported_date'],
                 'risk_level_code' => $this->normalizeRiskCode($validated['risk_level_code']),
+                'impact_radius_meters' => $this->normalizeImpactRadiusMeters($validated['impact_radius_meters'] ?? 0),
                 'photo_url' => $validated['photo_url'] ?? null,
                 'sync_status' => 'synced',
                 'last_modified_at' => now(),
@@ -58,6 +59,7 @@ class GenericReportService
             'description' => $validated['description'],
             'reported_date' => $validated['reported_date'],
             'risk_level_code' => $this->normalizeRiskCode($validated['risk_level_code']),
+            'impact_radius_meters' => $this->normalizeImpactRadiusMeters($validated['impact_radius_meters'] ?? 0),
             'photo_url' => $validated['photo_url'] ?? null,
             'sync_status' => 'synced',
             'last_modified_at' => now(),
@@ -123,6 +125,7 @@ class GenericReportService
                     'description' => $reportData['description'],
                     'reported_date' => $reportData['reported_date'],
                     'risk_level_code' => $this->normalizeRiskCode($reportData['risk_level_code']),
+                    'impact_radius_meters' => $this->normalizeImpactRadiusMeters($reportData['impact_radius_meters'] ?? 0),
                     'photo_url' => $reportData['photo_url'] ?? null,
                     'sync_status' => 'synced',
                     'last_modified_at' => $reportData['last_modified_at'],
@@ -167,5 +170,10 @@ class GenericReportService
         }
 
         return 'undefined';
+    }
+
+    private function normalizeImpactRadiusMeters(mixed $value): int
+    {
+        return max(0, (int) round((float) $value));
     }
 }

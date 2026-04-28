@@ -1,6 +1,7 @@
 import 'package:latlong2/latlong.dart';
-import '../models/hazard_report_record.dart';
 import '../models/colored_route_segment.dart';
+import '../models/generic_report_record.dart';
+import '../models/hazard_report_record.dart';
 import 'package:flutter/material.dart';
 
 /// Servicio para analizar rutas y marcar segmentos peligrosos
@@ -17,8 +18,28 @@ class RouteHazardVisualizerService {
   static List<ColoredRouteSegment> analyzeRouteHazards({
     required List<LatLng> routePolyline,
     required List<HazardReportRecord> hazards,
+    List<GenericReportRecord> genericReports = const <GenericReportRecord>[],
   }) {
-    if (routePolyline.length < 2 || hazards.isEmpty) {
+    final List<_RouteAvoidanceZone> avoidanceZones = <_RouteAvoidanceZone>[
+      ...hazards.map(
+        (HazardReportRecord hazard) => _RouteAvoidanceZone(
+          latitude: hazard.incidentLatitude,
+          longitude: hazard.incidentLongitude,
+          radiusMeters: hazard.impactRadiusMeters.toDouble(),
+        ),
+      ),
+      ...genericReports
+          .where((GenericReportRecord report) => report.impactRadiusMeters > 0)
+          .map(
+            (GenericReportRecord report) => _RouteAvoidanceZone(
+              latitude: report.latitude,
+              longitude: report.longitude,
+              radiusMeters: report.impactRadiusMeters.toDouble(),
+            ),
+          ),
+    ];
+
+    if (routePolyline.length < 2 || avoidanceZones.isEmpty) {
       // Sin hazards o ruta muy corta, retorna como seguro
       return [
         ColoredRouteSegment(
@@ -39,7 +60,7 @@ class RouteHazardVisualizerService {
       final bool segmentHasHazard = _segmentIntersectsHazard(
         start: start,
         end: end,
-        hazards: hazards,
+        avoidanceZones: avoidanceZones,
       );
 
       segments.add(
@@ -58,13 +79,10 @@ class RouteHazardVisualizerService {
   static bool _segmentIntersectsHazard({
     required LatLng start,
     required LatLng end,
-    required List<HazardReportRecord> hazards,
+    required List<_RouteAvoidanceZone> avoidanceZones,
   }) {
-    for (final HazardReportRecord hazard in hazards) {
-      final LatLng hazardPoint = LatLng(
-        hazard.incidentLatitude,
-        hazard.incidentLongitude,
-      );
+    for (final _RouteAvoidanceZone zone in avoidanceZones) {
+      final LatLng hazardPoint = LatLng(zone.latitude, zone.longitude);
 
       // Calcular distancia del hazard al segmento de línea
       final double distanceToSegment = _distancePointToLineSegment(
@@ -74,7 +92,7 @@ class RouteHazardVisualizerService {
       );
 
       // Si la distancia es menor que el radio del hazard, intersecta
-      if (distanceToSegment <= hazard.impactRadiusMeters) {
+      if (distanceToSegment <= zone.radiusMeters) {
         return true;
       }
     }
@@ -135,4 +153,16 @@ class RouteHazardVisualizerService {
       return distanceCalculator.as(LengthUnit.Meter, point, projection);
     }
   }
+}
+
+class _RouteAvoidanceZone {
+  final double latitude;
+  final double longitude;
+  final double radiusMeters;
+
+  const _RouteAvoidanceZone({
+    required this.latitude,
+    required this.longitude,
+    required this.radiusMeters,
+  });
 }

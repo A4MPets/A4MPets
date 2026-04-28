@@ -7,6 +7,7 @@ import '../providers/local_data_providers.dart';
 import '../theme/app_palette.dart';
 import 'location_picker_widget.dart';
 import 'reporting_form_widgets.dart';
+import 'shared/panel_scroll_view.dart';
 
 class FoundPetDraftPreview {
   final LatLng? location;
@@ -123,8 +124,9 @@ class _FoundPetReportingPanelContentState
 
   Future<void> _pickDate() async {
     final DateTime now = DateTime.now();
-    final DateTime? picked = await showDatePicker(
+    final DateTime? picked = await showReportingDatePicker(
       context: context,
+      isDarkMode: widget.isDarkMode,
       initialDate: _foundDate,
       firstDate: DateTime(now.year - 5),
       lastDate: DateTime(now.year, now.month, now.day),
@@ -227,7 +229,7 @@ class _FoundPetReportingPanelContentState
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
-          child: SingleChildScrollView(
+          child: PanelScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

@@ -7,6 +7,7 @@ import '../providers/local_data_providers.dart';
 import '../theme/app_palette.dart';
 import 'location_picker_widget.dart';
 import 'reporting_form_widgets.dart';
+import 'shared/panel_scroll_view.dart';
 
 class LostPetDraftPreview {
   final LatLng? location;
@@ -55,6 +56,8 @@ class _LostPetReportingPanelContentState
   String? _locationErrorText;
   String? _nameErrorText;
   String? _detailsErrorText;
+  String? _phoneErrorText;
+  String? _photoErrorText;
   String? _submitValidationErrorText;
   String? _saveErrorText;
 
@@ -108,6 +111,8 @@ class _LostPetReportingPanelContentState
       }
       setState(() {
         _storedPhotoUrl = storedPath;
+        _photoErrorText = null;
+        _submitValidationErrorText = null;
       });
     } catch (_) {
       if (!mounted) {
@@ -127,8 +132,9 @@ class _LostPetReportingPanelContentState
 
   Future<void> _pickDate() async {
     final DateTime now = DateTime.now();
-    final DateTime? picked = await showDatePicker(
+    final DateTime? picked = await showReportingDatePicker(
       context: context,
+      isDarkMode: widget.isDarkMode,
       initialDate: _disappearanceDate,
       firstDate: DateTime(now.year - 5),
       lastDate: DateTime(now.year, now.month, now.day),
@@ -150,6 +156,8 @@ class _LostPetReportingPanelContentState
       _locationErrorText = null;
       _nameErrorText = null;
       _detailsErrorText = null;
+      _phoneErrorText = null;
+      _photoErrorText = null;
       _submitValidationErrorText = null;
       _saveErrorText = null;
     });
@@ -173,9 +181,23 @@ class _LostPetReportingPanelContentState
       });
     }
 
+    if (_phoneController.text.trim().isEmpty) {
+      setState(() {
+        _phoneErrorText = 'El telefono es obligatorio.';
+      });
+    }
+
+    if (_storedPhotoUrl == null || _storedPhotoUrl!.trim().isEmpty) {
+      setState(() {
+        _photoErrorText = 'La foto es obligatoria.';
+      });
+    }
+
     if (_locationErrorText != null ||
         _nameErrorText != null ||
-        _detailsErrorText != null) {
+        _detailsErrorText != null ||
+        _phoneErrorText != null ||
+        _photoErrorText != null) {
       setState(() {
         _submitValidationErrorText =
             'Completa los campos obligatorios para reportar.';
@@ -196,10 +218,8 @@ class _LostPetReportingPanelContentState
             name: _nameController.text.trim(),
             details: _detailsController.text.trim(),
             disappearanceDate: _disappearanceDate,
-            photoUrl: _storedPhotoUrl,
-            phone: _phoneController.text.trim().isEmpty
-                ? null
-                : _phoneController.text.trim(),
+            photoUrl: _storedPhotoUrl!,
+            phone: _phoneController.text.trim(),
           );
 
       if (!mounted) {
@@ -241,7 +261,7 @@ class _LostPetReportingPanelContentState
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
-          child: SingleChildScrollView(
+          child: PanelScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -303,27 +323,37 @@ class _LostPetReportingPanelContentState
                 ),
                 const SizedBox(height: 8),
                 ReportingLabeledField(
-                  label: 'Telefono (opcional)',
+                  label: 'Telefono',
                   child: ReportingTextField(
                     isDarkMode: widget.isDarkMode,
                     controller: _phoneController,
                     hintText: 'Numero de contacto',
+                    errorText: _phoneErrorText,
                     keyboardType: TextInputType.phone,
                     inputFormatters: <TextInputFormatter>[
                       FilteringTextInputFormatter.allow(
                         RegExp(r'[0-9+\-\s()]'),
                       ),
                     ],
+                    onChanged: (_) {
+                      if (_phoneErrorText != null) {
+                        setState(() {
+                          _phoneErrorText = null;
+                          _submitValidationErrorText = null;
+                        });
+                      }
+                    },
                   ),
                 ),
                 const SizedBox(height: 8),
                 ReportingLabeledField(
-                  label: 'Foto (opcional)',
+                  label: 'Foto',
                   child: ReportingPhotoField(
                     isDarkMode: widget.isDarkMode,
                     photoSource: _storedPhotoUrl,
                     isBusy: _isPickingPhoto,
                     onPickPressed: _pickPhoto,
+                    errorText: _photoErrorText,
                   ),
                 ),
                 if (_saveErrorText != null) ...[

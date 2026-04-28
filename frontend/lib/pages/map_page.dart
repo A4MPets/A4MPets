@@ -91,6 +91,9 @@ class _MapPageState extends ConsumerState<MapPage> {
   bool _showLostPetReports = true;
   bool _showFoundPetReports = true;
   bool _showGenericReports = true;
+  _ProximityAlertTarget? _activeProximityAlert;
+  Set<String> _currentProximityZoneKeys = <String>{};
+  final Set<String> _acknowledgedProximityZoneKeys = <String>{};
 
   // Trip navigation state.
   final Set<int> _selectedTripPetIds = <int>{};
@@ -239,7 +242,12 @@ class _MapPageState extends ConsumerState<MapPage> {
             _hasOpenPanels &&
             (_panelStack.last.isTripStartPanel || _panelStack.last.isTripPanel),
         onProfileTap: () => _openProfilePanel(isDarkMode),
-        panelOverlay: _buildPanelOverlay(isDarkMode),
+        panelOverlay: Stack(
+          children: <Widget>[
+            _buildPanelOverlay(isDarkMode),
+            _buildProximityAlertOverlay(isDarkMode),
+          ],
+        ),
         routePoints: _renderedRoutePoints,
         routePolylinePoints: _renderedRoutePolylinePoints,
         coloredRouteSegments: _hazardColoredRouteSegments,

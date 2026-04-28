@@ -25,6 +25,7 @@ class SyncGenericReportsRequest extends FormRequest
             'generic_reports.*.description' => ['required', 'string'],
             'generic_reports.*.reported_date' => ['required', 'date_format:Y-m-d H:i:s'],
             'generic_reports.*.risk_level_code' => ['required', 'string'],
+            'generic_reports.*.impact_radius_meters' => ['sometimes', 'numeric', 'min:0', 'max:10000'],
             'generic_reports.*.photo_url' => ['nullable', 'string', 'max:500'],
             'generic_reports.*.sync_status' => ['nullable', 'string', 'max:32'],
             'generic_reports.*.last_modified_at' => ['required', 'date_format:Y-m-d H:i:s'],

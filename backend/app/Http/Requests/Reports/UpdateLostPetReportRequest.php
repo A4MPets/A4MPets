@@ -22,8 +22,8 @@ class UpdateLostPetReportRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'details' => ['required', 'string'],
             'disappearance_date' => ['required', 'date'],
-            'photo_url' => ['nullable', 'string', 'max:500'],
-            'phone' => ['nullable', 'string', 'max:64'],
+            'photo_url' => ['required', 'string', 'max:500'],
+            'phone' => ['required', 'string', 'max:64'],
         ];
     }
 }

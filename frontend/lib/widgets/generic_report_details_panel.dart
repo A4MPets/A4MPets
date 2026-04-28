@@ -2,60 +2,98 @@ import 'package:flutter/material.dart';
 
 import '../models/generic_report_record.dart';
 import '../theme/app_palette.dart';
+import 'shared/panel_scroll_view.dart';
 import 'shared/local_image_widget.dart';
 
 class GenericReportDetailsPanelContent extends StatelessWidget {
   final bool isDarkMode;
   final GenericReportRecord report;
+  final VoidCallback onViewComments;
 
   const GenericReportDetailsPanelContent({
     super.key,
     required this.isDarkMode,
     required this.report,
+    required this.onViewComments,
   });
 
   @override
   Widget build(BuildContext context) {
     final Color textColor = AppPalette.textPrimary(isDarkMode);
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (report.photoUrl != null && report.photoUrl!.isNotEmpty)
-            SizedBox(
-              height: 180,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: buildLocalImageWidget(
-                  source: report.photoUrl,
-                  fit: BoxFit.cover,
-                  fallback: const _ImageFallback(),
-                  errorBuilder: (_, _, _) => const _ImageFallback(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: PanelScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (report.photoUrl != null && report.photoUrl!.isNotEmpty)
+                  SizedBox(
+                    height: 180,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: buildLocalImageWidget(
+                        source: report.photoUrl,
+                        fit: BoxFit.cover,
+                        fallback: const _ImageFallback(),
+                        errorBuilder: (_, _, _) => const _ImageFallback(),
+                      ),
+                    ),
+                  ),
+                if (report.photoUrl != null && report.photoUrl!.isNotEmpty)
+                  const SizedBox(height: 12),
+                Text(
+                  'Reporte',
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
+                const SizedBox(height: 8),
+                _DetailsRow(label: 'Fecha', value: _formatDate(report.reportedDate)),
+                const SizedBox(height: 8),
+                _DetailsRow(
+                  label: 'Riesgo',
+                  value: GenericReportRecord.riskLabelFromCode(
+                    report.riskLevelCode,
+                  ),
+                ),
+                if (report.impactRadiusMeters > 0) ...[
+                  const SizedBox(height: 8),
+                  _DetailsRow(
+                    label: 'Radio de afectacion',
+                    value: '${report.impactRadiusMeters} m',
+                  ),
+                ],
+                const SizedBox(height: 8),
+                _DetailsRow(label: 'Descripcion', value: report.description),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 44,
+          child: ElevatedButton(
+            onPressed: onViewComments,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppPalette.placeholderGray,
+              foregroundColor: AppPalette.charcoal,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
-          if (report.photoUrl != null && report.photoUrl!.isNotEmpty)
-            const SizedBox(height: 12),
-          Text(
-            'Otro reporte',
-            style: TextStyle(
-              color: textColor,
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
+            child: const Text(
+              'Ver comentarios',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
             ),
           ),
-          const SizedBox(height: 8),
-          _DetailsRow(label: 'Fecha', value: _formatDate(report.reportedDate)),
-          const SizedBox(height: 8),
-          _DetailsRow(
-            label: 'Riesgo',
-            value: GenericReportRecord.riskLabelFromCode(report.riskLevelCode),
-          ),
-          const SizedBox(height: 8),
-          _DetailsRow(label: 'Descripcion', value: report.description),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

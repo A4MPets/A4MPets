@@ -6,14 +6,17 @@ import '../providers/local_data_providers.dart';
 import '../theme/app_palette.dart';
 import 'location_picker_widget.dart';
 import 'reporting_form_widgets.dart';
+import 'shared/panel_scroll_view.dart';
 
 class GenericReportDraftPreview {
   final LatLng? location;
   final String riskLevelCode;
+  final int impactRadiusMeters;
 
   const GenericReportDraftPreview({
     required this.location,
     required this.riskLevelCode,
+    required this.impactRadiusMeters,
   });
 }
 
@@ -55,10 +58,19 @@ class _GenericReportPanelContentState
         ReportingSelectionOption('high', 'Alto'),
         ReportingSelectionOption('undefined', 'No lo se'),
       ];
+  static const List<ReportingSelectionOption> _impactRadiusOptions =
+      <ReportingSelectionOption>[
+        ReportingSelectionOption('1', '1 m'),
+        ReportingSelectionOption('10', '10 m'),
+        ReportingSelectionOption('100', '100 m'),
+        ReportingSelectionOption('300', '300 m'),
+      ];
 
   late final TextEditingController _descriptionController;
   late DateTime _reportedDate;
   String _selectedRiskLevelCode = 'undefined';
+  bool _isPetDanger = false;
+  String _selectedImpactRadiusCode = '25';
   String? _storedPhotoUrl;
   bool _isSaving = false;
   bool _isPickingPhoto = false;
@@ -99,6 +111,9 @@ class _GenericReportPanelContentState
       GenericReportDraftPreview(
         location: _effectiveLocation,
         riskLevelCode: _selectedRiskLevelCode,
+        impactRadiusMeters: _isPetDanger
+            ? int.parse(_selectedImpactRadiusCode)
+            : 0,
       ),
     );
   }
@@ -137,8 +152,9 @@ class _GenericReportPanelContentState
 
   Future<void> _pickDate() async {
     final DateTime now = DateTime.now();
-    final DateTime? picked = await showDatePicker(
+    final DateTime? picked = await showReportingDatePicker(
       context: context,
+      isDarkMode: widget.isDarkMode,
       initialDate: _reportedDate,
       firstDate: DateTime(now.year - 5),
       lastDate: DateTime(now.year, now.month, now.day),
@@ -197,6 +213,9 @@ class _GenericReportPanelContentState
             description: _descriptionController.text.trim(),
             reportedDate: _reportedDate,
             riskLevelCode: _selectedRiskLevelCode,
+            impactRadiusMeters: _isPetDanger
+                ? int.parse(_selectedImpactRadiusCode)
+                : 0,
             photoUrl: _storedPhotoUrl,
           );
 
@@ -239,7 +258,7 @@ class _GenericReportPanelContentState
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
-          child: SingleChildScrollView(
+          child: PanelScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -296,6 +315,40 @@ class _GenericReportPanelContentState
                     },
                   ),
                 ),
+                const SizedBox(height: 8),
+                ReportingLabeledField(
+                  label: 'Impacto en rutas',
+                  child: ReportingCheckboxField(
+                    isDarkMode: widget.isDarkMode,
+                    value: _isPetDanger,
+                    title: 'Peligro para las mascotas',
+                    subtitle:
+                        'Activalo si este reporte debe afectar el calculo de rutas.',
+                    onChanged: (bool value) {
+                      setState(() {
+                        _isPetDanger = value;
+                      });
+                      _emitPreview();
+                    },
+                  ),
+                ),
+                if (_isPetDanger) ...[
+                  const SizedBox(height: 8),
+                  ReportingLabeledField(
+                    label: 'Radio de afectacion',
+                    child: ReportingDropdownField(
+                      isDarkMode: widget.isDarkMode,
+                      value: _selectedImpactRadiusCode,
+                      items: _impactRadiusOptions,
+                      onChanged: (String value) {
+                        setState(() {
+                          _selectedImpactRadiusCode = value;
+                        });
+                        _emitPreview();
+                      },
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 ReportingLabeledField(
                   label: 'Foto (opcional)',

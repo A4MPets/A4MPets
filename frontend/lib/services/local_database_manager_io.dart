@@ -13,6 +13,7 @@ import '../models/found_pet_report_record.dart';
 import '../models/generic_report_record.dart';
 import '../models/hazard_report_record.dart';
 import '../models/pet_record.dart';
+import '../models/report_comment_record.dart';
 import '../models/route_record.dart';
 import 'local_database_schema.dart';
 
@@ -64,7 +65,7 @@ class LocalDatabaseManager {
 
     return openDatabase(
       databasePath,
-      version: 8,
+      version: 10,
       onCreate: (Database db, int version) async {
         await LocalDatabaseSchema.createTables(
           db: db,
@@ -437,6 +438,45 @@ class LocalDatabaseManager {
     );
   }
 
+  Future<void> addCommentToLostPetReport({
+    required int reportId,
+    required ReportCommentRecord comment,
+  }) async {
+    await _appendCommentToReportTable(
+      tableName: _lostPetReportsTable,
+      reportId: reportId,
+      currentComments: (Map<String, Object?> row) =>
+          LostPetReportRecord.fromMap(row).comments,
+      comment: comment,
+    );
+  }
+
+  Future<void> addCommentToFoundPetReport({
+    required int reportId,
+    required ReportCommentRecord comment,
+  }) async {
+    await _appendCommentToReportTable(
+      tableName: _foundPetReportsTable,
+      reportId: reportId,
+      currentComments: (Map<String, Object?> row) =>
+          FoundPetReportRecord.fromMap(row).comments,
+      comment: comment,
+    );
+  }
+
+  Future<void> addCommentToGenericReport({
+    required int reportId,
+    required ReportCommentRecord comment,
+  }) async {
+    await _appendCommentToReportTable(
+      tableName: _genericReportsTable,
+      reportId: reportId,
+      currentComments: (Map<String, Object?> row) =>
+          GenericReportRecord.fromMap(row).comments,
+      comment: comment,
+    );
+  }
+
   Future<List<HazardReportRecord>> getHazardReportsNeedingSync() async {
     final Database db = await database;
     final List<Map<String, Object?>> rows = await db.query(
@@ -575,8 +615,8 @@ class LocalDatabaseManager {
     required String name,
     required String details,
     required DateTime disappearanceDate,
-    String? photoUrl,
-    String? phone,
+    required String photoUrl,
+    required String phone,
   }) async {
     final Database db = await database;
     final int now = DateTime.now().millisecondsSinceEpoch;
@@ -593,6 +633,7 @@ class LocalDatabaseManager {
       disappearanceDate: disappearanceDate,
       photoUrl: photoUrl,
       phone: phone,
+      comments: const <ReportCommentRecord>[],
       createdAt: DateTime.fromMillisecondsSinceEpoch(now),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
       needsSync: true,
@@ -647,6 +688,7 @@ class LocalDatabaseManager {
     required DateTime disappearanceDate,
     required String? photoUrl,
     required String? phone,
+    String? commentsJson,
   }) async {
     final Database db = await database;
     final List<Map<String, Object?>> rows = await db.query(
@@ -671,6 +713,7 @@ class LocalDatabaseManager {
         'disappearance_date': disappearanceDate.millisecondsSinceEpoch,
         'photo_url': photoUrl,
         'phone': phone,
+        'comments_json': commentsJson ?? '[]',
         'created_at': remoteMs,
         'updated_at': remoteMs,
         'needs_sync': 0,
@@ -700,6 +743,7 @@ class LocalDatabaseManager {
           remoteSource: photoUrl,
         ),
         'phone': phone,
+        'comments_json': commentsJson ?? local.toMap()['comments_json'],
         'updated_at': now,
         'needs_sync': 0,
       },
@@ -739,6 +783,7 @@ class LocalDatabaseManager {
       foundDate: foundDate,
       photoUrl: photoUrl,
       phone: phone,
+      comments: const <ReportCommentRecord>[],
       createdAt: DateTime.fromMillisecondsSinceEpoch(now),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
       needsSync: true,
@@ -792,6 +837,7 @@ class LocalDatabaseManager {
     required DateTime foundDate,
     required String? photoUrl,
     required String? phone,
+    String? commentsJson,
   }) async {
     final Database db = await database;
     final List<Map<String, Object?>> rows = await db.query(
@@ -815,6 +861,7 @@ class LocalDatabaseManager {
         'found_date': foundDate.millisecondsSinceEpoch,
         'photo_url': photoUrl,
         'phone': phone,
+        'comments_json': commentsJson ?? '[]',
         'created_at': remoteMs,
         'updated_at': remoteMs,
         'needs_sync': 0,
@@ -843,6 +890,7 @@ class LocalDatabaseManager {
           remoteSource: photoUrl,
         ),
         'phone': phone,
+        'comments_json': commentsJson ?? local.toMap()['comments_json'],
         'updated_at': now,
         'needs_sync': 0,
       },
@@ -866,6 +914,7 @@ class LocalDatabaseManager {
     required String description,
     required DateTime reportedDate,
     required String riskLevelCode,
+    required int impactRadiusMeters,
     String? photoUrl,
   }) async {
     final Database db = await database;
@@ -881,7 +930,9 @@ class LocalDatabaseManager {
       description: description,
       reportedDate: reportedDate,
       riskLevelCode: riskLevelCode,
+      impactRadiusMeters: impactRadiusMeters,
       photoUrl: photoUrl,
+      comments: const <ReportCommentRecord>[],
       createdAt: DateTime.fromMillisecondsSinceEpoch(now),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
       needsSync: true,
@@ -934,7 +985,9 @@ class LocalDatabaseManager {
     required String description,
     required DateTime reportedDate,
     required String riskLevelCode,
+    required int impactRadiusMeters,
     required String? photoUrl,
+    String? commentsJson,
   }) async {
     final Database db = await database;
     final List<Map<String, Object?>> rows = await db.query(
@@ -957,7 +1010,9 @@ class LocalDatabaseManager {
         'description': description,
         'reported_date': reportedDate.millisecondsSinceEpoch,
         'risk_level_code': riskLevelCode,
+        'impact_radius_meters': impactRadiusMeters,
         'photo_url': photoUrl,
+        'comments_json': commentsJson ?? '[]',
         'created_at': remoteMs,
         'updated_at': remoteMs,
         'needs_sync': 0,
@@ -982,10 +1037,12 @@ class LocalDatabaseManager {
         'description': description,
         'reported_date': reportedDate.millisecondsSinceEpoch,
         'risk_level_code': riskLevelCode,
+        'impact_radius_meters': impactRadiusMeters,
         'photo_url': _preferOfflineImageSource(
           currentSource: local.photoUrl,
           remoteSource: photoUrl,
         ),
+        'comments_json': commentsJson ?? local.toMap()['comments_json'],
         'updated_at': now,
         'needs_sync': 0,
       },
@@ -1255,5 +1312,45 @@ class LocalDatabaseManager {
 
   bool _isRemoteUrl(String value) {
     return value.startsWith('http://') || value.startsWith('https://');
+  }
+
+  Future<void> _appendCommentToReportTable({
+    required String tableName,
+    required int reportId,
+    required List<ReportCommentRecord> Function(Map<String, Object?> row)
+    currentComments,
+    required ReportCommentRecord comment,
+  }) async {
+    final Database db = await database;
+    final List<Map<String, Object?>> rows = await db.query(
+      tableName,
+      where: 'id = ?',
+      whereArgs: <Object?>[reportId],
+      limit: 1,
+    );
+
+    if (rows.isEmpty) {
+      return;
+    }
+
+    final List<ReportCommentRecord> updatedComments = <ReportCommentRecord>[
+      ...currentComments(rows.first),
+      comment,
+    ];
+    final int now = DateTime.now().millisecondsSinceEpoch;
+
+    await db.update(
+      tableName,
+      <String, Object?>{
+        'comments_json': jsonEncode(
+          updatedComments.map((ReportCommentRecord c) => c.toMap()).toList(),
+        ),
+        'updated_at': now,
+        'last_modified_at': now,
+        'needs_sync': 1,
+      },
+      where: 'id = ?',
+      whereArgs: <Object?>[reportId],
+    );
   }
 }

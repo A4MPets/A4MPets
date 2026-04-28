@@ -1,4 +1,4 @@
-﻿part of 'map_page.dart';
+part of 'map_page.dart';
 
 extension _MapPageHazardsState on _MapPageState {
   double _hazardFocusZoomFor(HazardReportRecord hazard) {
@@ -319,10 +319,7 @@ extension _MapPageHazardsState on _MapPageState {
       isHazardCommentsPanel: true,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
-        return HazardCommentsPanelContent(
-          isDarkMode: isDarkMode,
-          hazard: hazard,
-        );
+        return HazardCommentsPanelContent(isDarkMode: isDarkMode, hazard: hazard);
       },
     );
   }
@@ -338,6 +335,7 @@ extension _MapPageHazardsState on _MapPageState {
         RouteHazardVisualizerService.analyzeRouteHazards(
           routePolyline: _draftRoutePolyline,
           hazards: visibleHazards,
+          genericReports: _visibleGenericReports,
         );
 
     _hazardColoredRouteSegments = segments;

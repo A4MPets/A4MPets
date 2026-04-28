@@ -27,7 +27,7 @@ class LostPetReportSyncApiTest extends TestCase
                     'name' => 'Milo',
                     'details' => 'Brown dog with blue collar',
                     'disappearance_date' => now()->subDay()->format('Y-m-d H:i:s'),
-                    'photo_url' => null,
+                    'photo_url' => 'https://example.com/lost-1.jpg',
                     'phone' => '5551234',
                     'sync_status' => 'synced',
                     'last_modified_at' => now()->format('Y-m-d H:i:s'),
@@ -40,8 +40,8 @@ class LostPetReportSyncApiTest extends TestCase
                     'name' => 'Nina',
                     'details' => 'White cat',
                     'disappearance_date' => now()->subDays(2)->format('Y-m-d H:i:s'),
-                    'photo_url' => null,
-                    'phone' => null,
+                    'photo_url' => 'https://example.com/lost-2.jpg',
+                    'phone' => '5554321',
                     'sync_status' => 'deleted',
                     'last_modified_at' => now()->format('Y-m-d H:i:s'),
                 ],
@@ -53,5 +53,36 @@ class LostPetReportSyncApiTest extends TestCase
             ->assertJsonPath('sync_results.synced', 1)
             ->assertJsonPath('sync_results.deleted', 1)
             ->assertJsonPath('sync_results.errors', 0);
+    }
+
+    public function test_lost_pet_sync_requires_phone_and_photo(): void
+    {
+        $user = User::factory()->create();
+        $headers = $this->authHeaders($user);
+
+        $response = $this->postJson('/api/lost-pet-reports/sync', [
+            'lost_pet_reports' => [
+                [
+                    'local_id' => 'lost-invalid',
+                    'remote_id' => null,
+                    'last_seen_latitude' => 3.4516,
+                    'last_seen_longitude' => -76.5320,
+                    'name' => 'Milo',
+                    'details' => 'Brown dog with blue collar',
+                    'disappearance_date' => now()->subDay()->format('Y-m-d H:i:s'),
+                    'photo_url' => '',
+                    'phone' => '',
+                    'sync_status' => 'synced',
+                    'last_modified_at' => now()->format('Y-m-d H:i:s'),
+                ],
+            ],
+        ], $headers);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'lost_pet_reports.0.photo_url',
+                'lost_pet_reports.0.phone',
+            ]);
     }
 }

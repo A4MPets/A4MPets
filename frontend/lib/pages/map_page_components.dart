@@ -88,6 +88,127 @@ class _PanelRoute {
   });
 }
 
+class _ProximityAlertTarget {
+  final String zoneKey;
+  final ReportCommentSubjectType subjectType;
+  final int reportId;
+  final double distanceMeters;
+
+  const _ProximityAlertTarget({
+    required this.zoneKey,
+    required this.subjectType,
+    required this.reportId,
+    required this.distanceMeters,
+  });
+}
+
+class _ProximityAlertCard extends StatelessWidget {
+  final bool isDarkMode;
+  final VoidCallback onAcknowledge;
+  final VoidCallback onOpenComments;
+
+  const _ProximityAlertCard({
+    required this.isDarkMode,
+    required this.onAcknowledge,
+    required this.onOpenComments,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color textColor = AppPalette.textPrimary(isDarkMode);
+    final Color surface = AppPalette.cardBackground(isDarkMode);
+
+    return Center(
+      child: IgnorePointer(
+        ignoring: false,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 340),
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: surface,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: AppPalette.border(isDarkMode)),
+                boxShadow: const <BoxShadow>[
+                  BoxShadow(
+                    color: Color(0x33000000),
+                    blurRadius: 24,
+                    offset: Offset(0, 14),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    '¡Cuidado!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Estas dentro del radio de afectacion de un peligro.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    height: 46,
+                    child: ElevatedButton(
+                      onPressed: onAcknowledge,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppPalette.primaryBlue,
+                        foregroundColor: AppPalette.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'De acuerdo',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 46,
+                    child: OutlinedButton(
+                      onPressed: onOpenComments,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppPalette.primaryBlue,
+                        side: const BorderSide(color: AppPalette.primaryBlue),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Desmentir o Confirmar',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _TripStartPanelContent extends StatelessWidget {
   final bool isDarkMode;
   final _TripTransportMethod selectedTransport;

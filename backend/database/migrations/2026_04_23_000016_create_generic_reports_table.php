@@ -18,6 +18,7 @@ return new class extends Migration
             $table->text('description');
             $table->dateTime('reported_date');
             $table->string('risk_level_code')->default('undefined');
+            $table->unsignedInteger('impact_radius_meters')->default(0);
             $table->string('photo_url')->nullable();
             $table->string('sync_status')->default('synced');
             $table->dateTime('last_modified_at')->nullable()->index();

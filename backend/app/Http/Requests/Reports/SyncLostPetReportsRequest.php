@@ -25,8 +25,8 @@ class SyncLostPetReportsRequest extends FormRequest
             'lost_pet_reports.*.name' => ['required', 'string', 'max:255'],
             'lost_pet_reports.*.details' => ['required', 'string'],
             'lost_pet_reports.*.disappearance_date' => ['required', 'date_format:Y-m-d H:i:s'],
-            'lost_pet_reports.*.photo_url' => ['nullable', 'string', 'max:500'],
-            'lost_pet_reports.*.phone' => ['nullable', 'string', 'max:64'],
+            'lost_pet_reports.*.photo_url' => ['required', 'string', 'max:500'],
+            'lost_pet_reports.*.phone' => ['required', 'string', 'max:64'],
             'lost_pet_reports.*.sync_status' => ['nullable', 'string', 'max:32'],
             'lost_pet_reports.*.last_modified_at' => ['required', 'date_format:Y-m-d H:i:s'],
         ];

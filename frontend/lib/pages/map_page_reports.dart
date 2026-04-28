@@ -190,8 +190,6 @@ extension _MapPageReportsState on _MapPageState {
       title: 'Reportar',
       anchor: PanelAnchor.bottomLeft,
       width: 290,
-      height: 280,
-      maxHeight: 320,
       adaptHeightToContent: true,
       expandHorizontal: false,
       expandVertical: false,
@@ -277,7 +275,7 @@ extension _MapPageReportsState on _MapPageState {
   _PanelRoute _buildGenericReportRoute(bool isDarkMode) {
     return _PanelRoute(
       transitionKey: ++_panelTransitionSeed,
-      title: 'Otro Reporte',
+      title: 'Reporte',
       anchor: PanelAnchor.bottomLeft,
       width: 340,
       mobileMaxHeightFactor: 0.5,
@@ -327,6 +325,7 @@ extension _MapPageReportsState on _MapPageState {
         return LostPetDetailsPanelContent(
           isDarkMode: isDarkMode,
           report: report,
+          onViewComments: () => _openLostPetCommentsPanel(isDarkMode, report),
         );
       },
     );
@@ -353,6 +352,7 @@ extension _MapPageReportsState on _MapPageState {
         return FoundPetDetailsPanelContent(
           isDarkMode: isDarkMode,
           report: report,
+          onViewComments: () => _openFoundPetCommentsPanel(isDarkMode, report),
         );
       },
     );
@@ -364,7 +364,7 @@ extension _MapPageReportsState on _MapPageState {
   ) {
     return _PanelRoute(
       transitionKey: ++_panelTransitionSeed,
-      title: 'Otro Reporte',
+      title: 'Reporte',
       anchor: PanelAnchor.bottomLeft,
       width: 380,
       height: 420,
@@ -379,6 +379,65 @@ extension _MapPageReportsState on _MapPageState {
         return GenericReportDetailsPanelContent(
           isDarkMode: isDarkMode,
           report: report,
+          onViewComments: () => _openGenericReportCommentsPanel(isDarkMode, report),
+        );
+      },
+    );
+  }
+
+  void _openLostPetCommentsPanel(bool isDarkMode, LostPetReportRecord report) {
+    _pushPanel(_buildReportCommentsRoute(
+      isDarkMode: isDarkMode,
+      reportId: report.id,
+      subjectType: ReportCommentSubjectType.lostPet,
+    ));
+  }
+
+  void _openFoundPetCommentsPanel(
+    bool isDarkMode,
+    FoundPetReportRecord report,
+  ) {
+    _pushPanel(_buildReportCommentsRoute(
+      isDarkMode: isDarkMode,
+      reportId: report.id,
+      subjectType: ReportCommentSubjectType.foundPet,
+    ));
+  }
+
+  void _openGenericReportCommentsPanel(
+    bool isDarkMode,
+    GenericReportRecord report,
+  ) {
+    _pushPanel(_buildReportCommentsRoute(
+      isDarkMode: isDarkMode,
+      reportId: report.id,
+      subjectType: ReportCommentSubjectType.generic,
+    ));
+  }
+
+  _PanelRoute _buildReportCommentsRoute({
+    required bool isDarkMode,
+    required int reportId,
+    required ReportCommentSubjectType subjectType,
+  }) {
+    return _PanelRoute(
+      transitionKey: ++_panelTransitionSeed,
+      title: 'Comentarios',
+      anchor: PanelAnchor.bottomLeft,
+      width: 380,
+      height: 560,
+      maxHeight: 620,
+      adaptHeightToContent: false,
+      expandHorizontal: false,
+      expandVertical: false,
+      scrollContent: false,
+      isHazardCommentsPanel: true,
+      borderRadius: BorderRadius.circular(22),
+      contentBuilder: (BuildContext context) {
+        return ReportCommentsPanelContent(
+          isDarkMode: isDarkMode,
+          subjectType: subjectType,
+          reportId: reportId,
         );
       },
     );

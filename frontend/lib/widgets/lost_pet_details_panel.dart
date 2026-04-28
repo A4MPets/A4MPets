@@ -2,62 +2,91 @@ import 'package:flutter/material.dart';
 
 import '../models/lost_pet_report_record.dart';
 import '../theme/app_palette.dart';
+import 'shared/panel_scroll_view.dart';
 import 'shared/local_image_widget.dart';
 
 class LostPetDetailsPanelContent extends StatelessWidget {
   final bool isDarkMode;
   final LostPetReportRecord report;
+  final VoidCallback onViewComments;
 
   const LostPetDetailsPanelContent({
     super.key,
     required this.isDarkMode,
     required this.report,
+    required this.onViewComments,
   });
 
   @override
   Widget build(BuildContext context) {
     final Color textColor = AppPalette.textPrimary(isDarkMode);
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (report.photoUrl != null && report.photoUrl!.isNotEmpty)
-            SizedBox(
-              height: 180,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: buildLocalImageWidget(
-                  source: report.photoUrl,
-                  fit: BoxFit.cover,
-                  fallback: const _ImageFallback(),
-                  errorBuilder: (_, _, _) => const _ImageFallback(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: PanelScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (report.photoUrl != null && report.photoUrl!.isNotEmpty)
+                  SizedBox(
+                    height: 180,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: buildLocalImageWidget(
+                        source: report.photoUrl,
+                        fit: BoxFit.cover,
+                        fallback: const _ImageFallback(),
+                        errorBuilder: (_, _, _) => const _ImageFallback(),
+                      ),
+                    ),
+                  ),
+                if (report.photoUrl != null && report.photoUrl!.isNotEmpty)
+                  const SizedBox(height: 12),
+                Text(
+                  report.name,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
+                const SizedBox(height: 8),
+                _DetailsRow(
+                  label: 'Fecha',
+                  value: _formatDate(report.disappearanceDate),
+                ),
+                const SizedBox(height: 8),
+                _DetailsRow(label: 'Detalles', value: report.details),
+                if (report.phone != null && report.phone!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _DetailsRow(label: 'Telefono', value: report.phone!),
+                ],
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 44,
+          child: ElevatedButton(
+            onPressed: onViewComments,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppPalette.placeholderGray,
+              foregroundColor: AppPalette.charcoal,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
-          if (report.photoUrl != null && report.photoUrl!.isNotEmpty)
-            const SizedBox(height: 12),
-          Text(
-            report.name,
-            style: TextStyle(
-              color: textColor,
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
+            child: const Text(
+              'Ver comentarios',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
             ),
           ),
-          const SizedBox(height: 8),
-          _DetailsRow(
-            label: 'Fecha',
-            value: _formatDate(report.disappearanceDate),
-          ),
-          const SizedBox(height: 8),
-          _DetailsRow(label: 'Detalles', value: report.details),
-          if (report.phone != null && report.phone!.trim().isNotEmpty) ...[
-            const SizedBox(height: 8),
-            _DetailsRow(label: 'Telefono', value: report.phone!),
-          ],
-        ],
-      ),
+        ),
+      ],
     );
   }
 

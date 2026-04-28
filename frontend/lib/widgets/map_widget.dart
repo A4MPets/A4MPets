@@ -1070,29 +1070,26 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (reportDangerVisible)
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: SizedBox(
-                          width: 220,
-                          height: 56,
-                          child: ElevatedButton(
-                            onPressed: _onReportarPeligro,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: secondary,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: _onReportarPeligro,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: secondary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Text(
-                              'Reportar',
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
+                          ),
+                          child: const Text(
+                            'Reportar',
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),

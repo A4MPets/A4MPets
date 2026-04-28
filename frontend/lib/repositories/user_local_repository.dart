@@ -9,6 +9,7 @@ import '../models/found_pet_report_record.dart';
 import '../models/generic_report_record.dart';
 import '../models/hazard_report_record.dart';
 import '../models/pet_record.dart';
+import '../models/report_comment_record.dart';
 import '../models/route_record.dart';
 import '../services/backend_api_client.dart';
 import '../services/local_database_manager.dart';
@@ -273,6 +274,18 @@ class UserLocalRepository {
     unawaited(syncCoordinator.scheduleSync());
   }
 
+  Future<void> addCommentToLostPetReport({
+    required int reportId,
+    required ReportCommentRecord comment,
+  }) async {
+    await databaseManager.addCommentToLostPetReport(
+      reportId: reportId,
+      comment: comment,
+    );
+    await databaseManager.markUserDataForFutureSync();
+    unawaited(syncCoordinator.scheduleSync());
+  }
+
   Future<void> syncHazardsNow() {
     return syncCoordinator.syncNow();
   }
@@ -287,8 +300,8 @@ class UserLocalRepository {
     required String name,
     required String details,
     required DateTime disappearanceDate,
-    String? photoUrl,
-    String? phone,
+    required String photoUrl,
+    required String phone,
   }) async {
     await databaseManager.addLostPetReport(
       lastSeenLatitude: lastSeenLatitude,
@@ -305,6 +318,18 @@ class UserLocalRepository {
 
   Future<void> syncLostPetReportsNow() {
     return syncCoordinator.syncNow();
+  }
+
+  Future<void> addCommentToFoundPetReport({
+    required int reportId,
+    required ReportCommentRecord comment,
+  }) async {
+    await databaseManager.addCommentToFoundPetReport(
+      reportId: reportId,
+      comment: comment,
+    );
+    await databaseManager.markUserDataForFutureSync();
+    unawaited(syncCoordinator.scheduleSync());
   }
 
   Future<List<FoundPetReportRecord>> getFoundPetReports() {
@@ -345,6 +370,7 @@ class UserLocalRepository {
     required String description,
     required DateTime reportedDate,
     required String riskLevelCode,
+    required int impactRadiusMeters,
     String? photoUrl,
   }) async {
     await databaseManager.addGenericReport(
@@ -353,7 +379,20 @@ class UserLocalRepository {
       description: description,
       reportedDate: reportedDate,
       riskLevelCode: riskLevelCode,
+      impactRadiusMeters: impactRadiusMeters,
       photoUrl: photoUrl,
+    );
+    await databaseManager.markUserDataForFutureSync();
+    unawaited(syncCoordinator.scheduleSync());
+  }
+
+  Future<void> addCommentToGenericReport({
+    required int reportId,
+    required ReportCommentRecord comment,
+  }) async {
+    await databaseManager.addCommentToGenericReport(
+      reportId: reportId,
+      comment: comment,
     );
     await databaseManager.markUserDataForFutureSync();
     unawaited(syncCoordinator.scheduleSync());
