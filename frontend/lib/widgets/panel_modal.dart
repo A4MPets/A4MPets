@@ -357,13 +357,10 @@ class _PanelScrollableBodyState extends State<_PanelScrollableBody> {
     final EdgeInsets contentPadding = EdgeInsets.fromLTRB(
       16,
       widget.topPadding,
-      8,
+      0,
       18,
     );
-    final Widget spacedChild = Padding(
-      padding: const EdgeInsets.only(right: 12),
-      child: widget.child,
-    );
+    final Widget spacedChild = widget.child;
 
     if (widget.adaptHeightToContent) {
       return Scrollbar(

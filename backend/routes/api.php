@@ -43,6 +43,8 @@ Route::middleware('api.token')->group(function (): void {
         Route::get('/{lostPetReport}', [LostPetReportController::class, 'show']);
         Route::put('/{lostPetReport}', [LostPetReportController::class, 'update']);
         Route::delete('/{lostPetReport}', [LostPetReportController::class, 'destroy']);
+        Route::get('/{lostPetReport}/comments', [LostPetReportController::class, 'comments']);
+        Route::post('/{lostPetReport}/comments', [LostPetReportController::class, 'storeComment']);
     });
 
     Route::prefix('found-pet-reports')->group(function (): void {
@@ -52,6 +54,8 @@ Route::middleware('api.token')->group(function (): void {
         Route::get('/{foundPetReport}', [FoundPetReportController::class, 'show']);
         Route::put('/{foundPetReport}', [FoundPetReportController::class, 'update']);
         Route::delete('/{foundPetReport}', [FoundPetReportController::class, 'destroy']);
+        Route::get('/{foundPetReport}/comments', [FoundPetReportController::class, 'comments']);
+        Route::post('/{foundPetReport}/comments', [FoundPetReportController::class, 'storeComment']);
     });
 
     Route::prefix('generic-reports')->group(function (): void {
@@ -61,6 +65,8 @@ Route::middleware('api.token')->group(function (): void {
         Route::get('/{genericReport}', [GenericReportController::class, 'show']);
         Route::put('/{genericReport}', [GenericReportController::class, 'update']);
         Route::delete('/{genericReport}', [GenericReportController::class, 'destroy']);
+        Route::get('/{genericReport}/comments', [GenericReportController::class, 'comments']);
+        Route::post('/{genericReport}/comments', [GenericReportController::class, 'storeComment']);
     });
 
     Route::prefix('pets')->group(function (): void {

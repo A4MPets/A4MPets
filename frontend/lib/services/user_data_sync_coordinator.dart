@@ -320,6 +320,17 @@ class UserDataSyncCoordinator {
             hazard['remote_id']?.toString() ?? hazard['id']?.toString();
         final String syncStatus = hazard['status']?.toString() ?? 'synced';
 
+        if (syncStatus == 'archived') {
+          await _databaseManager.removeHazardReportBySyncIdentity(
+            localUuid: localUuid,
+            remoteId: remoteId,
+          );
+          _log(
+            'pull: hazard archivado removido local_uuid=$localUuid remote_id=$remoteId',
+          );
+          continue;
+        }
+
         await _databaseManager.upsertHazardFromRemote(
           localUuid: localUuid,
           remoteId: remoteId,

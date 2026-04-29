@@ -3,6 +3,7 @@
 namespace App\Services\Hazards;
 
 use App\Models\HazardReport;
+use App\Services\Comments\ReportCommentService;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Log;
@@ -12,7 +13,7 @@ class HazardReportService
 {
     public function __construct(
         private readonly HazardValueNormalizer $normalizer,
-        private readonly HazardCommentSyncService $commentSyncService
+        private readonly ReportCommentService $commentSyncService
     ) {}
 
     /**
@@ -115,12 +116,10 @@ class HazardReportService
         ];
     }
 
-    public function archive(HazardReport $hazardReport): void
+    public function delete(HazardReport $hazardReport): void
     {
-        $hazardReport->update([
-            'status' => 'archived',
-            'last_modified_at' => now(),
-        ]);
+        $hazardReport->comments()->delete();
+        $hazardReport->delete();
     }
 
     public function unsynced()

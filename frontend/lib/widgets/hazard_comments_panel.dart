@@ -56,11 +56,9 @@ class _ReportCommentsPanelContentState
     extends ConsumerState<ReportCommentsPanelContent> {
   static const String _confirmHazardText =
       'Confirmo que hay un peligro en este area';
-  static const String _denyHazardText =
-      'No veo que haya peligro en este area';
+  static const String _denyHazardText = 'No veo que haya peligro en este area';
 
   late final TextEditingController _commentController;
-  late final ScrollController _commentsScrollController;
   bool _isSending = false;
   String? _sendErrorText;
 
@@ -71,13 +69,11 @@ class _ReportCommentsPanelContentState
   void initState() {
     super.initState();
     _commentController = TextEditingController();
-    _commentsScrollController = ScrollController();
   }
 
   @override
   void dispose() {
     _commentController.dispose();
-    _commentsScrollController.dispose();
     super.dispose();
   }
 
@@ -188,7 +184,9 @@ class _ReportCommentsPanelContentState
             ref.watch(foundPetReportsControllerProvider).asData?.value ??
             const <FoundPetReportRecord>[];
         return reports
-                .where((FoundPetReportRecord item) => item.id == widget.reportId)
+                .where(
+                  (FoundPetReportRecord item) => item.id == widget.reportId,
+                )
                 .firstOrNull
                 ?.comments ??
             const <ReportCommentRecord>[];
@@ -213,7 +211,6 @@ class _ReportCommentsPanelContentState
       children: [
         Expanded(
           child: PanelScrollView(
-            controller: _commentsScrollController,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

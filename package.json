@@ -3,14 +3,18 @@
   "scripts": {
     "frontend": "node scripts/run-frontend.js",
     "frontend:android": "node scripts/run-frontend.js --android",
-    "backend": "cd backend && php artisan serve --host=0.0.0.0 --port=8000",
+    "frontend:url": "node scripts/run-frontend.js --url",
+    "frontend:runtime": "node scripts/run-frontend.js --url-file .runtime/cloudflare-url.txt",
+    "frontend:android:url": "node scripts/run-frontend.js --android --url",
+    "frontend:android:runtime": "node scripts/run-frontend.js --android --url-file .runtime/cloudflare-url.txt",
+    "backend": "node scripts/run-backend.js",
+    "backend:cloudflare": "node scripts/run-backend.js --cloudflare",
     "graphhopper": "docker compose up -d graphhopper",
-    "cloudflare": "node scripts/run-frontend.js --cloudflare",
-    "cloudflare:android": "node scripts/run-frontend.js --android --cloudflare",
+    "cloudflare": "npm run backend:cloudflare",
     "dev": "concurrently \"npm run backend\" \"npm run frontend\" \"npm run graphhopper\"",
     "dev:android": "concurrently \"npm run backend\" \"npm run frontend:android\" \"npm run graphhopper\"",
-    "dev:cloudflare": "concurrently \"npm run backend\" \"npm run cloudflare\" \"npm run graphhopper\"",
-    "dev:cloudflare:android": "concurrently \"npm run backend\" \"npm run cloudflare:android\" \"npm run graphhopper\"",
+    "dev:cloudflare": "concurrently \"npm run backend:cloudflare\" \"npm run frontend:runtime\" \"npm run graphhopper\"",
+    "dev:cloudflare:android": "concurrently \"npm run backend:cloudflare\" \"npm run frontend:android:runtime\" \"npm run graphhopper\"",
     "dev:docker": "docker compose up -d --build"
   },
   "devDependencies": {

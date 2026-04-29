@@ -3,19 +3,44 @@ const os = require('os');
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');
 
-const args = new Set(process.argv.slice(2));
+const rawArgs = process.argv.slice(2);
+const args = new Set(rawArgs);
 const isAndroid = args.has('--android');
 const useCloudflare = args.has('--cloudflare');
 const isDryRun = args.has('--dry-run');
+
+function getFlagValue(flag) {
+  const index = rawArgs.indexOf(flag);
+  if (index === -1) {
+    return null;
+  }
+
+  const value = rawArgs[index + 1];
+  if (!value || value.startsWith('--')) {
+    return null;
+  }
+
+  return value;
+}
 
 const repoRoot = path.resolve(__dirname, '..');
 const frontendDir = path.join(repoRoot, 'frontend');
 const runtimeEnvPath = path.join(frontendDir, 'env', 'runtime.local.json');
 const cloudflaredLogPath = path.join(repoRoot, 'cloudflared-runtime.log');
+const defaultRuntimeTunnelUrlPath = path.join(
+  repoRoot,
+  '.runtime',
+  'cloudflare-url.txt',
+);
 const backendPort = process.env.A4M_BACKEND_PORT || '8000';
 const webPort = process.env.A4M_WEB_PORT || '7357';
 const cloudflaredCommand =
   process.platform === 'win32' ? 'cloudflared.exe' : 'cloudflared';
+const explicitTunnelUrl = getFlagValue('--url');
+const runtimeTunnelUrlFileArg = getFlagValue('--url-file');
+const runtimeTunnelUrlFile = runtimeTunnelUrlFileArg
+  ? path.resolve(repoRoot, runtimeTunnelUrlFileArg)
+  : defaultRuntimeTunnelUrlPath;
 
 let cloudflaredProcess = null;
 let flutterProcess = null;
@@ -166,6 +191,25 @@ async function waitForTunnelUrl(child, timeoutMs = 45000) {
   throw new Error('Tiempo de espera agotado para cloudflared.');
 }
 
+async function waitForTunnelUrlFile(filePath, timeoutMs = 60000) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    if (fs.existsSync(filePath)) {
+      const fileText = fs.readFileSync(filePath, 'utf8').trim();
+      if (fileText.length > 0) {
+        return fileText;
+      }
+    }
+
+    await wait(500);
+  }
+
+  throw new Error(
+    `Tiempo de espera agotado para la URL runtime en ${path.relative(repoRoot, filePath)}.`,
+  );
+}
+
 async function startCloudflareTunnel() {
   if (fs.existsSync(cloudflaredLogPath)) {
     fs.unlinkSync(cloudflaredLogPath);
@@ -274,7 +318,12 @@ async function main() {
   const lanIp = getLanIpv4Address();
   let tunnelUrl = null;
 
-  if (useCloudflare) {
+  if (explicitTunnelUrl) {
+    tunnelUrl = explicitTunnelUrl;
+  } else if (args.has('--url-file')) {
+    tunnelUrl = await waitForTunnelUrlFile(runtimeTunnelUrlFile);
+    console.log(`[runner] URL runtime detectada: ${tunnelUrl}`);
+  } else if (useCloudflare) {
     tunnelUrl = await startCloudflareTunnel();
     await waitForTunnelReady(tunnelUrl);
   }

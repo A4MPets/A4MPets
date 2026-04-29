@@ -2,19 +2,20 @@
 
 namespace App\Services\Hazards;
 
-use App\Models\HazardComment;
 use App\Models\HazardReport;
+use App\Models\ReportComment;
 
 class HazardResponseFormatter
 {
     /**
      * @return array<string, mixed>
      */
-    public function formatComment(HazardComment $comment): array
+    public function formatComment(ReportComment $comment): array
     {
         return [
             'id' => $comment->id,
-            'hazard_report_id' => $comment->hazard_report_id,
+            'commentable_type' => $comment->commentable_type,
+            'commentable_id' => $comment->commentable_id,
             'user_id' => $comment->user_id,
             'author_username' => $comment->author_name,
             'author_avatar_url' => $comment->author_avatar_url,

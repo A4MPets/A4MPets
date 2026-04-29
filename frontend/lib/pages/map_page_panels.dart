@@ -1,4 +1,4 @@
-﻿part of 'map_page.dart';
+part of 'map_page.dart';
 
 extension _MapPagePanelsState on _MapPageState {
   void _pushPanel(_PanelRoute route) {
@@ -97,9 +97,19 @@ extension _MapPagePanelsState on _MapPageState {
       if (currentPanel.isGenericReportPanel) {
         _activeReportSelectionContext = null;
         _manualGenericReportLocation = null;
+        _genericReportDraftPreview = null;
       }
       if (currentPanel.isHazardDetailsPanel) {
         _selectedHazard = null;
+      }
+      if (currentPanel.isLostPetDetailsPanel) {
+        _selectedLostPetReport = null;
+      }
+      if (currentPanel.isFoundPetDetailsPanel) {
+        _selectedFoundPetReport = null;
+      }
+      if (currentPanel.isGenericReportDetailsPanel) {
+        _selectedGenericReport = null;
       }
       _panelStack.removeLast();
     });

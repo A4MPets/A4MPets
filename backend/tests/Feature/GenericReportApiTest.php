@@ -71,5 +71,23 @@ class GenericReportApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('sync_results.synced', 1)
             ->assertJsonPath('sync_results.errors', 0);
+
+        $this->postJson('/api/generic-reports/'.$genericReportId.'/comments', [
+            'comment_text' => 'This zone still looks risky.',
+        ], $headers)
+            ->assertCreated()
+            ->assertJsonPath('data.comment_text', 'This zone still looks risky.');
+
+        $this->getJson('/api/generic-reports/'.$genericReportId.'/comments', $headers)
+            ->assertOk()
+            ->assertJsonPath('data.0.comment_text', 'This zone still looks risky.');
+
+        $this->deleteJson('/api/generic-reports/'.$genericReportId, [], $headers)
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->getJson('/api/generic-reports', $headers)
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
     }
 }

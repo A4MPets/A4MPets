@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Reports\StoreGenericReportRequest;
+use App\Http\Requests\Reports\StoreReportCommentRequest;
 use App\Http\Requests\Reports\SyncGenericReportsRequest;
 use App\Http\Requests\Reports\UpdateGenericReportRequest;
 use App\Models\GenericReport;
+use App\Services\Comments\ReportCommentFormatter;
+use App\Services\Comments\ReportCommentService;
 use App\Services\Reports\GenericReportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,7 +16,9 @@ use Illuminate\Http\Request;
 class GenericReportController extends Controller
 {
     public function __construct(
-        private readonly GenericReportService $genericReportService
+        private readonly GenericReportService $genericReportService,
+        private readonly ReportCommentService $reportCommentService,
+        private readonly ReportCommentFormatter $reportCommentFormatter
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -38,6 +43,8 @@ class GenericReportController extends Controller
 
     public function show(GenericReport $genericReport): JsonResponse
     {
+        $genericReport->load(['comments', 'comments.user']);
+
         return response()->json([
             'success' => true,
             'data' => $genericReport,
@@ -88,5 +95,32 @@ class GenericReportController extends Controller
             'success' => true,
             'sync_results' => $results,
         ]);
+    }
+
+    public function comments(GenericReport $genericReport): JsonResponse
+    {
+        $genericReport->load(['comments', 'comments.user']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $genericReport->comments
+                ->map(fn ($comment) => $this->reportCommentFormatter->formatComment($comment))
+                ->values(),
+        ]);
+    }
+
+    public function storeComment(StoreReportCommentRequest $request, GenericReport $genericReport): JsonResponse
+    {
+        $comment = $this->reportCommentService->storeComment(
+            $genericReport,
+            $request->user(),
+            $request->validated()
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Comentario agregado exitosamente',
+            'data' => $this->reportCommentFormatter->formatComment($comment),
+        ], 201);
     }
 }

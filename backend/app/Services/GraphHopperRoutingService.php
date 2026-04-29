@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\GenericReport;
 use App\Models\HazardReport;
+use App\Services\Hazards\HazardRoutingRiskFilter;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -11,10 +12,19 @@ use Throwable;
 
 class GraphHopperRoutingService
 {
-    public function planRoute(array $points, bool $avoidHazards, string $travelMode): array
-    {
+    public function __construct(
+        private readonly HazardRoutingRiskFilter $hazardRoutingRiskFilter
+    ) {}
+
+    public function planRoute(
+        array $points,
+        bool $avoidHazards,
+        ?array $hazardRiskFilters,
+        string $travelMode
+    ): array {
         $baseUrls = $this->resolveBaseUrls();
         $apiKey = (string) config('services.graphhopper.api_key');
+        $selectedRiskFilters = $this->hazardRoutingRiskFilter->normalizeSelectedFilters($hazardRiskFilters);
 
         if (count($baseUrls) === 0) {
             throw new RuntimeException('GraphHopper no está configurado en services.graphhopper.base_url.');
@@ -24,7 +34,12 @@ class GraphHopperRoutingService
         $attempts = [];
 
         foreach ($profiles as $profile) {
-            $routeRequest = $this->buildPayload($points, $profile, $avoidHazards);
+            $routeRequest = $this->buildPayload(
+                $points,
+                $profile,
+                $avoidHazards,
+                $selectedRiskFilters
+            );
             $payload = $routeRequest['payload'];
             $hazardsConsidered = $routeRequest['hazards_considered'];
 
@@ -92,6 +107,7 @@ class GraphHopperRoutingService
                     'duration_seconds' => ((float) ($firstPath['time'] ?? 0.0)) / 1000.0,
                     'profile' => $profile,
                     'hazards_considered' => $hazardsConsidered,
+                    'hazard_risk_filters' => $selectedRiskFilters,
                 ];
             }
         }
@@ -125,7 +141,7 @@ class GraphHopperRoutingService
         return $normalized;
     }
 
-    private function buildPayload(array $points, string $profile, bool $avoidHazards): array
+    private function buildPayload(array $points, string $profile, bool $avoidHazards, array $selectedRiskFilters): array
     {
         $payload = [
             'profile' => $profile,
@@ -138,7 +154,7 @@ class GraphHopperRoutingService
             'calc_points' => true,
         ];
 
-        if (! $avoidHazards) {
+        if (! $avoidHazards || $selectedRiskFilters === []) {
             return [
                 'payload' => $payload,
                 'hazards_considered' => 0,
@@ -148,8 +164,8 @@ class GraphHopperRoutingService
         $payload['ch.disable'] = true;
 
         $avoidanceAreas = [
-            ...$this->loadHazardAvoidanceAreas(),
-            ...$this->loadGenericReportAvoidanceAreas(),
+            ...$this->loadHazardAvoidanceAreas($selectedRiskFilters),
+            ...$this->loadGenericReportAvoidanceAreas($selectedRiskFilters),
         ];
 
         if (count($avoidanceAreas) === 0) {
@@ -201,9 +217,10 @@ class GraphHopperRoutingService
     }
 
     /**
+     * @param  array<int, string>  $selectedRiskFilters
      * @return array<int, array{latitude: float, longitude: float, impact_radius_meters: float}>
      */
-    private function loadHazardAvoidanceAreas(): array
+    private function loadHazardAvoidanceAreas(array $selectedRiskFilters): array
     {
         $hazards = HazardReport::query()
             ->where('status', '!=', 'archived')
@@ -216,9 +233,16 @@ class GraphHopperRoutingService
                 'incident_latitude',
                 'incident_longitude',
                 'impact_radius_meters',
+                'risk_level_id',
             ]);
 
         return $hazards
+            ->filter(function (HazardReport $hazard) use ($selectedRiskFilters): bool {
+                return $this->hazardRoutingRiskFilter->shouldAvoidRisk(
+                    $hazard->risk_level_code,
+                    $selectedRiskFilters
+                );
+            })
             ->map(static fn (HazardReport $hazard): array => [
                 'latitude' => (float) $hazard->incident_latitude,
                 'longitude' => (float) $hazard->incident_longitude,
@@ -228,9 +252,10 @@ class GraphHopperRoutingService
     }
 
     /**
+     * @param  array<int, string>  $selectedRiskFilters
      * @return array<int, array{latitude: float, longitude: float, impact_radius_meters: float}>
      */
-    private function loadGenericReportAvoidanceAreas(): array
+    private function loadGenericReportAvoidanceAreas(array $selectedRiskFilters): array
     {
         $reports = GenericReport::query()
             ->where('sync_status', '!=', 'deleted')
@@ -243,9 +268,16 @@ class GraphHopperRoutingService
                 'latitude',
                 'longitude',
                 'impact_radius_meters',
+                'risk_level_code',
             ]);
 
         return $reports
+            ->filter(function (GenericReport $report) use ($selectedRiskFilters): bool {
+                return $this->hazardRoutingRiskFilter->shouldAvoidRisk(
+                    $report->risk_level_code,
+                    $selectedRiskFilters
+                );
+            })
             ->map(static fn (GenericReport $report): array => [
                 'latitude' => (float) $report->latitude,
                 'longitude' => (float) $report->longitude,

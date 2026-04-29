@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_palette.dart';
+
 class PanelScrollView extends StatefulWidget {
   final Widget child;
   final EdgeInsets padding;
@@ -11,7 +13,7 @@ class PanelScrollView extends StatefulWidget {
     required this.child,
     this.padding = EdgeInsets.zero,
     this.shrinkWrap = false,
-    this.scrollbarSpacing = 12,
+    this.scrollbarSpacing = 0,
   });
 
   @override
@@ -35,37 +37,64 @@ class _PanelScrollViewState extends State<PanelScrollView> {
 
   @override
   Widget build(BuildContext context) {
-    final Widget spacedChild = Padding(
-      padding: EdgeInsets.only(right: widget.scrollbarSpacing),
-      child: widget.child,
-    );
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final Color thumbColor = isDarkMode
+        ? AppPalette.primaryBlue.withValues(alpha: 0.95)
+        : AppPalette.charcoal.withValues(alpha: 0.78);
+    final Color trackColor = isDarkMode
+        ? AppPalette.borderLight.withValues(alpha: 0.28)
+        : AppPalette.borderLight.withValues(alpha: 0.9);
+    final Widget spacedChild = widget.scrollbarSpacing == 0
+        ? widget.child
+        : Padding(
+            padding: EdgeInsets.only(right: widget.scrollbarSpacing),
+            child: widget.child,
+          );
 
     if (widget.shrinkWrap) {
-      return Scrollbar(
-        controller: _scrollController,
-        thumbVisibility: true,
-        trackVisibility: true,
-        thickness: 8,
-        radius: const Radius.circular(999),
-        child: ListView(
+      return ScrollbarTheme(
+        data: ScrollbarThemeData(
+          thumbColor: WidgetStatePropertyAll<Color>(thumbColor),
+          trackColor: WidgetStatePropertyAll<Color>(trackColor),
+          trackBorderColor: const WidgetStatePropertyAll<Color>(
+            Colors.transparent,
+          ),
+          thickness: const WidgetStatePropertyAll<double>(8),
+          radius: const Radius.circular(999),
+        ),
+        child: Scrollbar(
           controller: _scrollController,
-          padding: widget.padding,
-          shrinkWrap: true,
-          children: <Widget>[spacedChild],
+          thumbVisibility: true,
+          trackVisibility: true,
+          child: ListView(
+            controller: _scrollController,
+            padding: widget.padding,
+            shrinkWrap: true,
+            children: <Widget>[spacedChild],
+          ),
         ),
       );
     }
 
-    return Scrollbar(
-      controller: _scrollController,
-      thumbVisibility: true,
-      trackVisibility: true,
-      thickness: 8,
-      radius: const Radius.circular(999),
-      child: SingleChildScrollView(
+    return ScrollbarTheme(
+      data: ScrollbarThemeData(
+        thumbColor: WidgetStatePropertyAll<Color>(thumbColor),
+        trackColor: WidgetStatePropertyAll<Color>(trackColor),
+        trackBorderColor: const WidgetStatePropertyAll<Color>(
+          Colors.transparent,
+        ),
+        thickness: const WidgetStatePropertyAll<double>(8),
+        radius: const Radius.circular(999),
+      ),
+      child: Scrollbar(
         controller: _scrollController,
-        padding: widget.padding,
-        child: spacedChild,
+        thumbVisibility: true,
+        trackVisibility: true,
+        child: SingleChildScrollView(
+          controller: _scrollController,
+          padding: widget.padding,
+          child: spacedChild,
+        ),
       ),
     );
   }

@@ -9,12 +9,16 @@ class HazardDetailsPanelContent extends StatelessWidget {
   final bool isDarkMode;
   final HazardReportRecord hazard;
   final VoidCallback onViewComments;
+  final String? debugDeleteLabel;
+  final VoidCallback? onDebugDelete;
 
   const HazardDetailsPanelContent({
     super.key,
     required this.isDarkMode,
     required this.hazard,
     required this.onViewComments,
+    this.debugDeleteLabel,
+    this.onDebugDelete,
   });
 
   @override
@@ -113,6 +117,29 @@ class HazardDetailsPanelContent extends StatelessWidget {
             ),
           ),
         ),
+        if (onDebugDelete != null && debugDeleteLabel != null) ...[
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 44,
+            child: OutlinedButton(
+              onPressed: onDebugDelete,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppPalette.dangerRed,
+                side: const BorderSide(color: AppPalette.dangerRed),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                debugDeleteLabel!,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 8),
         Text(
           'Reportado por: ${hazard.reportedByUsername}',

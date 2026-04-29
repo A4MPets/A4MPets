@@ -3,6 +3,7 @@ import '../models/colored_route_segment.dart';
 import '../models/generic_report_record.dart';
 import '../models/hazard_report_record.dart';
 import 'package:flutter/material.dart';
+import 'hazard_risk_filtering.dart';
 
 /// Servicio para analizar rutas y marcar segmentos peligrosos
 /// Solo pinta, sin modificar la ruta
@@ -19,17 +20,33 @@ class RouteHazardVisualizerService {
     required List<LatLng> routePolyline,
     required List<HazardReportRecord> hazards,
     List<GenericReportRecord> genericReports = const <GenericReportRecord>[],
+    List<String> hazardRiskFilters = HazardRiskFiltering.allRoutingFilters,
   }) {
+    final Set<String> selectedRiskFilters =
+        HazardRiskFiltering.normalizeSelectedFilters(hazardRiskFilters);
     final List<_RouteAvoidanceZone> avoidanceZones = <_RouteAvoidanceZone>[
-      ...hazards.map(
-        (HazardReportRecord hazard) => _RouteAvoidanceZone(
-          latitude: hazard.incidentLatitude,
-          longitude: hazard.incidentLongitude,
-          radiusMeters: hazard.impactRadiusMeters.toDouble(),
-        ),
-      ),
+      ...hazards
+          .where((HazardReportRecord hazard) {
+            return HazardRiskFiltering.shouldConsiderRisk(
+              riskLevelCode: hazard.riskLevelCode,
+              selectedFilters: selectedRiskFilters,
+            );
+          })
+          .map(
+            (HazardReportRecord hazard) => _RouteAvoidanceZone(
+              latitude: hazard.incidentLatitude,
+              longitude: hazard.incidentLongitude,
+              radiusMeters: hazard.impactRadiusMeters.toDouble(),
+            ),
+          ),
       ...genericReports
-          .where((GenericReportRecord report) => report.impactRadiusMeters > 0)
+          .where((GenericReportRecord report) {
+            return report.impactRadiusMeters > 0 &&
+                HazardRiskFiltering.shouldConsiderRisk(
+                  riskLevelCode: report.riskLevelCode,
+                  selectedFilters: selectedRiskFilters,
+                );
+          })
           .map(
             (GenericReportRecord report) => _RouteAvoidanceZone(
               latitude: report.latitude,

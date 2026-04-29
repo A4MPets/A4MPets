@@ -332,6 +332,11 @@ class LocalDatabaseManager {
     final String raw = prefs.getString(_hazardsKey)!;
     final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
     return decoded
+        .where((dynamic row) {
+          final String syncStatus =
+              (row as Map<String, dynamic>)['sync_status']?.toString() ?? '';
+          return syncStatus != 'deleted' && syncStatus != 'archived';
+        })
         .map(
           (dynamic row) => HazardReportRecord.fromMap(
             (row as Map<String, dynamic>).cast<String, Object?>(),
@@ -438,6 +443,48 @@ class LocalDatabaseManager {
     await prefs.setString(_hazardsKey, jsonEncode(encoded));
   }
 
+  Future<void> deleteHazardReport({required int hazardId}) async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final List<HazardReportRecord> current = await getHazardReports();
+    final List<Map<String, Object?>> encoded = current
+        .where((HazardReportRecord report) => report.id != hazardId)
+        .map((HazardReportRecord report) => report.toMap())
+        .toList(growable: false);
+
+    await prefs.setString(_hazardsKey, jsonEncode(encoded));
+  }
+
+  Future<void> removeHazardReportBySyncIdentity({
+    required String localUuid,
+    String? remoteId,
+  }) async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final String raw = prefs.getString(_hazardsKey)!;
+    final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
+    final List<Map<String, Object?>> encoded = decoded
+        .where((dynamic row) {
+          final Map<String, Object?> map = (row as Map<String, dynamic>)
+              .cast<String, Object?>();
+          final String storedLocalUuid = map['local_uuid']?.toString() ?? '';
+          final String? storedRemoteId = map['remote_id']?.toString();
+          final bool matchesRemote =
+              remoteId != null &&
+              remoteId.isNotEmpty &&
+              storedRemoteId != null &&
+              storedRemoteId == remoteId;
+          return storedLocalUuid != localUuid && !matchesRemote;
+        })
+        .map(
+          (dynamic row) =>
+              (row as Map<String, dynamic>).cast<String, Object?>(),
+        )
+        .toList(growable: false);
+
+    await prefs.setString(_hazardsKey, jsonEncode(encoded));
+  }
+
   Future<void> addCommentToLostPetReport({
     required int reportId,
     required ReportCommentRecord comment,
@@ -447,27 +494,28 @@ class LocalDatabaseManager {
       getReports: getLostPetReports,
       reportId: reportId,
       comment: comment,
-      rebuild: (LostPetReportRecord report, List<ReportCommentRecord> comments) {
-        final int now = DateTime.now().millisecondsSinceEpoch;
-        return LostPetReportRecord(
-          id: report.id,
-          localUuid: report.localUuid,
-          remoteId: report.remoteId,
-          syncStatus: report.syncStatus,
-          lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
-          lastSeenLatitude: report.lastSeenLatitude,
-          lastSeenLongitude: report.lastSeenLongitude,
-          name: report.name,
-          details: report.details,
-          disappearanceDate: report.disappearanceDate,
-          photoUrl: report.photoUrl,
-          phone: report.phone,
-          comments: comments,
-          createdAt: report.createdAt,
-          updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
-          needsSync: true,
-        );
-      },
+      rebuild:
+          (LostPetReportRecord report, List<ReportCommentRecord> comments) {
+            final int now = DateTime.now().millisecondsSinceEpoch;
+            return LostPetReportRecord(
+              id: report.id,
+              localUuid: report.localUuid,
+              remoteId: report.remoteId,
+              syncStatus: report.syncStatus,
+              lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
+              lastSeenLatitude: report.lastSeenLatitude,
+              lastSeenLongitude: report.lastSeenLongitude,
+              name: report.name,
+              details: report.details,
+              disappearanceDate: report.disappearanceDate,
+              photoUrl: report.photoUrl,
+              phone: report.phone,
+              comments: comments,
+              createdAt: report.createdAt,
+              updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+              needsSync: true,
+            );
+          },
       commentsOf: (LostPetReportRecord report) => report.comments,
     );
   }
@@ -481,29 +529,27 @@ class LocalDatabaseManager {
       getReports: getFoundPetReports,
       reportId: reportId,
       comment: comment,
-      rebuild: (
-        FoundPetReportRecord report,
-        List<ReportCommentRecord> comments,
-      ) {
-        final int now = DateTime.now().millisecondsSinceEpoch;
-        return FoundPetReportRecord(
-          id: report.id,
-          localUuid: report.localUuid,
-          remoteId: report.remoteId,
-          syncStatus: report.syncStatus,
-          lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
-          latitude: report.latitude,
-          longitude: report.longitude,
-          details: report.details,
-          foundDate: report.foundDate,
-          photoUrl: report.photoUrl,
-          phone: report.phone,
-          comments: comments,
-          createdAt: report.createdAt,
-          updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
-          needsSync: true,
-        );
-      },
+      rebuild:
+          (FoundPetReportRecord report, List<ReportCommentRecord> comments) {
+            final int now = DateTime.now().millisecondsSinceEpoch;
+            return FoundPetReportRecord(
+              id: report.id,
+              localUuid: report.localUuid,
+              remoteId: report.remoteId,
+              syncStatus: report.syncStatus,
+              lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
+              latitude: report.latitude,
+              longitude: report.longitude,
+              details: report.details,
+              foundDate: report.foundDate,
+              photoUrl: report.photoUrl,
+              phone: report.phone,
+              comments: comments,
+              createdAt: report.createdAt,
+              updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+              needsSync: true,
+            );
+          },
       commentsOf: (FoundPetReportRecord report) => report.comments,
     );
   }
@@ -517,30 +563,28 @@ class LocalDatabaseManager {
       getReports: getGenericReports,
       reportId: reportId,
       comment: comment,
-      rebuild: (
-        GenericReportRecord report,
-        List<ReportCommentRecord> comments,
-      ) {
-        final int now = DateTime.now().millisecondsSinceEpoch;
-        return GenericReportRecord(
-          id: report.id,
-          localUuid: report.localUuid,
-          remoteId: report.remoteId,
-          syncStatus: report.syncStatus,
-          lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
-          latitude: report.latitude,
-          longitude: report.longitude,
-          description: report.description,
-          reportedDate: report.reportedDate,
-          riskLevelCode: report.riskLevelCode,
-          impactRadiusMeters: report.impactRadiusMeters,
-          photoUrl: report.photoUrl,
-          comments: comments,
-          createdAt: report.createdAt,
-          updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
-          needsSync: true,
-        );
-      },
+      rebuild:
+          (GenericReportRecord report, List<ReportCommentRecord> comments) {
+            final int now = DateTime.now().millisecondsSinceEpoch;
+            return GenericReportRecord(
+              id: report.id,
+              localUuid: report.localUuid,
+              remoteId: report.remoteId,
+              syncStatus: report.syncStatus,
+              lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
+              latitude: report.latitude,
+              longitude: report.longitude,
+              description: report.description,
+              reportedDate: report.reportedDate,
+              riskLevelCode: report.riskLevelCode,
+              impactRadiusMeters: report.impactRadiusMeters,
+              photoUrl: report.photoUrl,
+              comments: comments,
+              createdAt: report.createdAt,
+              updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+              needsSync: true,
+            );
+          },
       commentsOf: (GenericReportRecord report) => report.comments,
     );
   }
@@ -1023,6 +1067,10 @@ class LocalDatabaseManager {
     final String raw = prefs.getString(_lostPetReportsKey)!;
     final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
     return decoded
+        .where(
+          (dynamic row) =>
+              (row as Map<String, dynamic>)['sync_status'] != 'deleted',
+        )
         .map(
           (dynamic row) => LostPetReportRecord.fromMap(
             (row as Map<String, dynamic>).cast<String, Object?>(),
@@ -1080,10 +1128,54 @@ class LocalDatabaseManager {
   }
 
   Future<List<LostPetReportRecord>> getLostPetReportsNeedingSync() async {
-    final List<LostPetReportRecord> reports = await getLostPetReports();
-    return reports
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final String raw = prefs.getString(_lostPetReportsKey)!;
+    final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
+    return decoded
+        .map(
+          (dynamic row) => LostPetReportRecord.fromMap(
+            (row as Map<String, dynamic>).cast<String, Object?>(),
+          ),
+        )
         .where((LostPetReportRecord report) => report.needsSync)
         .toList(growable: false);
+  }
+
+  Future<void> deleteLostPetReport({required int reportId}) async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final List<LostPetReportRecord> current = await getLostPetReports();
+    final int now = DateTime.now().millisecondsSinceEpoch;
+
+    final List<Map<String, Object?>> encoded = current
+        .map((LostPetReportRecord report) {
+          if (report.id != reportId) {
+            return report.toMap();
+          }
+
+          return LostPetReportRecord(
+            id: report.id,
+            localUuid: report.localUuid,
+            remoteId: report.remoteId,
+            syncStatus: 'deleted',
+            lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
+            lastSeenLatitude: report.lastSeenLatitude,
+            lastSeenLongitude: report.lastSeenLongitude,
+            name: report.name,
+            details: report.details,
+            disappearanceDate: report.disappearanceDate,
+            photoUrl: report.photoUrl,
+            phone: report.phone,
+            comments: report.comments,
+            createdAt: report.createdAt,
+            updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+            needsSync: true,
+          ).toMap();
+        })
+        .toList(growable: false);
+
+    await prefs.setString(_lostPetReportsKey, jsonEncode(encoded));
   }
 
   Future<void> markLostPetReportAsSynced({
@@ -1160,7 +1252,7 @@ class LocalDatabaseManager {
               1;
 
     if (existing == null) {
-    final LostPetReportRecord inserted = LostPetReportRecord(
+      final LostPetReportRecord inserted = LostPetReportRecord(
         id: nextId,
         localUuid: localUuid,
         remoteId: remoteId,
@@ -1173,9 +1265,7 @@ class LocalDatabaseManager {
         disappearanceDate: disappearanceDate,
         photoUrl: photoUrl,
         phone: phone,
-        comments: _decodeReportComments(
-          report['comments_json']?.toString() ?? '[]',
-        ),
+        comments: _decodeReportComments(commentsJson ?? '[]'),
         createdAt: remoteLastModifiedAt,
         updatedAt: remoteLastModifiedAt,
         needsSync: false,
@@ -1235,6 +1325,10 @@ class LocalDatabaseManager {
     final String raw = prefs.getString(_foundPetReportsKey)!;
     final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
     return decoded
+        .where(
+          (dynamic row) =>
+              (row as Map<String, dynamic>)['sync_status'] != 'deleted',
+        )
         .map(
           (dynamic row) => FoundPetReportRecord.fromMap(
             (row as Map<String, dynamic>).cast<String, Object?>(),
@@ -1290,10 +1384,53 @@ class LocalDatabaseManager {
   }
 
   Future<List<FoundPetReportRecord>> getFoundPetReportsNeedingSync() async {
-    final List<FoundPetReportRecord> reports = await getFoundPetReports();
-    return reports
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final String raw = prefs.getString(_foundPetReportsKey)!;
+    final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
+    return decoded
+        .map(
+          (dynamic row) => FoundPetReportRecord.fromMap(
+            (row as Map<String, dynamic>).cast<String, Object?>(),
+          ),
+        )
         .where((FoundPetReportRecord report) => report.needsSync)
         .toList(growable: false);
+  }
+
+  Future<void> deleteFoundPetReport({required int reportId}) async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final List<FoundPetReportRecord> current = await getFoundPetReports();
+    final int now = DateTime.now().millisecondsSinceEpoch;
+
+    final List<Map<String, Object?>> encoded = current
+        .map((FoundPetReportRecord report) {
+          if (report.id != reportId) {
+            return report.toMap();
+          }
+
+          return FoundPetReportRecord(
+            id: report.id,
+            localUuid: report.localUuid,
+            remoteId: report.remoteId,
+            syncStatus: 'deleted',
+            lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
+            latitude: report.latitude,
+            longitude: report.longitude,
+            details: report.details,
+            foundDate: report.foundDate,
+            photoUrl: report.photoUrl,
+            phone: report.phone,
+            comments: report.comments,
+            createdAt: report.createdAt,
+            updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+            needsSync: true,
+          ).toMap();
+        })
+        .toList(growable: false);
+
+    await prefs.setString(_foundPetReportsKey, jsonEncode(encoded));
   }
 
   Future<void> markFoundPetReportAsSynced({
@@ -1380,9 +1517,7 @@ class LocalDatabaseManager {
         foundDate: foundDate,
         photoUrl: photoUrl,
         phone: phone,
-        comments: _decodeReportComments(
-          report['comments_json']?.toString() ?? '[]',
-        ),
+        comments: _decodeReportComments(commentsJson ?? '[]'),
         createdAt: remoteLastModifiedAt,
         updatedAt: remoteLastModifiedAt,
         needsSync: false,
@@ -1441,6 +1576,10 @@ class LocalDatabaseManager {
     final String raw = prefs.getString(_genericReportsKey)!;
     final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
     return decoded
+        .where(
+          (dynamic row) =>
+              (row as Map<String, dynamic>)['sync_status'] != 'deleted',
+        )
         .map(
           (dynamic row) => GenericReportRecord.fromMap(
             (row as Map<String, dynamic>).cast<String, Object?>(),
@@ -1498,10 +1637,54 @@ class LocalDatabaseManager {
   }
 
   Future<List<GenericReportRecord>> getGenericReportsNeedingSync() async {
-    final List<GenericReportRecord> reports = await getGenericReports();
-    return reports
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final String raw = prefs.getString(_genericReportsKey)!;
+    final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
+    return decoded
+        .map(
+          (dynamic row) => GenericReportRecord.fromMap(
+            (row as Map<String, dynamic>).cast<String, Object?>(),
+          ),
+        )
         .where((GenericReportRecord report) => report.needsSync)
         .toList(growable: false);
+  }
+
+  Future<void> deleteGenericReport({required int reportId}) async {
+    final SharedPreferences prefs = await _prefs;
+    await _ensureDefaultUser(prefs);
+    final List<GenericReportRecord> current = await getGenericReports();
+    final int now = DateTime.now().millisecondsSinceEpoch;
+
+    final List<Map<String, Object?>> encoded = current
+        .map((GenericReportRecord report) {
+          if (report.id != reportId) {
+            return report.toMap();
+          }
+
+          return GenericReportRecord(
+            id: report.id,
+            localUuid: report.localUuid,
+            remoteId: report.remoteId,
+            syncStatus: 'deleted',
+            lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
+            latitude: report.latitude,
+            longitude: report.longitude,
+            description: report.description,
+            reportedDate: report.reportedDate,
+            riskLevelCode: report.riskLevelCode,
+            impactRadiusMeters: report.impactRadiusMeters,
+            photoUrl: report.photoUrl,
+            comments: report.comments,
+            createdAt: report.createdAt,
+            updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+            needsSync: true,
+          ).toMap();
+        })
+        .toList(growable: false);
+
+    await prefs.setString(_genericReportsKey, jsonEncode(encoded));
   }
 
   Future<void> markGenericReportAsSynced({
@@ -1591,9 +1774,7 @@ class LocalDatabaseManager {
         riskLevelCode: riskLevelCode,
         impactRadiusMeters: impactRadiusMeters,
         photoUrl: photoUrl,
-        comments: _decodeReportComments(
-          report['comments_json']?.toString() ?? '[]',
-        ),
+        comments: _decodeReportComments(commentsJson ?? '[]'),
         createdAt: remoteLastModifiedAt,
         updatedAt: remoteLastModifiedAt,
         needsSync: false,
@@ -1684,19 +1865,19 @@ class LocalDatabaseManager {
     await _ensureDefaultUser(prefs);
     final List<T> current = await getReports();
 
-    final List<Map<String, Object?>> encoded = current.map((T report) {
-      final dynamic dynamicReport = report;
-      if (dynamicReport.id != reportId) {
-        return dynamicReport.toMap() as Map<String, Object?>;
-      }
+    final List<Map<String, Object?>> encoded = current
+        .map((T report) {
+          final dynamic dynamicReport = report;
+          if (dynamicReport.id != reportId) {
+            return dynamicReport.toMap() as Map<String, Object?>;
+          }
 
-      final List<ReportCommentRecord> updatedComments = <ReportCommentRecord>[
-        ...commentsOf(report),
-        comment,
-      ];
-      final dynamic updated = rebuild(report, updatedComments);
-      return updated.toMap() as Map<String, Object?>;
-    }).toList(growable: false);
+          final List<ReportCommentRecord> updatedComments =
+              <ReportCommentRecord>[...commentsOf(report), comment];
+          final dynamic updated = rebuild(report, updatedComments);
+          return updated.toMap() as Map<String, Object?>;
+        })
+        .toList(growable: false);
 
     await prefs.setString(storageKey, jsonEncode(encoded));
   }

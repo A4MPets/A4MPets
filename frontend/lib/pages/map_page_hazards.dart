@@ -91,6 +91,9 @@ extension _MapPageHazardsState on _MapPageState {
 
     _updatePageState(() {
       _selectedHazard = hazard;
+      _selectedLostPetReport = null;
+      _selectedFoundPetReport = null;
+      _selectedGenericReport = null;
       _hazardFocusRevision += 1;
     });
 
@@ -198,9 +201,7 @@ extension _MapPageHazardsState on _MapPageState {
           onStartMapSelection: _startHazardMapSelection,
           onUseCurrentLocation: _useCurrentHazardLocation,
           onPreviewChanged: _updateHazardDraftPreview,
-          onReported: () {
-            _closeCurrentPanel();
-          },
+          onReported: _closeReportingFlowAfterSubmit,
         );
       },
     );
@@ -296,6 +297,10 @@ extension _MapPageHazardsState on _MapPageState {
           isDarkMode: isDarkMode,
           hazard: hazard,
           onViewComments: () => _openHazardCommentsPanel(isDarkMode, hazard),
+          debugDeleteLabel: kIsWeb && kDebugMode ? 'Borrar peligro' : null,
+          onDebugDelete: kIsWeb && kDebugMode
+              ? _confirmAndDeleteSelectedDebugItem
+              : null,
         );
       },
     );
@@ -319,7 +324,10 @@ extension _MapPageHazardsState on _MapPageState {
       isHazardCommentsPanel: true,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
-        return HazardCommentsPanelContent(isDarkMode: isDarkMode, hazard: hazard);
+        return HazardCommentsPanelContent(
+          isDarkMode: isDarkMode,
+          hazard: hazard,
+        );
       },
     );
   }
@@ -336,6 +344,9 @@ extension _MapPageHazardsState on _MapPageState {
           routePolyline: _draftRoutePolyline,
           hazards: visibleHazards,
           genericReports: _visibleGenericReports,
+          hazardRiskFilters: _selectedTripHazardRiskFilters.toList(
+            growable: false,
+          ),
         );
 
     _hazardColoredRouteSegments = segments;

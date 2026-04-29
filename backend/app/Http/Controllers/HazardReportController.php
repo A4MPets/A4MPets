@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\Hazards\StoreHazardCommentRequest;
 use App\Http\Requests\Hazards\StoreHazardRequest;
 use App\Http\Requests\Hazards\SyncHazardsRequest;
 use App\Http\Requests\Hazards\UpdateHazardRequest;
+use App\Http\Requests\Reports\StoreReportCommentRequest;
 use App\Models\HazardReport;
-use App\Services\Hazards\HazardCommentSyncService;
+use App\Services\Comments\ReportCommentFormatter;
+use App\Services\Comments\ReportCommentService;
 use App\Services\Hazards\HazardReportService;
 use App\Services\Hazards\HazardResponseFormatter;
 use Illuminate\Http\JsonResponse;
@@ -17,8 +18,9 @@ class HazardReportController extends Controller
 {
     public function __construct(
         private readonly HazardReportService $hazardReportService,
-        private readonly HazardCommentSyncService $hazardCommentSyncService,
-        private readonly HazardResponseFormatter $hazardResponseFormatter
+        private readonly ReportCommentService $reportCommentService,
+        private readonly HazardResponseFormatter $hazardResponseFormatter,
+        private readonly ReportCommentFormatter $reportCommentFormatter
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -100,11 +102,11 @@ class HazardReportController extends Controller
             ], 403);
         }
 
-        $this->hazardReportService->archive($hazardReport);
+        $this->hazardReportService->delete($hazardReport);
 
         return response()->json([
             'success' => true,
-            'message' => 'Peligro archivado exitosamente',
+            'message' => 'Peligro eliminado exitosamente',
         ]);
     }
 
@@ -134,14 +136,14 @@ class HazardReportController extends Controller
         return response()->json([
             'success' => true,
             'data' => $hazardReport->comments
-                ->map(fn ($comment) => $this->hazardResponseFormatter->formatComment($comment))
+                ->map(fn ($comment) => $this->reportCommentFormatter->formatComment($comment))
                 ->values(),
         ]);
     }
 
-    public function storeComment(StoreHazardCommentRequest $request, HazardReport $hazardReport): JsonResponse
+    public function storeComment(StoreReportCommentRequest $request, HazardReport $hazardReport): JsonResponse
     {
-        $comment = $this->hazardCommentSyncService->storeComment(
+        $comment = $this->reportCommentService->storeComment(
             $hazardReport,
             $request->user(),
             $request->validated()
@@ -150,7 +152,7 @@ class HazardReportController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Comentario agregado exitosamente',
-            'data' => $this->hazardResponseFormatter->formatComment($comment),
+            'data' => $this->reportCommentFormatter->formatComment($comment),
         ], 201);
     }
 

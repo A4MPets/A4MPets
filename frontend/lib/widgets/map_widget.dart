@@ -53,6 +53,8 @@ class MapWidget extends StatefulWidget {
   final LatLng? lostPetDraftLocation;
   final LatLng? foundPetDraftLocation;
   final LatLng? genericReportDraftLocation;
+  final int? genericReportDraftImpactRadiusMeters;
+  final String? genericReportDraftRiskLevelCode;
   final bool isSelectingReportLocation;
   final bool routeSelectionHintAtTop;
   final bool reportSelectionHintAtTop;
@@ -111,6 +113,8 @@ class MapWidget extends StatefulWidget {
     this.lostPetDraftLocation,
     this.foundPetDraftLocation,
     this.genericReportDraftLocation,
+    this.genericReportDraftImpactRadiusMeters,
+    this.genericReportDraftRiskLevelCode,
     this.isSelectingReportLocation = false,
     this.routeSelectionHintAtTop = false,
     this.reportSelectionHintAtTop = false,
@@ -134,7 +138,8 @@ class MapWidget extends StatefulWidget {
   State<MapWidget> createState() => _MapWidgetState();
 }
 
-class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
+class _MapWidgetState extends State<MapWidget>
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late MapController mapController;
   AnimationController? _cameraAnimationController;
   bool _isMapReady = false;
@@ -175,6 +180,7 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     mapController = MapController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _requestLocationPermission();
@@ -296,6 +302,37 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
               _emitUserLocationStatus(isLoading: false, errorText: null);
             }
           },
+          onError: (Object error, StackTrace stackTrace) {
+            debugPrint('Location stream error: $error');
+            _emitUserLocationStatus(
+              isLoading: false,
+              errorText:
+                  'Se perdio la actualizacion de ubicacion. Reintentando.',
+            );
+
+            if (!mounted) {
+              return;
+            }
+
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) {
+                return;
+              }
+              _requestLocationPermission();
+            });
+          },
+          onDone: () {
+            if (!mounted) {
+              return;
+            }
+
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) {
+                return;
+              }
+              _requestLocationPermission();
+            });
+          },
         );
   }
 
@@ -362,10 +399,25 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _disposeCameraAnimation();
     _positionStreamSub?.cancel();
     mapController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _requestLocationPermission();
+    });
   }
 
   @override
@@ -615,6 +667,14 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
   }
 
   Color _hazardFillColor(HazardReportRecord report) {
+    return _hazardFillColorForRiskLevel(report.riskLevelCode);
+  }
+
+  Color _genericReportBorderColor(GenericReportRecord report) {
+    return _hazardBorderColorForRiskLevel(report.riskLevelCode);
+  }
+
+  Color _genericReportFillColor(GenericReportRecord report) {
     return _hazardFillColorForRiskLevel(report.riskLevelCode);
   }
 
@@ -911,6 +971,29 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
                       .toList(growable: false),
                 ),
               ),
+            if (widget.genericReports.any(
+              (GenericReportRecord report) => report.impactRadiusMeters > 0,
+            ))
+              RepaintBoundary(
+                child: CircleLayer(
+                  circles: widget.genericReports
+                      .where(
+                        (GenericReportRecord report) =>
+                            report.impactRadiusMeters > 0,
+                      )
+                      .map((GenericReportRecord report) {
+                        return CircleMarker(
+                          point: LatLng(report.latitude, report.longitude),
+                          color: _genericReportFillColor(report),
+                          borderColor: _genericReportBorderColor(report),
+                          borderStrokeWidth: 1.2,
+                          useRadiusInMeter: true,
+                          radius: report.impactRadiusMeters.toDouble(),
+                        );
+                      })
+                      .toList(growable: false),
+                ),
+              ),
             if (widget.genericReports.isNotEmpty)
               RepaintBoundary(
                 child: MarkerLayer(
@@ -961,6 +1044,28 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
                         color: AppPalette.reportGreen,
                         label: '!',
                       ),
+                    ),
+                  ],
+                ),
+              ),
+            if (widget.genericReportDraftLocation != null &&
+                widget.genericReportDraftImpactRadiusMeters != null &&
+                widget.genericReportDraftImpactRadiusMeters! > 0)
+              RepaintBoundary(
+                child: CircleLayer(
+                  circles: [
+                    CircleMarker(
+                      point: widget.genericReportDraftLocation!,
+                      color: _hazardFillColorForRiskLevel(
+                        widget.genericReportDraftRiskLevelCode,
+                      ),
+                      borderColor: _hazardBorderColorForRiskLevel(
+                        widget.genericReportDraftRiskLevelCode,
+                      ),
+                      borderStrokeWidth: 1.5,
+                      useRadiusInMeter: true,
+                      radius: widget.genericReportDraftImpactRadiusMeters!
+                          .toDouble(),
                     ),
                   ],
                 ),
@@ -1246,29 +1351,35 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
             child: _buildAnimatedControl(
               visible: reportDangerVisible,
               hiddenOffset: const Offset(-0.06, 0.06),
-              child: SizedBox(
-                width: 220,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _onReportarPeligro,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: secondary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 220,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: _onReportarPeligro,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: secondary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        'Reportar',
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
-                  child: const Text(
-                    'Reportar',
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
+                ],
               ),
             ),
           ),

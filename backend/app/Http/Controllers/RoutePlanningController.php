@@ -21,17 +21,21 @@ class RoutePlanningController extends Controller
             'points.*.lat' => 'required|numeric|between:-90,90',
             'points.*.lng' => 'required|numeric|between:-180,180',
             'avoid_hazards' => 'sometimes|boolean',
+            'hazard_risk_filters' => 'sometimes|array',
+            'hazard_risk_filters.*' => 'string|in:low,medium,high',
             'travel_mode' => 'sometimes|string|max:32',
             'trip_config' => 'sometimes|array',
         ]);
 
         $avoidHazards = (bool) ($validated['avoid_hazards'] ?? false);
+        $hazardRiskFilters = $validated['hazard_risk_filters'] ?? null;
         $travelMode = (string) ($validated['travel_mode'] ?? 'walking');
 
         try {
             $route = $this->routingService->planRoute(
                 points: $validated['points'],
                 avoidHazards: $avoidHazards,
+                hazardRiskFilters: is_array($hazardRiskFilters) ? $hazardRiskFilters : null,
                 travelMode: $travelMode
             );
 
@@ -47,6 +51,7 @@ class RoutePlanningController extends Controller
                 ],
                 'meta' => [
                     'travel_mode' => $travelMode,
+                    'hazard_risk_filters' => $route['hazard_risk_filters'],
                     // Recibimos configuración completa de viaje para compatibilidad futura.
                     'trip_config' => $validated['trip_config'] ?? new \stdClass,
                 ],

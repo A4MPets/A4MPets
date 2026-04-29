@@ -26,6 +26,7 @@ class SyncFoundPetReportsRequest extends FormRequest
             'found_pet_reports.*.found_date' => ['required', 'date_format:Y-m-d H:i:s'],
             'found_pet_reports.*.photo_url' => ['nullable', 'string', 'max:500'],
             'found_pet_reports.*.phone' => ['nullable', 'string', 'max:64'],
+            'found_pet_reports.*.comments' => ['sometimes', 'array'],
             'found_pet_reports.*.sync_status' => ['nullable', 'string', 'max:32'],
             'found_pet_reports.*.last_modified_at' => ['required', 'date_format:Y-m-d H:i:s'],
         ];

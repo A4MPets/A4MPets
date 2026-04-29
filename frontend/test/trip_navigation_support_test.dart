@@ -50,4 +50,27 @@ void main() {
     expect(queued!.waypoints, nextWaypoints);
     expect(queued.location, currentLocation);
   });
+
+  test('trip reroute controller reset clears previous trip state', () {
+    final TripRerouteController controller = TripRerouteController(
+      distanceCalculator: distanceCalculator,
+      minDistanceMeters: 20,
+      minInterval: const Duration(seconds: 5),
+    );
+    const LatLng previousTripLocation = LatLng(3.4516, -76.5320);
+    const LatLng nextTripLocation = LatLng(3.4600, -76.5400);
+    const List<LatLng> nextWaypoints = <LatLng>[LatLng(3.4700, -76.5500)];
+
+    controller.markStarted(previousTripLocation);
+    controller.queue(location: nextTripLocation, waypoints: nextWaypoints);
+
+    controller.reset();
+
+    expect(controller.isInFlight, isFalse);
+    expect(
+      controller.shouldTrigger(location: nextTripLocation, force: false),
+      isTrue,
+    );
+    expect(controller.completeAndTakeQueued(), isNull);
+  });
 }

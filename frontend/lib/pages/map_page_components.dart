@@ -212,7 +212,7 @@ class _ProximityAlertCard extends StatelessWidget {
 class _TripStartPanelContent extends StatelessWidget {
   final bool isDarkMode;
   final _TripTransportMethod selectedTransport;
-  final bool avoidHazards;
+  final Set<String> selectedHazardRiskFilters;
   final int selectedPetsCount;
   final String? selectedRouteName;
   final String? errorText;
@@ -220,14 +220,15 @@ class _TripStartPanelContent extends StatelessWidget {
   final VoidCallback onSelectRoute;
   final VoidCallback? onEditSelectedRoute;
   final ValueChanged<_TripTransportMethod> onTransportChanged;
-  final ValueChanged<bool> onAvoidHazardsChanged;
+  final void Function(String riskLevelCode, bool value)
+  onToggleHazardRiskFilter;
   final double contentTopPadding;
   final VoidCallback onStartTrip;
 
   const _TripStartPanelContent({
     required this.isDarkMode,
     required this.selectedTransport,
-    required this.avoidHazards,
+    required this.selectedHazardRiskFilters,
     required this.selectedPetsCount,
     required this.selectedRouteName,
     required this.errorText,
@@ -235,7 +236,7 @@ class _TripStartPanelContent extends StatelessWidget {
     required this.onSelectRoute,
     this.onEditSelectedRoute,
     required this.onTransportChanged,
-    required this.onAvoidHazardsChanged,
+    required this.onToggleHazardRiskFilter,
     this.contentTopPadding = 8,
     required this.onStartTrip,
   });
@@ -312,31 +313,39 @@ class _TripStartPanelContent extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-                _TripFieldTitle(label: 'Estrategia de ruta', color: titleColor),
+                _TripFieldTitle(label: 'Evitar peligros', color: titleColor),
                 const SizedBox(height: 6),
                 Container(
-                  height: 46,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: grayButton,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Row(
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: Text(
-                          'Evitar peligros',
-                          style: TextStyle(
-                            color: textColor,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                      _TripRiskFilterCheckbox(
+                        label: 'Bajo',
+                        value: selectedHazardRiskFilters.contains('low'),
+                        textColor: textColor,
+                        onChanged: (bool value) =>
+                            onToggleHazardRiskFilter('low', value),
                       ),
-                      Switch(
-                        value: avoidHazards,
-                        onChanged: onAvoidHazardsChanged,
-                        activeThumbColor: AppPalette.primaryBlue,
+                      _TripRiskFilterCheckbox(
+                        label: 'Medio',
+                        value: selectedHazardRiskFilters.contains('medium'),
+                        textColor: textColor,
+                        onChanged: (bool value) =>
+                            onToggleHazardRiskFilter('medium', value),
+                      ),
+                      _TripRiskFilterCheckbox(
+                        label: 'Alto',
+                        value: selectedHazardRiskFilters.contains('high'),
+                        textColor: textColor,
+                        onChanged: (bool value) =>
+                            onToggleHazardRiskFilter('high', value),
                       ),
                     ],
                   ),
@@ -736,6 +745,46 @@ class _TripGrayActionButton extends StatelessWidget {
           ),
         ),
         child: Text(
+          label,
+          style: TextStyle(
+            color: textColor,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TripRiskFilterCheckbox extends StatelessWidget {
+  final String label;
+  final bool value;
+  final Color textColor;
+  final ValueChanged<bool> onChanged;
+
+  const _TripRiskFilterCheckbox({
+    required this.label,
+    required this.value,
+    required this.textColor,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 32,
+      child: CheckboxListTile(
+        value: value,
+        onChanged: (bool? nextValue) => onChanged(nextValue ?? false),
+        contentPadding: EdgeInsets.zero,
+        dense: true,
+        controlAffinity: ListTileControlAffinity.leading,
+        activeColor: AppPalette.primaryBlue,
+        checkboxShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6),
+        ),
+        title: Text(
           label,
           style: TextStyle(
             color: textColor,

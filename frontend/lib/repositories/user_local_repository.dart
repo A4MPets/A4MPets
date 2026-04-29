@@ -258,7 +258,12 @@ class UserLocalRepository {
       evidencePhotoUrl: evidencePhotoUrl,
       reportedByUsername: reportedByUsername,
     );
-    await databaseManager.markUserDataForFutureSync();
+    try {
+      await databaseManager.markUserDataForFutureSync();
+    } catch (_) {
+      // The hazard row already persists with needsSync=true, so a later
+      // background sync can still pick it up even if this extra marker fails.
+    }
     unawaited(syncCoordinator.scheduleSync());
   }
 
@@ -272,6 +277,19 @@ class UserLocalRepository {
     );
     await databaseManager.markUserDataForFutureSync();
     unawaited(syncCoordinator.scheduleSync());
+  }
+
+  Future<void> deleteHazardReport({
+    required int hazardId,
+    String? remoteId,
+  }) async {
+    await _deleteRemoteIfPossible(
+      path: remoteId == null || remoteId.trim().isEmpty
+          ? null
+          : '/hazards/$remoteId',
+      requiredSuccess: remoteId != null && remoteId.trim().isNotEmpty,
+    );
+    await databaseManager.deleteHazardReport(hazardId: hazardId);
   }
 
   Future<void> addCommentToLostPetReport({
@@ -312,6 +330,24 @@ class UserLocalRepository {
       photoUrl: photoUrl,
       phone: phone,
     );
+    try {
+      await databaseManager.markUserDataForFutureSync();
+    } catch (_) {
+      // The report row already persists with needsSync=true.
+    }
+    unawaited(syncCoordinator.scheduleSync());
+  }
+
+  Future<void> deleteLostPetReport({
+    required int reportId,
+    String? remoteId,
+  }) async {
+    await _deleteRemoteIfPossible(
+      path: remoteId == null || remoteId.trim().isEmpty
+          ? null
+          : '/lost-pet-reports/$remoteId',
+    );
+    await databaseManager.deleteLostPetReport(reportId: reportId);
     await databaseManager.markUserDataForFutureSync();
     unawaited(syncCoordinator.scheduleSync());
   }
@@ -352,6 +388,24 @@ class UserLocalRepository {
       photoUrl: photoUrl,
       phone: phone,
     );
+    try {
+      await databaseManager.markUserDataForFutureSync();
+    } catch (_) {
+      // The report row already persists with needsSync=true.
+    }
+    unawaited(syncCoordinator.scheduleSync());
+  }
+
+  Future<void> deleteFoundPetReport({
+    required int reportId,
+    String? remoteId,
+  }) async {
+    await _deleteRemoteIfPossible(
+      path: remoteId == null || remoteId.trim().isEmpty
+          ? null
+          : '/found-pet-reports/$remoteId',
+    );
+    await databaseManager.deleteFoundPetReport(reportId: reportId);
     await databaseManager.markUserDataForFutureSync();
     unawaited(syncCoordinator.scheduleSync());
   }
@@ -382,6 +436,24 @@ class UserLocalRepository {
       impactRadiusMeters: impactRadiusMeters,
       photoUrl: photoUrl,
     );
+    try {
+      await databaseManager.markUserDataForFutureSync();
+    } catch (_) {
+      // The report row already persists with needsSync=true.
+    }
+    unawaited(syncCoordinator.scheduleSync());
+  }
+
+  Future<void> deleteGenericReport({
+    required int reportId,
+    String? remoteId,
+  }) async {
+    await _deleteRemoteIfPossible(
+      path: remoteId == null || remoteId.trim().isEmpty
+          ? null
+          : '/generic-reports/$remoteId',
+    );
+    await databaseManager.deleteGenericReport(reportId: reportId);
     await databaseManager.markUserDataForFutureSync();
     unawaited(syncCoordinator.scheduleSync());
   }
@@ -522,5 +594,51 @@ class UserLocalRepository {
       return message;
     }
     return fallback;
+  }
+
+  Future<void> _deleteRemoteIfPossible({
+    required String? path,
+    bool requiredSuccess = false,
+  }) async {
+    if (path == null || path.isEmpty) {
+      return;
+    }
+
+    final LocalUserProfile profile = await databaseManager
+        .getLocalUserProfile();
+    final String? token = profile.accessToken;
+    if (token == null || token.isEmpty) {
+      if (requiredSuccess) {
+        throw Exception(
+          'No hay una sesion autenticada para borrar este registro remoto.',
+        );
+      }
+      return;
+    }
+
+    final http.Response? response = await _apiClient.deleteWithFallback(
+      path,
+      bearerToken: token,
+    );
+    if (response == null) {
+      if (requiredSuccess) {
+        throw Exception(
+          'No fue posible conectar con el backend para borrar este registro.',
+        );
+      }
+      return;
+    }
+
+    if (response.statusCode == 404) {
+      return;
+    }
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      if (requiredSuccess) {
+        throw Exception(
+          'El backend no pudo borrar este registro en este momento.',
+        );
+      }
+    }
   }
 }

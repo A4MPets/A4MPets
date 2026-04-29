@@ -9,12 +9,16 @@ class GenericReportDetailsPanelContent extends StatelessWidget {
   final bool isDarkMode;
   final GenericReportRecord report;
   final VoidCallback onViewComments;
+  final String? debugDeleteLabel;
+  final VoidCallback? onDebugDelete;
 
   const GenericReportDetailsPanelContent({
     super.key,
     required this.isDarkMode,
     required this.report,
     required this.onViewComments,
+    this.debugDeleteLabel,
+    this.onDebugDelete,
   });
 
   @override
@@ -53,7 +57,10 @@ class GenericReportDetailsPanelContent extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                _DetailsRow(label: 'Fecha', value: _formatDate(report.reportedDate)),
+                _DetailsRow(
+                  label: 'Fecha',
+                  value: _formatDate(report.reportedDate),
+                ),
                 const SizedBox(height: 8),
                 _DetailsRow(
                   label: 'Riesgo',
@@ -93,6 +100,29 @@ class GenericReportDetailsPanelContent extends StatelessWidget {
             ),
           ),
         ),
+        if (onDebugDelete != null && debugDeleteLabel != null) ...[
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 44,
+            child: OutlinedButton(
+              onPressed: onDebugDelete,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppPalette.dangerRed,
+                side: const BorderSide(color: AppPalette.dangerRed),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                debugDeleteLabel!,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

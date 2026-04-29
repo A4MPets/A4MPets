@@ -176,12 +176,7 @@ class HazardReportsController extends AsyncListController<HazardReportRecord> {
       evidencePhotoUrl: evidencePhotoUrl,
       reportedByUsername: reportedByUsername,
     );
-
-    try {
-      await reload();
-    } catch (_) {
-      // The local save already succeeded; avoid blocking the UI on refresh.
-    }
+    unawaited(_refreshAfterOptimisticSave());
   }
 
   Future<void> addCommentToHazard({
@@ -192,9 +187,28 @@ class HazardReportsController extends AsyncListController<HazardReportRecord> {
     await reload();
   }
 
+  Future<void> deleteHazardReport({
+    required int hazardId,
+    String? remoteId,
+  }) async {
+    await _repository.deleteHazardReport(
+      hazardId: hazardId,
+      remoteId: remoteId,
+    );
+    await reload();
+  }
+
   Future<void> syncWithBackend() async {
     await _repository.syncHazardsNow();
     await reload();
+  }
+
+  Future<void> _refreshAfterOptimisticSave() async {
+    try {
+      await reload();
+    } catch (_) {
+      // The local save already succeeded; avoid blocking the UI on refresh.
+    }
   }
 }
 
@@ -239,10 +253,7 @@ class LostPetReportsController
       photoUrl: photoUrl,
       phone: phone,
     );
-
-    try {
-      await reload();
-    } catch (_) {}
+    unawaited(_refreshAfterOptimisticSave());
   }
 
   Future<void> syncWithBackend() async {
@@ -259,6 +270,25 @@ class LostPetReportsController
       comment: comment,
     );
     await reload();
+  }
+
+  Future<void> deleteLostPetReport({
+    required int reportId,
+    String? remoteId,
+  }) async {
+    await _repository.deleteLostPetReport(
+      reportId: reportId,
+      remoteId: remoteId,
+    );
+    await reload();
+  }
+
+  Future<void> _refreshAfterOptimisticSave() async {
+    try {
+      await reload();
+    } catch (_) {
+      // The local save already succeeded; avoid blocking the UI on refresh.
+    }
   }
 }
 
@@ -302,10 +332,7 @@ class FoundPetReportsController
       photoUrl: photoUrl,
       phone: phone,
     );
-
-    try {
-      await reload();
-    } catch (_) {}
+    unawaited(_refreshAfterOptimisticSave());
   }
 
   Future<void> syncWithBackend() async {
@@ -322,6 +349,25 @@ class FoundPetReportsController
       comment: comment,
     );
     await reload();
+  }
+
+  Future<void> deleteFoundPetReport({
+    required int reportId,
+    String? remoteId,
+  }) async {
+    await _repository.deleteFoundPetReport(
+      reportId: reportId,
+      remoteId: remoteId,
+    );
+    await reload();
+  }
+
+  Future<void> _refreshAfterOptimisticSave() async {
+    try {
+      await reload();
+    } catch (_) {
+      // The local save already succeeded; avoid blocking the UI on refresh.
+    }
   }
 }
 
@@ -366,10 +412,7 @@ class GenericReportsController
       impactRadiusMeters: impactRadiusMeters,
       photoUrl: photoUrl,
     );
-
-    try {
-      await reload();
-    } catch (_) {}
+    unawaited(_refreshAfterOptimisticSave());
   }
 
   Future<void> syncWithBackend() async {
@@ -386,5 +429,24 @@ class GenericReportsController
       comment: comment,
     );
     await reload();
+  }
+
+  Future<void> deleteGenericReport({
+    required int reportId,
+    String? remoteId,
+  }) async {
+    await _repository.deleteGenericReport(
+      reportId: reportId,
+      remoteId: remoteId,
+    );
+    await reload();
+  }
+
+  Future<void> _refreshAfterOptimisticSave() async {
+    try {
+      await reload();
+    } catch (_) {
+      // The local save already succeeded; avoid blocking the UI on refresh.
+    }
   }
 }

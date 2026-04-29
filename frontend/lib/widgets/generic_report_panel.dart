@@ -70,7 +70,7 @@ class _GenericReportPanelContentState
   late DateTime _reportedDate;
   String _selectedRiskLevelCode = 'undefined';
   bool _isPetDanger = false;
-  String _selectedImpactRadiusCode = '25';
+  String _selectedImpactRadiusCode = '10';
   String? _storedPhotoUrl;
   bool _isSaving = false;
   bool _isPickingPhoto = false;

@@ -353,6 +353,8 @@ class LocalDatabaseManager {
     final Database db = await database;
     final List<Map<String, Object?>> rows = await db.query(
       _hazardsTable,
+      where: 'sync_status NOT IN (?, ?)',
+      whereArgs: <Object?>['deleted', 'archived'],
       orderBy: 'reported_at DESC',
     );
     return rows.map(HazardReportRecord.fromMap).toList(growable: false);
@@ -435,6 +437,36 @@ class LocalDatabaseManager {
       },
       where: 'id = ?',
       whereArgs: <Object?>[hazardId],
+    );
+  }
+
+  Future<void> deleteHazardReport({required int hazardId}) async {
+    final Database db = await database;
+    await db.delete(
+      _hazardsTable,
+      where: 'id = ?',
+      whereArgs: <Object?>[hazardId],
+    );
+  }
+
+  Future<void> removeHazardReportBySyncIdentity({
+    required String localUuid,
+    String? remoteId,
+  }) async {
+    final Database db = await database;
+    if (remoteId != null && remoteId.isNotEmpty) {
+      await db.delete(
+        _hazardsTable,
+        where: 'local_uuid = ? OR remote_id = ?',
+        whereArgs: <Object?>[localUuid, remoteId],
+      );
+      return;
+    }
+
+    await db.delete(
+      _hazardsTable,
+      where: 'local_uuid = ?',
+      whereArgs: <Object?>[localUuid],
     );
   }
 
@@ -604,6 +636,8 @@ class LocalDatabaseManager {
     final Database db = await database;
     final List<Map<String, Object?>> rows = await db.query(
       _lostPetReportsTable,
+      where: 'sync_status != ?',
+      whereArgs: <Object?>['deleted'],
       orderBy: 'disappearance_date DESC',
     );
     return rows.map(LostPetReportRecord.fromMap).toList(growable: false);
@@ -651,6 +685,22 @@ class LocalDatabaseManager {
       orderBy: 'last_modified_at ASC',
     );
     return rows.map(LostPetReportRecord.fromMap).toList(growable: false);
+  }
+
+  Future<void> deleteLostPetReport({required int reportId}) async {
+    final Database db = await database;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    await db.update(
+      _lostPetReportsTable,
+      <String, Object?>{
+        'sync_status': 'deleted',
+        'last_modified_at': now,
+        'updated_at': now,
+        'needs_sync': 1,
+      },
+      where: 'id = ?',
+      whereArgs: <Object?>[reportId],
+    );
   }
 
   Future<void> markLostPetReportAsSynced({
@@ -756,6 +806,8 @@ class LocalDatabaseManager {
     final Database db = await database;
     final List<Map<String, Object?>> rows = await db.query(
       _foundPetReportsTable,
+      where: 'sync_status != ?',
+      whereArgs: <Object?>['deleted'],
       orderBy: 'found_date DESC',
     );
     return rows.map(FoundPetReportRecord.fromMap).toList(growable: false);
@@ -801,6 +853,22 @@ class LocalDatabaseManager {
       orderBy: 'last_modified_at ASC',
     );
     return rows.map(FoundPetReportRecord.fromMap).toList(growable: false);
+  }
+
+  Future<void> deleteFoundPetReport({required int reportId}) async {
+    final Database db = await database;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    await db.update(
+      _foundPetReportsTable,
+      <String, Object?>{
+        'sync_status': 'deleted',
+        'last_modified_at': now,
+        'updated_at': now,
+        'needs_sync': 1,
+      },
+      where: 'id = ?',
+      whereArgs: <Object?>[reportId],
+    );
   }
 
   Future<void> markFoundPetReportAsSynced({
@@ -903,6 +971,8 @@ class LocalDatabaseManager {
     final Database db = await database;
     final List<Map<String, Object?>> rows = await db.query(
       _genericReportsTable,
+      where: 'sync_status != ?',
+      whereArgs: <Object?>['deleted'],
       orderBy: 'reported_date DESC',
     );
     return rows.map(GenericReportRecord.fromMap).toList(growable: false);
@@ -950,6 +1020,22 @@ class LocalDatabaseManager {
       orderBy: 'last_modified_at ASC',
     );
     return rows.map(GenericReportRecord.fromMap).toList(growable: false);
+  }
+
+  Future<void> deleteGenericReport({required int reportId}) async {
+    final Database db = await database;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    await db.update(
+      _genericReportsTable,
+      <String, Object?>{
+        'sync_status': 'deleted',
+        'last_modified_at': now,
+        'updated_at': now,
+        'needs_sync': 1,
+      },
+      where: 'id = ?',
+      whereArgs: <Object?>[reportId],
+    );
   }
 
   Future<void> markGenericReportAsSynced({

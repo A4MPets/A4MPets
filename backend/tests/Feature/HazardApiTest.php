@@ -53,5 +53,13 @@ class HazardApiTest extends TestCase
         ], $headers)
             ->assertCreated()
             ->assertJsonPath('data.comment_text', 'Needs cleanup soon.');
+
+        $this->deleteJson('/api/hazards/'.$hazardId, [], $headers)
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->getJson('/api/hazards', $headers)
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
     }
 }

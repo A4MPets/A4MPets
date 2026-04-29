@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Reports\StoreLostPetReportRequest;
+use App\Http\Requests\Reports\StoreReportCommentRequest;
 use App\Http\Requests\Reports\SyncLostPetReportsRequest;
 use App\Http\Requests\Reports\UpdateLostPetReportRequest;
 use App\Models\LostPetReport;
+use App\Services\Comments\ReportCommentFormatter;
+use App\Services\Comments\ReportCommentService;
 use App\Services\Reports\LostPetReportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,7 +16,9 @@ use Illuminate\Http\Request;
 class LostPetReportController extends Controller
 {
     public function __construct(
-        private readonly LostPetReportService $lostPetReportService
+        private readonly LostPetReportService $lostPetReportService,
+        private readonly ReportCommentService $reportCommentService,
+        private readonly ReportCommentFormatter $reportCommentFormatter
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -38,6 +43,8 @@ class LostPetReportController extends Controller
 
     public function show(LostPetReport $lostPetReport): JsonResponse
     {
+        $lostPetReport->load(['comments', 'comments.user']);
+
         return response()->json([
             'success' => true,
             'data' => $lostPetReport,
@@ -88,5 +95,32 @@ class LostPetReportController extends Controller
             'success' => true,
             'sync_results' => $results,
         ]);
+    }
+
+    public function comments(LostPetReport $lostPetReport): JsonResponse
+    {
+        $lostPetReport->load(['comments', 'comments.user']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $lostPetReport->comments
+                ->map(fn ($comment) => $this->reportCommentFormatter->formatComment($comment))
+                ->values(),
+        ]);
+    }
+
+    public function storeComment(StoreReportCommentRequest $request, LostPetReport $lostPetReport): JsonResponse
+    {
+        $comment = $this->reportCommentService->storeComment(
+            $lostPetReport,
+            $request->user(),
+            $request->validated()
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Comentario agregado exitosamente',
+            'data' => $this->reportCommentFormatter->formatComment($comment),
+        ], 201);
     }
 }

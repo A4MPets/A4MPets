@@ -1,4 +1,4 @@
-﻿part of 'map_page.dart';
+part of 'map_page.dart';
 
 extension _MapPageTripState on _MapPageState {
   void _refreshTripRoutePreviewForPreferences() {
@@ -105,6 +105,7 @@ extension _MapPageTripState on _MapPageState {
         .toList(growable: false);
 
     _updatePageState(() {
+      _tripRerouteController.reset();
       _tripStartErrorText = null;
       _isTripActive = true;
       _tripArrivalHandled = false;
@@ -179,6 +180,7 @@ extension _MapPageTripState on _MapPageState {
     }
 
     _updatePageState(() {
+      _tripRerouteController.reset();
       _isTripActive = false;
       _tripArrivalHandled = false;
       _selectedTripRoute = null;
@@ -186,7 +188,9 @@ extension _MapPageTripState on _MapPageState {
       _isTripStartPanelMinimized = false;
       _selectedTripPetIds.clear();
       _selectedTripTransport = _TripTransportMethod.walking;
-      _shouldAvoidHazardsInRouting = true;
+      _selectedTripHazardRiskFilters = <String>{
+        ...HazardRiskFiltering.allRoutingFilters,
+      };
       _clearDraftRouteVisuals();
       _panelStack.removeWhere(
         (_PanelRoute route) =>
@@ -205,6 +209,7 @@ extension _MapPageTripState on _MapPageState {
 
     final bool isDarkMode = ref.read(themeModeProvider);
     _updatePageState(() {
+      _tripRerouteController.reset();
       _tripArrivalHandled = true;
       _isTripActive = false;
       _selectedTripRoute = null;
@@ -212,7 +217,9 @@ extension _MapPageTripState on _MapPageState {
       _isTripStartPanelMinimized = false;
       _selectedTripPetIds.clear();
       _selectedTripTransport = _TripTransportMethod.walking;
-      _shouldAvoidHazardsInRouting = true;
+      _selectedTripHazardRiskFilters = <String>{
+        ...HazardRiskFiltering.allRoutingFilters,
+      };
       _clearDraftRouteVisuals();
       _panelStack.clear();
     });
@@ -226,13 +233,16 @@ extension _MapPageTripState on _MapPageState {
 
   void _acknowledgeTripArrival() {
     _updatePageState(() {
+      _tripRerouteController.reset();
       _tripArrivalHandled = false;
       _selectedTripRoute = null;
       _tripRemainingWaypoints = <LatLng>[];
       _isTripStartPanelMinimized = false;
       _selectedTripPetIds.clear();
       _selectedTripTransport = _TripTransportMethod.walking;
-      _shouldAvoidHazardsInRouting = true;
+      _selectedTripHazardRiskFilters = <String>{
+        ...HazardRiskFiltering.allRoutingFilters,
+      };
       _clearDraftRouteVisuals();
       _panelStack.clear();
     });
@@ -264,13 +274,19 @@ extension _MapPageTripState on _MapPageState {
   }
 
   void _clearTripSetupState() {
+    _tripArrivalHandled = false;
+    _tripStartErrorText = null;
+    _isTripActive = false;
+    _selectedRouteId = null;
     _selectedTripRoute = null;
     _tripRemainingWaypoints = <LatLng>[];
     _isTripStartPanelMinimized = false;
     _tripRerouteController.reset();
     _selectedTripPetIds.clear();
     _selectedTripTransport = _TripTransportMethod.walking;
-    _shouldAvoidHazardsInRouting = true;
+    _selectedTripHazardRiskFilters = <String>{
+      ...HazardRiskFiltering.allRoutingFilters,
+    };
     _clearDraftRouteVisuals();
   }
 
@@ -386,6 +402,8 @@ extension _MapPageTripState on _MapPageState {
     if (_isUserLocationLoading || _userLocationErrorText != null) {
       _handleUserLocationStatusChanged(false, null);
     }
+
+    _evaluateProximityAlerts(location);
 
     if (_tripArrivalHandled || _selectedTripRoute == null) {
       return;
@@ -531,7 +549,7 @@ extension _MapPageTripState on _MapPageState {
         return _TripStartPanelContent(
           isDarkMode: isDarkMode,
           selectedTransport: _selectedTripTransport,
-          avoidHazards: _shouldAvoidHazardsInRouting,
+          selectedHazardRiskFilters: _selectedTripHazardRiskFilters,
           selectedPetsCount: _selectedTripPetIds.length,
           selectedRouteName: _selectedTripRoute?.name,
           errorText: _tripStartErrorText,
@@ -547,9 +565,18 @@ extension _MapPageTripState on _MapPageState {
             });
             _refreshTripRoutePreviewForPreferences();
           },
-          onAvoidHazardsChanged: (bool value) {
+          onToggleHazardRiskFilter: (String riskLevelCode, bool value) {
+            final Set<String> nextFilters = Set<String>.from(
+              _selectedTripHazardRiskFilters,
+            );
+            if (value) {
+              nextFilters.add(riskLevelCode);
+            } else {
+              nextFilters.remove(riskLevelCode);
+            }
+
             _updatePageState(() {
-              _shouldAvoidHazardsInRouting = value;
+              _selectedTripHazardRiskFilters = nextFilters;
             });
             _refreshTripRoutePreviewForPreferences();
           },

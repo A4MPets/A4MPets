@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class HazardReport extends Model
 {
@@ -60,9 +60,9 @@ class HazardReport extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function comments(): HasMany
+    public function comments(): MorphMany
     {
-        return $this->hasMany(HazardComment::class)->orderBy('commented_at')->orderBy('id');
+        return $this->morphMany(ReportComment::class, 'commentable')->orderBy('commented_at')->orderBy('id');
     }
 
     public function riskLevel(): BelongsTo
@@ -142,7 +142,7 @@ class HazardReport extends Model
             ? $this->comments
             : $this->comments()->get();
 
-        return $comments->values()->map(static function (HazardComment $comment): array {
+        return $comments->values()->map(static function (ReportComment $comment): array {
             $commentedAt = $comment->commented_at ?? $comment->created_at ?? now();
             $timestampMs = ($commentedAt->getTimestamp() * 1000)
                 + (int) floor(((int) $commentedAt->format('u')) / 1000);

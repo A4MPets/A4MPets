@@ -9,12 +9,16 @@ class FoundPetDetailsPanelContent extends StatelessWidget {
   final bool isDarkMode;
   final FoundPetReportRecord report;
   final VoidCallback onViewComments;
+  final String? debugDeleteLabel;
+  final VoidCallback? onDebugDelete;
 
   const FoundPetDetailsPanelContent({
     super.key,
     required this.isDarkMode,
     required this.report,
     required this.onViewComments,
+    this.debugDeleteLabel,
+    this.onDebugDelete,
   });
 
   @override
@@ -53,10 +57,14 @@ class FoundPetDetailsPanelContent extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                _DetailsRow(label: 'Fecha', value: _formatDate(report.foundDate)),
+                _DetailsRow(
+                  label: 'Fecha',
+                  value: _formatDate(report.foundDate),
+                ),
                 const SizedBox(height: 8),
                 _DetailsRow(label: 'Detalles', value: report.details),
-                if (report.phone != null && report.phone!.trim().isNotEmpty) ...[
+                if (report.phone != null &&
+                    report.phone!.trim().isNotEmpty) ...[
                   const SizedBox(height: 8),
                   _DetailsRow(label: 'Telefono', value: report.phone!),
                 ],
@@ -83,6 +91,29 @@ class FoundPetDetailsPanelContent extends StatelessWidget {
             ),
           ),
         ),
+        if (onDebugDelete != null && debugDeleteLabel != null) ...[
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 44,
+            child: OutlinedButton(
+              onPressed: onDebugDelete,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppPalette.dangerRed,
+                side: const BorderSide(color: AppPalette.dangerRed),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                debugDeleteLabel!,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

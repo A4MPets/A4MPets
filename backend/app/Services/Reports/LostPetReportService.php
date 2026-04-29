@@ -3,14 +3,19 @@
 namespace App\Services\Reports;
 
 use App\Models\LostPetReport;
+use App\Services\Comments\ReportCommentService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Throwable;
 
 class LostPetReportService
 {
+    public function __construct(
+        private readonly ReportCommentService $reportCommentService
+    ) {}
+
     public function paginate(bool $includeArchived, int $perPage, int $page): LengthAwarePaginator
     {
-        $query = LostPetReport::query();
+        $query = LostPetReport::query()->with(['comments', 'comments.user']);
 
         if (! $includeArchived) {
             $query->where('sync_status', '!=', 'deleted');
@@ -26,6 +31,7 @@ class LostPetReportService
      */
     public function store(?int $userId, array $validated): LostPetReport
     {
+        $comments = (array) ($validated['comments'] ?? []);
         $report = LostPetReport::updateOrCreate(
             ['local_id' => $validated['local_id']],
             [
@@ -45,7 +51,11 @@ class LostPetReportService
 
         $this->ensureRemoteId($report);
 
-        return $report->refresh();
+        if ($comments !== []) {
+            $this->reportCommentService->syncComments($report, $comments);
+        }
+
+        return $report->refresh()->load(['comments', 'comments.user']);
     }
 
     /**
@@ -53,6 +63,7 @@ class LostPetReportService
      */
     public function update(LostPetReport $report, array $validated): LostPetReport
     {
+        $comments = (array) ($validated['comments'] ?? []);
         $report->update([
             'last_seen_latitude' => $validated['last_seen_latitude'],
             'last_seen_longitude' => $validated['last_seen_longitude'],
@@ -66,7 +77,11 @@ class LostPetReportService
             'synced_at' => now(),
         ]);
 
-        return $report->refresh();
+        if ($comments !== []) {
+            $this->reportCommentService->syncComments($report, $comments);
+        }
+
+        return $report->refresh()->load(['comments', 'comments.user']);
     }
 
     public function delete(LostPetReport $report): void
@@ -140,6 +155,7 @@ class LostPetReportService
                 }
 
                 $this->ensureRemoteId($report);
+                $this->reportCommentService->syncComments($report, (array) ($reportData['comments'] ?? []));
                 $results['synced']++;
             } catch (Throwable $error) {
                 $results['errors']++;

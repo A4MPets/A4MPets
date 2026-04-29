@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Reports\StoreFoundPetReportRequest;
+use App\Http\Requests\Reports\StoreReportCommentRequest;
 use App\Http\Requests\Reports\SyncFoundPetReportsRequest;
 use App\Http\Requests\Reports\UpdateFoundPetReportRequest;
 use App\Models\FoundPetReport;
+use App\Services\Comments\ReportCommentFormatter;
+use App\Services\Comments\ReportCommentService;
 use App\Services\Reports\FoundPetReportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,7 +16,9 @@ use Illuminate\Http\Request;
 class FoundPetReportController extends Controller
 {
     public function __construct(
-        private readonly FoundPetReportService $foundPetReportService
+        private readonly FoundPetReportService $foundPetReportService,
+        private readonly ReportCommentService $reportCommentService,
+        private readonly ReportCommentFormatter $reportCommentFormatter
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -38,6 +43,8 @@ class FoundPetReportController extends Controller
 
     public function show(FoundPetReport $foundPetReport): JsonResponse
     {
+        $foundPetReport->load(['comments', 'comments.user']);
+
         return response()->json([
             'success' => true,
             'data' => $foundPetReport,
@@ -88,5 +95,32 @@ class FoundPetReportController extends Controller
             'success' => true,
             'sync_results' => $results,
         ]);
+    }
+
+    public function comments(FoundPetReport $foundPetReport): JsonResponse
+    {
+        $foundPetReport->load(['comments', 'comments.user']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $foundPetReport->comments
+                ->map(fn ($comment) => $this->reportCommentFormatter->formatComment($comment))
+                ->values(),
+        ]);
+    }
+
+    public function storeComment(StoreReportCommentRequest $request, FoundPetReport $foundPetReport): JsonResponse
+    {
+        $comment = $this->reportCommentService->storeComment(
+            $foundPetReport,
+            $request->user(),
+            $request->validated()
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Comentario agregado exitosamente',
+            'data' => $this->reportCommentFormatter->formatComment($comment),
+        ], 201);
     }
 }

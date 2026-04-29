@@ -33,13 +33,20 @@ class OsmRoutingService {
 
   Future<List<LatLng>> buildRoadRoute({
     required List<LatLng> waypoints,
-    bool avoidHazards = false,
+    List<String> hazardRiskFilters = const <String>[],
     String travelMode = 'walking',
     Map<String, Object?>? tripConfig,
   }) async {
     if (waypoints.length < 2) {
       return waypoints;
     }
+
+    final List<String> normalizedRiskFilters = hazardRiskFilters
+        .map((String value) => value.trim().toLowerCase())
+        .where((String value) => value.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+    final bool avoidHazards = normalizedRiskFilters.isNotEmpty;
 
     final Map<String, Object?> payload = <String, Object?>{
       'points': waypoints
@@ -51,6 +58,7 @@ class OsmRoutingService {
           )
           .toList(growable: false),
       'avoid_hazards': avoidHazards,
+      'hazard_risk_filters': normalizedRiskFilters,
       'travel_mode': travelMode,
       'trip_config': tripConfig ?? <String, Object?>{},
     };

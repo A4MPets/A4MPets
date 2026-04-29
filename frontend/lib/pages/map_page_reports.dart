@@ -1,4 +1,4 @@
-﻿part of 'map_page.dart';
+part of 'map_page.dart';
 
 extension _MapPageReportsState on _MapPageState {
   List<LostPetReportRecord> get _visibleLostPetReports {
@@ -50,6 +50,28 @@ extension _MapPageReportsState on _MapPageState {
     _pushPanel(_buildReportSelectorRoute(isDarkMode));
   }
 
+  void _closeReportingFlowAfterSubmit() {
+    _updatePageState(() {
+      _isSelectingHazardLocationOnMap = false;
+      _activeReportSelectionContext = null;
+      _manualHazardLocation = null;
+      _hazardDraftPreview = null;
+      _isReportHazardPanelMinimized = false;
+      _manualLostPetLocation = null;
+      _manualFoundPetLocation = null;
+      _manualGenericReportLocation = null;
+      _genericReportDraftPreview = null;
+      _panelStack.removeWhere(
+        (_PanelRoute route) =>
+            route.isReportSelectorPanel ||
+            route.isReportHazardPanel ||
+            route.isLostPetReportPanel ||
+            route.isFoundPetReportPanel ||
+            route.isGenericReportPanel,
+      );
+    });
+  }
+
   void _openLostPetReportPanel(bool isDarkMode) {
     _updatePageState(() {
       _manualLostPetLocation = null;
@@ -70,8 +92,31 @@ extension _MapPageReportsState on _MapPageState {
     _updatePageState(() {
       _manualGenericReportLocation = null;
       _activeReportSelectionContext = null;
+      _genericReportDraftPreview = const GenericReportDraftPreview(
+        location: null,
+        riskLevelCode: 'undefined',
+        impactRadiusMeters: 0,
+      );
     });
     _replaceOrPushReportPanel(_buildGenericReportRoute(isDarkMode));
+  }
+
+  void _updateGenericReportDraftPreview(GenericReportDraftPreview preview) {
+    final GenericReportDraftPreview? currentPreview =
+        _genericReportDraftPreview;
+    if (currentPreview != null &&
+        currentPreview.impactRadiusMeters == preview.impactRadiusMeters &&
+        currentPreview.riskLevelCode == preview.riskLevelCode) {
+      return;
+    }
+
+    _updatePageState(() {
+      _genericReportDraftPreview = GenericReportDraftPreview(
+        location: currentPreview?.location,
+        riskLevelCode: preview.riskLevelCode,
+        impactRadiusMeters: preview.impactRadiusMeters,
+      );
+    });
   }
 
   void _replaceOrPushReportPanel(_PanelRoute route) {
@@ -143,6 +188,12 @@ extension _MapPageReportsState on _MapPageState {
     if (_hasOpenPanels && !_panelStack.last.isLostPetDetailsPanel) {
       return;
     }
+    _updatePageState(() {
+      _selectedHazard = null;
+      _selectedLostPetReport = report;
+      _selectedFoundPetReport = null;
+      _selectedGenericReport = null;
+    });
     final _PanelRoute route = _buildLostPetDetailsRoute(isDarkMode, report);
     if (_hasOpenPanels && _panelStack.last.isLostPetDetailsPanel) {
       _replaceTopPanel(route);
@@ -158,6 +209,12 @@ extension _MapPageReportsState on _MapPageState {
     if (_hasOpenPanels && !_panelStack.last.isFoundPetDetailsPanel) {
       return;
     }
+    _updatePageState(() {
+      _selectedHazard = null;
+      _selectedLostPetReport = null;
+      _selectedFoundPetReport = report;
+      _selectedGenericReport = null;
+    });
     final _PanelRoute route = _buildFoundPetDetailsRoute(isDarkMode, report);
     if (_hasOpenPanels && _panelStack.last.isFoundPetDetailsPanel) {
       _replaceTopPanel(route);
@@ -173,6 +230,12 @@ extension _MapPageReportsState on _MapPageState {
     if (_hasOpenPanels && !_panelStack.last.isGenericReportDetailsPanel) {
       return;
     }
+    _updatePageState(() {
+      _selectedHazard = null;
+      _selectedLostPetReport = null;
+      _selectedFoundPetReport = null;
+      _selectedGenericReport = report;
+    });
     final _PanelRoute route = _buildGenericReportDetailsRoute(
       isDarkMode,
       report,
@@ -234,7 +297,7 @@ extension _MapPageReportsState on _MapPageState {
           onStartMapSelection: _startLostPetMapSelection,
           onUseCurrentLocation: _useCurrentLostPetLocation,
           onPreviewChanged: (_) {},
-          onReported: _closeCurrentPanel,
+          onReported: _closeReportingFlowAfterSubmit,
         );
       },
     );
@@ -266,7 +329,7 @@ extension _MapPageReportsState on _MapPageState {
           onStartMapSelection: _startFoundPetMapSelection,
           onUseCurrentLocation: _useCurrentFoundPetLocation,
           onPreviewChanged: (_) {},
-          onReported: _closeCurrentPanel,
+          onReported: _closeReportingFlowAfterSubmit,
         );
       },
     );
@@ -297,8 +360,8 @@ extension _MapPageReportsState on _MapPageState {
               _ReportMapSelectionContext.generic,
           onStartMapSelection: _startGenericReportMapSelection,
           onUseCurrentLocation: _useCurrentGenericReportLocation,
-          onPreviewChanged: (_) {},
-          onReported: _closeCurrentPanel,
+          onPreviewChanged: _updateGenericReportDraftPreview,
+          onReported: _closeReportingFlowAfterSubmit,
         );
       },
     );
@@ -326,6 +389,12 @@ extension _MapPageReportsState on _MapPageState {
           isDarkMode: isDarkMode,
           report: report,
           onViewComments: () => _openLostPetCommentsPanel(isDarkMode, report),
+          debugDeleteLabel: kIsWeb && kDebugMode
+              ? 'Borrar mascota perdida'
+              : null,
+          onDebugDelete: kIsWeb && kDebugMode
+              ? _confirmAndDeleteSelectedDebugItem
+              : null,
         );
       },
     );
@@ -353,6 +422,12 @@ extension _MapPageReportsState on _MapPageState {
           isDarkMode: isDarkMode,
           report: report,
           onViewComments: () => _openFoundPetCommentsPanel(isDarkMode, report),
+          debugDeleteLabel: kIsWeb && kDebugMode
+              ? 'Borrar mascota encontrada'
+              : null,
+          onDebugDelete: kIsWeb && kDebugMode
+              ? _confirmAndDeleteSelectedDebugItem
+              : null,
         );
       },
     );
@@ -379,40 +454,51 @@ extension _MapPageReportsState on _MapPageState {
         return GenericReportDetailsPanelContent(
           isDarkMode: isDarkMode,
           report: report,
-          onViewComments: () => _openGenericReportCommentsPanel(isDarkMode, report),
+          onViewComments: () =>
+              _openGenericReportCommentsPanel(isDarkMode, report),
+          debugDeleteLabel: kIsWeb && kDebugMode ? 'Borrar reporte' : null,
+          onDebugDelete: kIsWeb && kDebugMode
+              ? _confirmAndDeleteSelectedDebugItem
+              : null,
         );
       },
     );
   }
 
   void _openLostPetCommentsPanel(bool isDarkMode, LostPetReportRecord report) {
-    _pushPanel(_buildReportCommentsRoute(
-      isDarkMode: isDarkMode,
-      reportId: report.id,
-      subjectType: ReportCommentSubjectType.lostPet,
-    ));
+    _pushPanel(
+      _buildReportCommentsRoute(
+        isDarkMode: isDarkMode,
+        reportId: report.id,
+        subjectType: ReportCommentSubjectType.lostPet,
+      ),
+    );
   }
 
   void _openFoundPetCommentsPanel(
     bool isDarkMode,
     FoundPetReportRecord report,
   ) {
-    _pushPanel(_buildReportCommentsRoute(
-      isDarkMode: isDarkMode,
-      reportId: report.id,
-      subjectType: ReportCommentSubjectType.foundPet,
-    ));
+    _pushPanel(
+      _buildReportCommentsRoute(
+        isDarkMode: isDarkMode,
+        reportId: report.id,
+        subjectType: ReportCommentSubjectType.foundPet,
+      ),
+    );
   }
 
   void _openGenericReportCommentsPanel(
     bool isDarkMode,
     GenericReportRecord report,
   ) {
-    _pushPanel(_buildReportCommentsRoute(
-      isDarkMode: isDarkMode,
-      reportId: report.id,
-      subjectType: ReportCommentSubjectType.generic,
-    ));
+    _pushPanel(
+      _buildReportCommentsRoute(
+        isDarkMode: isDarkMode,
+        reportId: report.id,
+        subjectType: ReportCommentSubjectType.generic,
+      ),
+    );
   }
 
   _PanelRoute _buildReportCommentsRoute({
@@ -441,5 +527,323 @@ extension _MapPageReportsState on _MapPageState {
         );
       },
     );
+  }
+
+  Widget _buildProximityAlertOverlay(bool isDarkMode) {
+    final _ProximityAlertTarget? alert = _activeProximityAlert;
+    if (alert == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Positioned.fill(
+      child: ColoredBox(
+        color: const Color(0x4D000000),
+        child: _ProximityAlertCard(
+          isDarkMode: isDarkMode,
+          onAcknowledge: _acknowledgeProximityAlert,
+          onOpenComments: _openCommentsFromProximityAlert,
+        ),
+      ),
+    );
+  }
+
+  void _evaluateProximityAlerts(LatLng location) {
+    final List<_ProximityAlertTarget> activeTargets =
+        _collectProximityTargets(location)..sort(
+          (_ProximityAlertTarget a, _ProximityAlertTarget b) =>
+              a.distanceMeters.compareTo(b.distanceMeters),
+        );
+
+    final Set<String> nextZoneKeys = activeTargets
+        .map((_ProximityAlertTarget target) => target.zoneKey)
+        .toSet();
+    final Set<String> exitedZoneKeys = _currentProximityZoneKeys.difference(
+      nextZoneKeys,
+    );
+    for (final String zoneKey in exitedZoneKeys) {
+      _acknowledgedProximityZoneKeys.remove(zoneKey);
+    }
+    _currentProximityZoneKeys = nextZoneKeys;
+
+    if (_activeProximityAlert != null) {
+      return;
+    }
+
+    for (final _ProximityAlertTarget target in activeTargets) {
+      if (_acknowledgedProximityZoneKeys.contains(target.zoneKey)) {
+        continue;
+      }
+
+      _updatePageState(() {
+        _activeProximityAlert = target;
+      });
+      return;
+    }
+  }
+
+  _ProximityAlertTarget? _currentProximityAlertTarget() {
+    final _ProximityAlertTarget? active = _activeProximityAlert;
+    if (active == null) {
+      return null;
+    }
+
+    for (final _ProximityAlertTarget target
+        in _buildCurrentProximityTargets()) {
+      if (target.zoneKey == active.zoneKey) {
+        return target;
+      }
+    }
+
+    return active;
+  }
+
+  List<_ProximityAlertTarget> _buildCurrentProximityTargets() {
+    final LatLng? location = _latestUserLocation;
+    if (location == null) {
+      return const <_ProximityAlertTarget>[];
+    }
+
+    return _collectProximityTargets(location);
+  }
+
+  List<_ProximityAlertTarget> _collectProximityTargets(LatLng location) {
+    final List<_ProximityAlertTarget> targets = <_ProximityAlertTarget>[];
+
+    for (final HazardReportRecord report in _visibleHazardCircles) {
+      final LatLng center = LatLng(
+        report.incidentLatitude,
+        report.incidentLongitude,
+      );
+      final double distanceMeters = _distanceCalculator.distance(
+        location,
+        center,
+      );
+      if (distanceMeters > report.impactRadiusMeters) {
+        continue;
+      }
+      targets.add(
+        _ProximityAlertTarget(
+          zoneKey: 'hazard:${report.remoteId ?? report.localUuid}',
+          subjectType: ReportCommentSubjectType.hazard,
+          reportId: report.id,
+          distanceMeters: distanceMeters,
+        ),
+      );
+    }
+
+    for (final GenericReportRecord report in _visibleGenericReports) {
+      if (report.impactRadiusMeters <= 0) {
+        continue;
+      }
+      final LatLng center = LatLng(report.latitude, report.longitude);
+      final double distanceMeters = _distanceCalculator.distance(
+        location,
+        center,
+      );
+      if (distanceMeters > report.impactRadiusMeters) {
+        continue;
+      }
+      targets.add(
+        _ProximityAlertTarget(
+          zoneKey: 'generic:${report.remoteId ?? report.localUuid}',
+          subjectType: ReportCommentSubjectType.generic,
+          reportId: report.id,
+          distanceMeters: distanceMeters,
+        ),
+      );
+    }
+
+    return targets;
+  }
+
+  void _acknowledgeProximityAlert() {
+    final _ProximityAlertTarget? alert = _activeProximityAlert;
+    if (alert == null) {
+      return;
+    }
+
+    _updatePageState(() {
+      _acknowledgedProximityZoneKeys.add(alert.zoneKey);
+      _activeProximityAlert = null;
+    });
+
+    final LatLng? location = _latestUserLocation;
+    if (location != null) {
+      _evaluateProximityAlerts(location);
+    }
+  }
+
+  void _openCommentsFromProximityAlert() {
+    final _ProximityAlertTarget? alert = _currentProximityAlertTarget();
+    if (alert == null) {
+      return;
+    }
+
+    _updatePageState(() {
+      _acknowledgedProximityZoneKeys.add(alert.zoneKey);
+      _activeProximityAlert = null;
+    });
+
+    final bool isDarkMode = ref.read(themeModeProvider);
+    switch (alert.subjectType) {
+      case ReportCommentSubjectType.hazard:
+        HazardReportRecord? hazard;
+        for (final HazardReportRecord item in _visibleHazardCircles) {
+          if (item.id == alert.reportId) {
+            hazard = item;
+            break;
+          }
+        }
+        if (hazard != null) {
+          _openHazardCommentsPanel(isDarkMode, hazard);
+        }
+        break;
+      case ReportCommentSubjectType.generic:
+        GenericReportRecord? report;
+        for (final GenericReportRecord item in _visibleGenericReports) {
+          if (item.id == alert.reportId) {
+            report = item;
+            break;
+          }
+        }
+        if (report != null) {
+          _openGenericReportCommentsPanel(isDarkMode, report);
+        }
+        break;
+      case ReportCommentSubjectType.lostPet:
+      case ReportCommentSubjectType.foundPet:
+        break;
+    }
+  }
+
+  Future<void> _confirmAndDeleteSelectedDebugItem() async {
+    if (!_isDebugDetailPanelOpen) {
+      return;
+    }
+
+    final String label = _debugDeleteLabel ?? 'Borrar registro';
+    final bool isDarkMode = ref.read(themeModeProvider);
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: AppPalette.dialogBackground(isDarkMode),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: AppPalette.border(isDarkMode)),
+          ),
+          title: Text(
+            label,
+            style: TextStyle(
+              color: AppPalette.dialogTitle(isDarkMode),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: Text(
+            'Esta accion es solo para debug. ¿Deseas continuar?',
+            style: TextStyle(color: AppPalette.dialogBody(isDarkMode)),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(
+                'Cancelar',
+                style: TextStyle(
+                  color: AppPalette.dialogCancel(isDarkMode),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text(
+                'Borrar',
+                style: TextStyle(
+                  color: AppPalette.dangerRed,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    try {
+      if (_hasOpenPanels && _panelStack.last.isHazardDetailsPanel) {
+        final HazardReportRecord? hazard = _selectedHazard;
+        if (hazard == null) {
+          return;
+        }
+        await ref
+            .read(hazardReportsControllerProvider.notifier)
+            .deleteHazardReport(hazardId: hazard.id, remoteId: hazard.remoteId);
+      } else if (_hasOpenPanels && _panelStack.last.isLostPetDetailsPanel) {
+        final LostPetReportRecord? report = _selectedLostPetReport;
+        if (report == null) {
+          return;
+        }
+        await ref
+            .read(lostPetReportsControllerProvider.notifier)
+            .deleteLostPetReport(
+              reportId: report.id,
+              remoteId: report.remoteId,
+            );
+      } else if (_hasOpenPanels && _panelStack.last.isFoundPetDetailsPanel) {
+        final FoundPetReportRecord? report = _selectedFoundPetReport;
+        if (report == null) {
+          return;
+        }
+        await ref
+            .read(foundPetReportsControllerProvider.notifier)
+            .deleteFoundPetReport(
+              reportId: report.id,
+              remoteId: report.remoteId,
+            );
+      } else if (_hasOpenPanels &&
+          _panelStack.last.isGenericReportDetailsPanel) {
+        final GenericReportRecord? report = _selectedGenericReport;
+        if (report == null) {
+          return;
+        }
+        await ref
+            .read(genericReportsControllerProvider.notifier)
+            .deleteGenericReport(
+              reportId: report.id,
+              remoteId: report.remoteId,
+            );
+      } else {
+        return;
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      _closeCurrentPanel();
+      _updatePageState(() {
+        _activeProximityAlert = null;
+      });
+      _analyzeRouteForHazards();
+      if (_latestUserLocation != null) {
+        _evaluateProximityAlerts(_latestUserLocation!);
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Registro borrado en modo debug.')),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString().replaceFirst('Exception: ', '')),
+        ),
+      );
+    }
   }
 }

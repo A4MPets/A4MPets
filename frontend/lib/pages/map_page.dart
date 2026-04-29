@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -14,6 +15,7 @@ import '../models/route_record.dart';
 import '../providers/local_data_providers.dart';
 import '../providers/theme_provider.dart';
 import '../services/osm_routing_service.dart';
+import '../services/hazard_risk_filtering.dart';
 import '../services/route_hazard_visualizer_service.dart';
 import '../services/trip_navigation_support.dart';
 import '../theme/app_palette.dart';
@@ -79,6 +81,9 @@ class _MapPageState extends ConsumerState<MapPage> {
   LatLng? _manualHazardLocation;
   HazardDraftPreview? _hazardDraftPreview;
   HazardReportRecord? _selectedHazard;
+  LostPetReportRecord? _selectedLostPetReport;
+  FoundPetReportRecord? _selectedFoundPetReport;
+  GenericReportRecord? _selectedGenericReport;
   int _hazardFocusRevision = 0;
   bool _showLowRiskHazardCircles = true;
   bool _showMediumRiskHazardCircles = true;
@@ -88,6 +93,7 @@ class _MapPageState extends ConsumerState<MapPage> {
   LatLng? _manualLostPetLocation;
   LatLng? _manualFoundPetLocation;
   LatLng? _manualGenericReportLocation;
+  GenericReportDraftPreview? _genericReportDraftPreview;
   bool _showLostPetReports = true;
   bool _showFoundPetReports = true;
   bool _showGenericReports = true;
@@ -98,7 +104,9 @@ class _MapPageState extends ConsumerState<MapPage> {
   // Trip navigation state.
   final Set<int> _selectedTripPetIds = <int>{};
   _TripTransportMethod _selectedTripTransport = _TripTransportMethod.walking;
-  bool _shouldAvoidHazardsInRouting = true;
+  Set<String> _selectedTripHazardRiskFilters = <String>{
+    ...HazardRiskFiltering.allRoutingFilters,
+  };
   RouteRecord? _selectedTripRoute;
   bool _isTripActive = false;
   bool _tripArrivalHandled = false;
@@ -127,6 +135,39 @@ class _MapPageState extends ConsumerState<MapPage> {
       );
 
   bool get _hasOpenPanels => _panelStack.isNotEmpty;
+
+  bool get _isDebugDetailPanelOpen {
+    if (!_hasOpenPanels) {
+      return false;
+    }
+
+    final _PanelRoute currentPanel = _panelStack.last;
+    return currentPanel.isHazardDetailsPanel ||
+        currentPanel.isLostPetDetailsPanel ||
+        currentPanel.isFoundPetDetailsPanel ||
+        currentPanel.isGenericReportDetailsPanel;
+  }
+
+  String? get _debugDeleteLabel {
+    if (!_isDebugDetailPanelOpen) {
+      return null;
+    }
+
+    final _PanelRoute currentPanel = _panelStack.last;
+    if (currentPanel.isHazardDetailsPanel) {
+      return 'Borrar peligro';
+    }
+    if (currentPanel.isLostPetDetailsPanel) {
+      return 'Borrar mascota perdida';
+    }
+    if (currentPanel.isFoundPetDetailsPanel) {
+      return 'Borrar mascota encontrada';
+    }
+    if (currentPanel.isGenericReportDetailsPanel) {
+      return 'Borrar reporte';
+    }
+    return null;
+  }
 
   void _updatePageState(VoidCallback mutation) {
     if (!mounted) {
@@ -307,6 +348,10 @@ class _MapPageState extends ConsumerState<MapPage> {
             _hasOpenPanels && _panelStack.last.isGenericReportPanel
             ? (_manualGenericReportLocation ?? _latestUserLocation)
             : null,
+        genericReportDraftImpactRadiusMeters:
+            _genericReportDraftPreview?.impactRadiusMeters,
+        genericReportDraftRiskLevelCode:
+            _genericReportDraftPreview?.riskLevelCode,
         isSelectingReportLocation:
             _activeReportSelectionContext != null &&
             _activeReportSelectionContext != _ReportMapSelectionContext.hazard,

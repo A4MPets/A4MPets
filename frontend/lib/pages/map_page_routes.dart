@@ -1,4 +1,4 @@
-﻿part of 'map_page.dart';
+part of 'map_page.dart';
 
 extension _MapPageRoutesState on _MapPageState {
   void _openManageRoutesPanel(bool isDarkMode) {
@@ -476,7 +476,9 @@ extension _MapPageRoutesState on _MapPageState {
     try {
       final List<LatLng> polyline = await _routingService.buildRoadRoute(
         waypoints: waypoints,
-        avoidHazards: _shouldAvoidHazardsInRouting,
+        hazardRiskFilters: _selectedTripHazardRiskFilters.toList(
+          growable: false,
+        ),
         travelMode: _selectedTripTransport == _TripTransportMethod.vehicle
             ? 'vehicle'
             : 'walking',
@@ -484,6 +486,9 @@ extension _MapPageRoutesState on _MapPageState {
           'selected_pet_ids': _selectedTripPetIds.toList(growable: false),
           'selected_route_id': _selectedTripRoute?.id,
           'transport_method': _selectedTripTransport.name,
+          'hazard_risk_filters': _selectedTripHazardRiskFilters.toList(
+            growable: false,
+          ),
         },
       );
       if (!mounted || requestVersion != _routePolylineRequestVersion) {

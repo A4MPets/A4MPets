@@ -3,14 +3,19 @@
 namespace App\Services\Reports;
 
 use App\Models\GenericReport;
+use App\Services\Comments\ReportCommentService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Throwable;
 
 class GenericReportService
 {
+    public function __construct(
+        private readonly ReportCommentService $reportCommentService
+    ) {}
+
     public function paginate(bool $includeArchived, int $perPage, int $page): LengthAwarePaginator
     {
-        $query = GenericReport::query();
+        $query = GenericReport::query()->with(['comments', 'comments.user']);
 
         if (! $includeArchived) {
             $query->where('sync_status', '!=', 'deleted');
@@ -26,6 +31,7 @@ class GenericReportService
      */
     public function store(?int $userId, array $validated): GenericReport
     {
+        $comments = (array) ($validated['comments'] ?? []);
         $report = GenericReport::updateOrCreate(
             ['local_id' => $validated['local_id']],
             [
@@ -45,7 +51,11 @@ class GenericReportService
 
         $this->ensureRemoteId($report);
 
-        return $report->refresh();
+        if ($comments !== []) {
+            $this->reportCommentService->syncComments($report, $comments);
+        }
+
+        return $report->refresh()->load(['comments', 'comments.user']);
     }
 
     /**
@@ -53,6 +63,7 @@ class GenericReportService
      */
     public function update(GenericReport $report, array $validated): GenericReport
     {
+        $comments = (array) ($validated['comments'] ?? []);
         $report->update([
             'latitude' => $validated['latitude'],
             'longitude' => $validated['longitude'],
@@ -66,7 +77,11 @@ class GenericReportService
             'synced_at' => now(),
         ]);
 
-        return $report->refresh();
+        if ($comments !== []) {
+            $this->reportCommentService->syncComments($report, $comments);
+        }
+
+        return $report->refresh()->load(['comments', 'comments.user']);
     }
 
     public function delete(GenericReport $report): void
@@ -140,6 +155,7 @@ class GenericReportService
                 }
 
                 $this->ensureRemoteId($report);
+                $this->reportCommentService->syncComments($report, (array) ($reportData['comments'] ?? []));
                 $results['synced']++;
             } catch (Throwable $error) {
                 $results['errors']++;

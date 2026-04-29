@@ -9,12 +9,16 @@ class LostPetDetailsPanelContent extends StatelessWidget {
   final bool isDarkMode;
   final LostPetReportRecord report;
   final VoidCallback onViewComments;
+  final String? debugDeleteLabel;
+  final VoidCallback? onDebugDelete;
 
   const LostPetDetailsPanelContent({
     super.key,
     required this.isDarkMode,
     required this.report,
     required this.onViewComments,
+    this.debugDeleteLabel,
+    this.onDebugDelete,
   });
 
   @override
@@ -59,7 +63,8 @@ class LostPetDetailsPanelContent extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 _DetailsRow(label: 'Detalles', value: report.details),
-                if (report.phone != null && report.phone!.trim().isNotEmpty) ...[
+                if (report.phone != null &&
+                    report.phone!.trim().isNotEmpty) ...[
                   const SizedBox(height: 8),
                   _DetailsRow(label: 'Telefono', value: report.phone!),
                 ],
@@ -86,6 +91,29 @@ class LostPetDetailsPanelContent extends StatelessWidget {
             ),
           ),
         ),
+        if (onDebugDelete != null && debugDeleteLabel != null) ...[
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 44,
+            child: OutlinedButton(
+              onPressed: onDebugDelete,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppPalette.dangerRed,
+                side: const BorderSide(color: AppPalette.dangerRed),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                debugDeleteLabel!,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
