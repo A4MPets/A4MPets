@@ -4,6 +4,14 @@ class AppPalette {
   const AppPalette._();
 
   static const Color primaryBlue = Color(0xFF5984BC);
+
+  // Variants of the primary blue color for route segments
+  static const List<Color> routeSegmentBlueVariants = <Color>[
+    Color.fromARGB(255, 90, 133, 189),
+    Color.fromARGB(255, 0, 74, 171),
+    Color.fromARGB(255, 42, 103, 183),
+    Color.fromARGB(255, 122, 180, 255),
+  ];
   static const Color reportPurple = Color(0xFF6F00A2);
   static const Color reportGreen = Color(0xFF0C9D05);
   static const Color reportYellow = Color(0xFFFFC401);

@@ -770,7 +770,7 @@ class _MapWidgetState extends State<MapWidget>
     final bool isMobileTripOverlayActive =
         !controlsVisible && widget.keepReportDangerVisible;
     final double mobileBottomActionsOffset = isMobileTripOverlayActive
-        ? 156
+        ? 244
         : 16;
 
     return Stack(

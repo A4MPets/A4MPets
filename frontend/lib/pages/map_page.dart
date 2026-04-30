@@ -78,6 +78,7 @@ class _MapPageState extends ConsumerState<MapPage> {
   // Route editor state.
   List<LatLng> _draftRoutePoints = <LatLng>[];
   List<LatLng> _draftRoutePolyline = <LatLng>[];
+  List<LatLng> _routePolylineWaypoints = <LatLng>[];
   List<dynamic> _hazardColoredRouteSegments = <dynamic>[];
   _RouteMapTool _activeRouteTool = _RouteMapTool.addPoint;
   int? _selectedPointIndexForEdit;

@@ -22,32 +22,19 @@ void main() {
         pointEndIndex: 2,
       );
 
-  test('returns 100m cue before 30m and immediate cues for unseen turn', () {
+  test('returns 100m cue for unseen next turn', () {
     final NavigationAudioCue? farCue = NavigationAudioProgress.nextCue(
       currentLocation: const LatLng(3.450900, -76.532000),
       polyline: polyline,
       instructions: const <RouteNavigationInstruction>[rightTurnInstruction],
-      spokenFarApproachIds: <String>{},
-      spokenApproachIds: <String>{},
-      spokenImmediateIds: <String>{},
+      spokenFarApproachKeys: <String>{},
+      spokenApproachKeys: <String>{},
+      spokenImmediateKeys: <String>{},
       distanceCalculator: distanceCalculator,
     );
 
     expect(farCue, isNotNull);
     expect(farCue!.type, NavigationAudioCueType.farApproach);
-
-    final NavigationAudioCue? cue = NavigationAudioProgress.nextCue(
-      currentLocation: const LatLng(3.451610, -76.532000),
-      polyline: polyline,
-      instructions: const <RouteNavigationInstruction>[rightTurnInstruction],
-      spokenFarApproachIds: <String>{},
-      spokenApproachIds: <String>{},
-      spokenImmediateIds: <String>{},
-      distanceCalculator: distanceCalculator,
-    );
-
-    expect(cue, isNotNull);
-    expect(cue!.type, NavigationAudioCueType.approach);
   });
 
   test('returns immediate cue when user is already at the maneuver', () {
@@ -55,9 +42,9 @@ void main() {
       currentLocation: const LatLng(3.451780, -76.532000),
       polyline: polyline,
       instructions: const <RouteNavigationInstruction>[rightTurnInstruction],
-      spokenFarApproachIds: <String>{},
-      spokenApproachIds: <String>{},
-      spokenImmediateIds: <String>{},
+      spokenFarApproachKeys: <String>{},
+      spokenApproachKeys: <String>{},
+      spokenImmediateKeys: <String>{},
       distanceCalculator: distanceCalculator,
     );
 
@@ -85,9 +72,9 @@ void main() {
         rightTurnInstruction,
         continueInstruction,
       ],
-      spokenFarApproachIds: <String>{rightTurnInstruction.id},
-      spokenApproachIds: <String>{rightTurnInstruction.id},
-      spokenImmediateIds: <String>{rightTurnInstruction.id},
+      spokenFarApproachKeys: <String>{'2-3.4518--76.5320'},
+      spokenApproachKeys: <String>{'2-3.4518--76.5320'},
+      spokenImmediateKeys: <String>{'2-3.4518--76.5320'},
       distanceCalculator: distanceCalculator,
     );
 

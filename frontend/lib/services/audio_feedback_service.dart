@@ -1,9 +1,14 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'dart:async';
 
 class AudioFeedbackService {
+  static const MethodChannel _audioBackgroundChannel = MethodChannel(
+    'com.a4mpets/audio_background_service',
+  );
+
   AudioFeedbackService()
     : _tts = FlutterTts(),
       _dangerPlayer = AudioPlayer(),
@@ -12,6 +17,7 @@ class AudioFeedbackService {
     _dangerPlayer.setReleaseMode(ReleaseMode.stop);
     _arrivalPlayer.setReleaseMode(ReleaseMode.stop);
     _waypointPlayer.setReleaseMode(ReleaseMode.stop);
+    unawaited(_configureAudioContext());
   }
 
   final FlutterTts _tts;
@@ -21,8 +27,25 @@ class AudioFeedbackService {
 
   bool _ttsInitialized = false;
   bool _isSpeaking = false;
+  bool _backgroundAudioRequested = false;
   final List<String> _speechQueue = <String>[];
   Completer<void>? _speechCompleter;
+
+  Future<void> enableBackgroundAudio({String? notificationText}) async {
+    if (_backgroundAudioRequested) {
+      if (notificationText != null && notificationText.trim().isNotEmpty) {
+        await _updateBackgroundAudioNotification(notificationText.trim());
+      }
+      return;
+    }
+    _backgroundAudioRequested = true;
+    await _startBackgroundAudioService(notificationText: notificationText);
+  }
+
+  Future<void> disableBackgroundAudio() async {
+    _backgroundAudioRequested = false;
+    await _stopBackgroundAudioService();
+  }
 
   Future<void> speakNavigation(String message) async {
     await _enqueueSpeech(message, clearQueue: false, stopCurrent: false);
@@ -67,6 +90,7 @@ class AudioFeedbackService {
   }
 
   Future<void> dispose() async {
+    await disableBackgroundAudio();
     await stopSpeech();
     try {
       await _dangerPlayer.dispose();
@@ -87,6 +111,21 @@ class AudioFeedbackService {
       await _tts.setSharedInstance(true);
     } catch (_) {
       // Unsupported on some platforms.
+    }
+
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      try {
+        await _tts.setIosAudioCategory(
+          IosTextToSpeechAudioCategory.playback,
+          [
+            IosTextToSpeechAudioCategoryOptions.allowBluetooth,
+            IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
+          ],
+          IosTextToSpeechAudioMode.voicePrompt,
+        );
+      } catch (_) {
+        // Keep defaults when iOS category configuration is unavailable.
+      }
     }
 
     try {
@@ -125,6 +164,75 @@ class AudioFeedbackService {
         _speechCompleter!.complete();
       }
     });
+  }
+
+  Future<void> _configureAudioContext() async {
+    try {
+      final AudioContext context = AudioContext(
+        android: AudioContextAndroid(
+          usageType: AndroidUsageType.assistanceNavigationGuidance,
+          contentType: AndroidContentType.speech,
+          audioFocus: AndroidAudioFocus.gainTransientMayDuck,
+          stayAwake: true,
+        ),
+        iOS: AudioContextIOS(
+          category: AVAudioSessionCategory.playback,
+          options: const {
+            AVAudioSessionOptions.allowBluetooth,
+            AVAudioSessionOptions.allowBluetoothA2DP,
+            AVAudioSessionOptions.mixWithOthers,
+          },
+        ),
+      );
+      await _dangerPlayer.setAudioContext(context);
+      await _arrivalPlayer.setAudioContext(context);
+      await _waypointPlayer.setAudioContext(context);
+    } catch (_) {
+      // Keep player defaults if a platform does not support custom contexts.
+    }
+  }
+
+  Future<void> _startBackgroundAudioService({String? notificationText}) async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+      return;
+    }
+    try {
+      await _audioBackgroundChannel.invokeMethod<void>(
+        'startAudioBackgroundService',
+        <String, dynamic>{
+          'notificationText': notificationText?.trim(),
+        },
+      );
+    } catch (error) {
+      debugPrint('AudioFeedbackService.startBackgroundService failed: $error');
+    }
+  }
+
+  Future<void> _updateBackgroundAudioNotification(String text) async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+      return;
+    }
+    try {
+      await _audioBackgroundChannel.invokeMethod<void>(
+        'updateAudioBackgroundNotification',
+        <String, dynamic>{'notificationText': text},
+      );
+    } catch (error) {
+      debugPrint('AudioFeedbackService.updateNotification failed: $error');
+    }
+  }
+
+  Future<void> _stopBackgroundAudioService() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+      return;
+    }
+    try {
+      await _audioBackgroundChannel.invokeMethod<void>(
+        'stopAudioBackgroundService',
+      );
+    } catch (error) {
+      debugPrint('AudioFeedbackService.stopBackgroundService failed: $error');
+    }
   }
 
   Future<void> _enqueueSpeech(

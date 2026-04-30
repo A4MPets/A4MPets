@@ -15,8 +15,7 @@
     "dev:android": "concurrently \"npm run backend\" \"npm run frontend:android\" \"npm run graphhopper\"",
     "dev:cloudflare": "concurrently \"npm run backend:cloudflare\" \"npm run frontend:runtime\" \"npm run graphhopper\"",
     "dev:cloudflare:android": "concurrently \"npm run backend:cloudflare\" \"npm run frontend:android:runtime\" \"npm run graphhopper\"",
-    "dev:docker": "docker compose up -d --build",
-    "docs:requirements": "node scripts/generate-requirements-pdfs.js"
+    "dev:docker": "docker compose up -d --build"
   },
   "devDependencies": {
     "concurrently": "^9.0.1",

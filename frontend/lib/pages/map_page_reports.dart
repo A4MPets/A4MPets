@@ -56,6 +56,18 @@ extension _MapPageReportsState on _MapPageState {
         );
   }
 
+  bool get _hasProximityAudioTargets {
+    if (_visibleHazardCircles.isNotEmpty) {
+      return true;
+    }
+    for (final GenericReportRecord report in _visibleGenericReports) {
+      if (report.impactRadiusMeters > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   void _openReportTypeSelectorPanel(bool isDarkMode) {
     if (_hasOpenPanels &&
         !_panelStack.last.isTripPanel &&

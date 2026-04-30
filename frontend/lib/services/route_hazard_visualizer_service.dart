@@ -18,6 +18,8 @@ class RouteHazardVisualizerService {
   /// si está dentro del radio de algún hazard
   static List<ColoredRouteSegment> analyzeRouteHazards({
     required List<LatLng> routePolyline,
+    List<LatLng> routeWaypoints = const <LatLng>[],
+    List<Color> segmentColors = const <Color>[Color(0xFF4A90E2)],
     required List<HazardReportRecord> hazards,
     List<GenericReportRecord> genericReports = const <GenericReportRecord>[],
     List<String> hazardRiskFilters = HazardRiskFiltering.allRoutingFilters,
@@ -56,23 +58,29 @@ class RouteHazardVisualizerService {
           ),
     ];
 
-    if (routePolyline.length < 2 || avoidanceZones.isEmpty) {
-      // Sin hazards o ruta muy corta, retorna como seguro
-      return [
-        ColoredRouteSegment(
-          points: routePolyline,
-          color: _safeColor,
-          hasHazard: false,
-        ),
-      ];
+    if (routePolyline.length < 2) {
+      return <ColoredRouteSegment>[];
     }
 
     final List<ColoredRouteSegment> segments = [];
+    final List<Color> resolvedSegmentColors = segmentColors.isEmpty
+        ? <Color>[_safeColor]
+        : segmentColors;
+    final List<int> waypointBreakIndices = _resolveWaypointBreakIndices(
+      routePolyline: routePolyline,
+      routeWaypoints: routeWaypoints,
+    );
 
     // Iteramos sobre cada par de puntos consecutivos en la polilinea
     for (int i = 0; i < routePolyline.length - 1; i++) {
       final LatLng start = routePolyline[i];
       final LatLng end = routePolyline[i + 1];
+      final int legIndex = _resolveLegIndex(
+        polylineIndex: i,
+        waypointBreakIndices: waypointBreakIndices,
+      );
+      final Color legColor =
+          resolvedSegmentColors[legIndex % resolvedSegmentColors.length];
 
       final bool segmentHasHazard = _segmentIntersectsHazard(
         start: start,
@@ -83,13 +91,72 @@ class RouteHazardVisualizerService {
       segments.add(
         ColoredRouteSegment(
           points: [start, end],
-          color: segmentHasHazard ? _hazardColor : _safeColor,
+          color: segmentHasHazard ? _hazardColor : legColor,
           hasHazard: segmentHasHazard,
         ),
       );
     }
 
     return segments;
+  }
+
+  static List<int> _resolveWaypointBreakIndices({
+    required List<LatLng> routePolyline,
+    required List<LatLng> routeWaypoints,
+  }) {
+    if (routeWaypoints.length < 2) {
+      return <int>[0, routePolyline.length - 1];
+    }
+
+    final Distance distanceCalculator = const Distance();
+    final List<int> breakIndices = <int>[0];
+    int searchStartIndex = 0;
+
+    for (int waypointIndex = 1;
+        waypointIndex < routeWaypoints.length - 1;
+        waypointIndex++) {
+      final LatLng waypoint = routeWaypoints[waypointIndex];
+      int bestPolylineIndex = searchStartIndex;
+      double bestDistance = double.infinity;
+
+      for (int polylineIndex = searchStartIndex;
+          polylineIndex < routePolyline.length;
+          polylineIndex++) {
+        final double candidateDistance = distanceCalculator.distance(
+          waypoint,
+          routePolyline[polylineIndex],
+        );
+        if (candidateDistance < bestDistance) {
+          bestDistance = candidateDistance;
+          bestPolylineIndex = polylineIndex;
+        }
+      }
+
+      breakIndices.add(bestPolylineIndex);
+      searchStartIndex = bestPolylineIndex;
+    }
+
+    breakIndices.add(routePolyline.length - 1);
+    return breakIndices;
+  }
+
+  static int _resolveLegIndex({
+    required int polylineIndex,
+    required List<int> waypointBreakIndices,
+  }) {
+    if (waypointBreakIndices.length < 2) {
+      return 0;
+    }
+
+    for (int legIndex = 0; legIndex < waypointBreakIndices.length - 1; legIndex++) {
+      final int start = waypointBreakIndices[legIndex];
+      final int end = waypointBreakIndices[legIndex + 1];
+      if (polylineIndex >= start && polylineIndex < end) {
+        return legIndex;
+      }
+    }
+
+    return waypointBreakIndices.length - 2;
   }
 
   /// Verifica si un segmento de línea (start-end) intersecta con algún hazard

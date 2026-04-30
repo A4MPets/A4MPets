@@ -351,6 +351,8 @@ extension _MapPageHazardsState on _MapPageState {
     final List<ColoredRouteSegment> segments =
         RouteHazardVisualizerService.analyzeRouteHazards(
           routePolyline: _draftRoutePolyline,
+          routeWaypoints: _routePolylineWaypoints,
+          segmentColors: AppPalette.routeSegmentBlueVariants,
           hazards: visibleHazards,
           genericReports: _visibleGenericReports,
           hazardRiskFilters: _selectedTripHazardRiskFilters.toList(

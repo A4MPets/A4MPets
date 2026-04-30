@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_audio_channel_name">Audio de navegacion</string>
+    <string name="nav_audio_channel_description">
+        Mantiene activas las indicaciones y alertas en segundo plano.
+    </string>
+    <string name="nav_audio_notification_title">A4MPets</string>
+    <string name="nav_audio_notification_text">
+        Audio en segundo plano activo
+    </string>
+</resources>

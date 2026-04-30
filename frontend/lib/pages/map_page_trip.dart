@@ -1,6 +1,27 @@
 part of 'map_page.dart';
 
 extension _MapPageTripState on _MapPageState {
+  Future<void> _syncBackgroundAudioContext() async {
+    final audioService = ref.read(audioFeedbackServiceProvider);
+    if (!_isAudioFeedbackEnabled) {
+      await audioService.disableBackgroundAudio();
+      return;
+    }
+
+    final bool shouldEnableBackgroundAudio =
+        _isTripActive || _hasProximityAudioTargets;
+    if (shouldEnableBackgroundAudio) {
+      await audioService.enableBackgroundAudio(
+        notificationText: _isTripActive
+            ? 'Indicaciones y alertas activas'
+            : 'Alertas de proximidad activas',
+      );
+      return;
+    }
+
+    await audioService.disableBackgroundAudio();
+  }
+
   void _stopNavigationSpeech() {
     unawaited(ref.read(audioFeedbackServiceProvider).stopSpeech());
   }
@@ -27,9 +48,9 @@ extension _MapPageTripState on _MapPageState {
       currentLocation: location,
       polyline: _draftRoutePolyline,
       instructions: _activeNavigationInstructions,
-      spokenFarApproachIds: _spokenFarApproachInstructionIds,
-      spokenApproachIds: _spokenApproachInstructionIds,
-      spokenImmediateIds: _spokenImmediateInstructionIds,
+      spokenFarApproachKeys: _spokenFarApproachInstructionIds,
+      spokenApproachKeys: _spokenApproachInstructionIds,
+      spokenImmediateKeys: _spokenImmediateInstructionIds,
       distanceCalculator: _distanceCalculator,
     );
     if (cue == null) {
@@ -49,14 +70,14 @@ extension _MapPageTripState on _MapPageState {
     }
 
     if (cue.type == NavigationAudioCueType.farApproach) {
-      _spokenFarApproachInstructionIds.add(cue.instruction.id);
+      _spokenFarApproachInstructionIds.add(cue.maneuverKey);
     } else if (cue.type == NavigationAudioCueType.approach) {
-      _spokenFarApproachInstructionIds.add(cue.instruction.id);
-      _spokenApproachInstructionIds.add(cue.instruction.id);
+      _spokenFarApproachInstructionIds.add(cue.maneuverKey);
+      _spokenApproachInstructionIds.add(cue.maneuverKey);
     } else {
-      _spokenFarApproachInstructionIds.add(cue.instruction.id);
-      _spokenApproachInstructionIds.add(cue.instruction.id);
-      _spokenImmediateInstructionIds.add(cue.instruction.id);
+      _spokenFarApproachInstructionIds.add(cue.maneuverKey);
+      _spokenApproachInstructionIds.add(cue.maneuverKey);
+      _spokenImmediateInstructionIds.add(cue.maneuverKey);
     }
 
     await ref.read(audioFeedbackServiceProvider).speakNavigation(message);
@@ -203,6 +224,7 @@ extension _MapPageTripState on _MapPageState {
         _tripUserFocusRevision += 1;
       }
     });
+    unawaited(_syncBackgroundAudioContext());
 
     final LatLng? origin = _latestUserLocation;
     if (origin != null && routePoints.isNotEmpty) {
@@ -285,6 +307,7 @@ extension _MapPageTripState on _MapPageState {
             route.isTripRouteSelectionPanel,
       );
     });
+    unawaited(_syncBackgroundAudioContext());
   }
 
   void _finishTripOnArrival() {
@@ -333,6 +356,7 @@ extension _MapPageTripState on _MapPageState {
       _clearDraftRouteVisuals();
       _panelStack.clear();
     });
+    unawaited(_syncBackgroundAudioContext());
   }
 
   Future<void> _showTripArrivalDialog(bool isDarkMode) async {
@@ -376,6 +400,7 @@ extension _MapPageTripState on _MapPageState {
       ...HazardRiskFiltering.allRoutingFilters,
     };
     _clearDraftRouteVisuals();
+    unawaited(_syncBackgroundAudioContext());
   }
 
   Future<void> _restoreTripRouteSelectionAfterEditorClose({
@@ -511,6 +536,7 @@ extension _MapPageTripState on _MapPageState {
     }
 
     _evaluateProximityAlerts(location);
+    unawaited(_syncBackgroundAudioContext());
     unawaited(_maybeAnnounceNavigationInstruction(location));
 
     if (_tripArrivalHandled || _selectedTripRoute == null) {

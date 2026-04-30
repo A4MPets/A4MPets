@@ -215,8 +215,10 @@ extension _MapPageRoutesState on _MapPageState {
     _routePolylineRequestVersion++;
     _draftRoutePoints = <LatLng>[];
     _draftRoutePolyline = <LatLng>[];
+    _routePolylineWaypoints = <LatLng>[];
     _hazardColoredRouteSegments = <dynamic>[];
     _activeNavigationInstructions = const <RouteNavigationInstruction>[];
+    _spokenFarApproachInstructionIds.clear();
     _spokenApproachInstructionIds.clear();
     _spokenImmediateInstructionIds.clear();
     _activeRouteTool = _RouteMapTool.addPoint;
@@ -467,15 +469,19 @@ extension _MapPageRoutesState on _MapPageState {
 
     if (!keepCurrentPolylineWhileLoading && mounted) {
       _updatePageState(() {
+        _routePolylineWaypoints = List<LatLng>.from(waypoints);
         _draftRoutePolyline = List<LatLng>.from(waypoints);
         _analyzeRouteForHazards();
       });
+    } else {
+      _routePolylineWaypoints = List<LatLng>.from(waypoints);
     }
 
     if (waypoints.length < 2) {
       if (_isTripNavigationContext) {
         _updatePageState(() {
           _activeNavigationInstructions = const <RouteNavigationInstruction>[];
+          _spokenFarApproachInstructionIds.clear();
           _spokenApproachInstructionIds.clear();
           _spokenImmediateInstructionIds.clear();
         });
@@ -508,8 +514,6 @@ extension _MapPageRoutesState on _MapPageState {
         _draftRoutePolyline = routeResult.polyline;
         if (_isTripNavigationContext) {
           _activeNavigationInstructions = routeResult.navigationInstructions;
-          _spokenApproachInstructionIds.clear();
-          _spokenImmediateInstructionIds.clear();
         }
         _analyzeRouteForHazards();
       });
@@ -524,6 +528,7 @@ extension _MapPageRoutesState on _MapPageState {
       _updatePageState(() {
         if (_isTripNavigationContext) {
           _activeNavigationInstructions = const <RouteNavigationInstruction>[];
+          _spokenFarApproachInstructionIds.clear();
           _spokenApproachInstructionIds.clear();
           _spokenImmediateInstructionIds.clear();
         }
