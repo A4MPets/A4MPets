@@ -127,7 +127,7 @@ class LocationPickerWidget extends StatelessWidget {
                   ),
                   icon: const Icon(Icons.my_location_rounded, size: 16),
                   label: const Text(
-                    'Usar ubicacion actual',
+                    'Usar ubicación actual',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
@@ -197,11 +197,11 @@ class _LocationStatusChip extends StatelessWidget {
       color = AppPalette.primaryBlue;
     } else if (hasCurrentLocation) {
       icon = Icons.my_location_rounded;
-      label = 'Usando ubicacion actual';
+      label = 'Usando ubicación actual';
       color = isDarkMode ? AppPalette.textMutedDark : AppPalette.charcoal;
     } else {
       icon = Icons.location_off_rounded;
-      label = 'Aun no hay ubicacion lista';
+      label = 'Aún no hay ubicación lista';
       color = AppPalette.dangerRed;
     }
 

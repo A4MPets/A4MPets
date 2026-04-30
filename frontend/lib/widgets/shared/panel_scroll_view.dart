@@ -39,11 +39,11 @@ class _PanelScrollViewState extends State<PanelScrollView> {
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final Color thumbColor = isDarkMode
-        ? AppPalette.primaryBlue.withValues(alpha: 0.95)
-        : AppPalette.charcoal.withValues(alpha: 0.78);
+        ? AppPalette.borderLight.withValues(alpha: 0.94)
+        : AppPalette.white.withValues(alpha: 0.98);
     final Color trackColor = isDarkMode
-        ? AppPalette.borderLight.withValues(alpha: 0.28)
-        : AppPalette.borderLight.withValues(alpha: 0.9);
+        ? AppPalette.iconGray.withValues(alpha: 0.8)
+        : AppPalette.charcoal.withValues(alpha: 0.42);
     final Widget spacedChild = widget.scrollbarSpacing == 0
         ? widget.child
         : Padding(
@@ -66,6 +66,8 @@ class _PanelScrollViewState extends State<PanelScrollView> {
           controller: _scrollController,
           thumbVisibility: true,
           trackVisibility: true,
+          thickness: 8,
+          radius: const Radius.circular(999),
           child: ListView(
             controller: _scrollController,
             padding: widget.padding,
@@ -76,26 +78,35 @@ class _PanelScrollViewState extends State<PanelScrollView> {
       );
     }
 
-    return ScrollbarTheme(
-      data: ScrollbarThemeData(
-        thumbColor: WidgetStatePropertyAll<Color>(thumbColor),
-        trackColor: WidgetStatePropertyAll<Color>(trackColor),
-        trackBorderColor: const WidgetStatePropertyAll<Color>(
-          Colors.transparent,
-        ),
-        thickness: const WidgetStatePropertyAll<double>(8),
-        radius: const Radius.circular(999),
-      ),
-      child: Scrollbar(
-        controller: _scrollController,
-        thumbVisibility: true,
-        trackVisibility: true,
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          padding: widget.padding,
-          child: spacedChild,
-        ),
-      ),
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        return ScrollbarTheme(
+          data: ScrollbarThemeData(
+            thumbColor: WidgetStatePropertyAll<Color>(thumbColor),
+            trackColor: WidgetStatePropertyAll<Color>(trackColor),
+            trackBorderColor: const WidgetStatePropertyAll<Color>(
+              Colors.transparent,
+            ),
+            thickness: const WidgetStatePropertyAll<double>(8),
+            radius: const Radius.circular(999),
+          ),
+          child: Scrollbar(
+            controller: _scrollController,
+            thumbVisibility: true,
+            trackVisibility: true,
+            thickness: 8,
+            radius: const Radius.circular(999),
+            child: SizedBox(
+              height: constraints.maxHeight,
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                padding: widget.padding,
+                child: spacedChild,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

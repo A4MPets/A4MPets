@@ -71,7 +71,7 @@ extension _MapPageRoutesState on _MapPageState {
             ),
           ),
           content: Text(
-            'Â¿EstÃ¡s seguro de borrar la ruta "${route.name}"?',
+            '¿Estás seguro de borrar la ruta "${route.name}"?',
             style: TextStyle(color: AppPalette.dialogBody(isDarkMode)),
           ),
           actions: [
@@ -198,12 +198,12 @@ extension _MapPageRoutesState on _MapPageState {
           routeId: _editingRouteId,
           initialRouteName: _editingRouteName,
           onSaveRoute: _persistDraftRoute,
-          onSavedComplete: () {
+          onSavedComplete: (int savedRouteId) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!mounted) {
                 return;
               }
-              _closeAddRoutePanelAfterSave();
+              _closeAddRoutePanelAfterSave(savedRouteId);
             });
           },
         );
@@ -216,6 +216,9 @@ extension _MapPageRoutesState on _MapPageState {
     _draftRoutePoints = <LatLng>[];
     _draftRoutePolyline = <LatLng>[];
     _hazardColoredRouteSegments = <dynamic>[];
+    _activeNavigationInstructions = const <RouteNavigationInstruction>[];
+    _spokenApproachInstructionIds.clear();
+    _spokenImmediateInstructionIds.clear();
     _activeRouteTool = _RouteMapTool.addPoint;
     _selectedPointIndexForEdit = null;
     _selectedRouteId = null;
@@ -286,7 +289,7 @@ extension _MapPageRoutesState on _MapPageState {
             ),
           ),
           content: Text(
-            'Tienes puntos sin guardar. Si cierras este panel, se perderÃ¡n.',
+            'Tienes puntos sin guardar. Si cierras este panel, se perderán.',
             style: TextStyle(color: AppPalette.dialogBody(isDarkMode)),
           ),
           actions: <Widget>[
@@ -420,7 +423,7 @@ extension _MapPageRoutesState on _MapPageState {
     _refreshDraftRoutePolyline(updated);
   }
 
-  Future<void> _persistDraftRoute(String name) async {
+  Future<int> _persistDraftRoute(String name) async {
     final String resolvedName = name.trim().isEmpty ? 'Ruta' : name.trim();
     final List<RoutePoint> points = _draftRoutePoints
         .map(
@@ -442,16 +445,16 @@ extension _MapPageRoutesState on _MapPageState {
             points: points,
           );
       if (!mounted) {
-        return;
+        return _editingRouteId!;
       }
       _updatePageState(() {
         _editingRouteName = resolvedName;
         _selectedRouteId = _editingRouteId;
       });
-      return;
+      return _editingRouteId!;
     }
 
-    await ref
+    return ref
         .read(routesControllerProvider.notifier)
         .addRoute(name: resolvedName, points: points);
   }
@@ -470,11 +473,18 @@ extension _MapPageRoutesState on _MapPageState {
     }
 
     if (waypoints.length < 2) {
+      if (_isTripNavigationContext) {
+        _updatePageState(() {
+          _activeNavigationInstructions = const <RouteNavigationInstruction>[];
+          _spokenApproachInstructionIds.clear();
+          _spokenImmediateInstructionIds.clear();
+        });
+      }
       return;
     }
 
     try {
-      final List<LatLng> polyline = await _routingService.buildRoadRoute(
+      final PlannedRouteResult routeResult = await _routingService.buildRoadRoute(
         waypoints: waypoints,
         hazardRiskFilters: _selectedTripHazardRiskFilters.toList(
           growable: false,
@@ -495,14 +505,29 @@ extension _MapPageRoutesState on _MapPageState {
         return;
       }
       _updatePageState(() {
-        _draftRoutePolyline = polyline;
+        _draftRoutePolyline = routeResult.polyline;
+        if (_isTripNavigationContext) {
+          _activeNavigationInstructions = routeResult.navigationInstructions;
+          _spokenApproachInstructionIds.clear();
+          _spokenImmediateInstructionIds.clear();
+        }
         _analyzeRouteForHazards();
       });
+      if (_isTripNavigationContext) {
+        ref.read(audioFeedbackServiceProvider).stopSpeech();
+      }
     } catch (_) {
       if (!mounted || requestVersion != _routePolylineRequestVersion) {
         return;
       }
-      _updatePageState(_analyzeRouteForHazards);
+      _updatePageState(() {
+        if (_isTripNavigationContext) {
+          _activeNavigationInstructions = const <RouteNavigationInstruction>[];
+          _spokenApproachInstructionIds.clear();
+          _spokenImmediateInstructionIds.clear();
+        }
+        _analyzeRouteForHazards();
+      });
     }
   }
 

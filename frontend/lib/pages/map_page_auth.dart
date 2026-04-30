@@ -1,4 +1,4 @@
-﻿part of 'map_page.dart';
+part of 'map_page.dart';
 
 void _invalidateUserScopedData(WidgetRef ref) {
   ref.invalidate(localUserProfileProvider);
@@ -131,7 +131,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       });
       return null;
     } catch (error) {
-      return 'No se pudo cerrar sesiÃ³n: $error';
+      return 'No se pudo cerrar sesión: $error';
     } finally {
       if (mounted) {
         _updatePageState(() {
@@ -156,6 +156,35 @@ extension _MapPageAuthAndProfileState on _MapPageState {
 
   void _openEditPetPanel(bool isDarkMode, PetRecord pet) {
     _pushPanel(_buildEditPetRoute(isDarkMode, pet));
+  }
+
+  Future<void> _closeAddPetPanelAfterSave(int petId) async {
+    if (!_hasOpenPanels) {
+      return;
+    }
+
+    final bool returningToTripPetSelection =
+        _panelStack.length > 1 &&
+        _panelStack[_panelStack.length - 2].isTripPetSelectionPanel;
+
+    _updatePageState(() {
+      _panelStack.removeLast();
+    });
+
+    if (!returningToTripPetSelection) {
+      return;
+    }
+
+    await ref.read(petsControllerProvider.notifier).reload();
+    if (!mounted) {
+      return;
+    }
+
+    final bool isDarkMode = ref.read(themeModeProvider);
+    _updatePageState(() {
+      _selectedTripPetIds.add(petId);
+    });
+    _returnToTripStartPanel(isDarkMode);
   }
 
   _PanelRoute _buildProfileRoute(bool isDarkMode) {
@@ -187,7 +216,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
   _PanelRoute _buildLoginRoute(bool isDarkMode) {
     return _PanelRoute(
       transitionKey: ++_panelTransitionSeed,
-      title: 'Iniciar SesiÃ³n',
+      title: 'Iniciar Sesión',
       anchor: PanelAnchor.topLeft,
       width: 360,
       height: 430,
@@ -274,7 +303,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       contentBuilder: (BuildContext context) {
         return AddPetPanelContent(
           isDarkMode: isDarkMode,
-          onSaved: _closeCurrentPanel,
+          onSaved: _closeAddPetPanelAfterSave,
         );
       },
     );

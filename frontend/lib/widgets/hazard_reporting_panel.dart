@@ -193,7 +193,7 @@ class _ReportHazardPanelContentState
     if (resolvedLocation == null) {
       setState(() {
         _locationErrorText =
-            'Necesitamos una ubicacion valida para reportar este peligro.';
+            'Necesitamos una ubicación valida para reportar este peligro.';
         _submitValidationErrorText =
             'Completa los campos obligatorios para reportar.';
       });
@@ -285,7 +285,7 @@ class _ReportHazardPanelContentState
                 ),
                 const SizedBox(height: 10),
                 ReportingLabeledField(
-                  label: 'Radio de afectacion ($_selectedImpactRadiusMeters m)',
+                  label: 'Radio de afectación ($_selectedImpactRadiusMeters m)',
                   child: ReportingDropdownField(
                     isDarkMode: widget.isDarkMode,
                     value: _selectedImpactRadiusMeters.toString(),

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\GenericReport;
 use App\Models\HazardReport;
 use App\Services\Hazards\HazardRoutingRiskFilter;
+use App\Support\NavigationInstructionFormatter;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -108,6 +109,9 @@ class GraphHopperRoutingService
                     'profile' => $profile,
                     'hazards_considered' => $hazardsConsidered,
                     'hazard_risk_filters' => $selectedRiskFilters,
+                    'navigation_instructions' => NavigationInstructionFormatter::normalize(
+                        is_array($firstPath['instructions'] ?? null) ? $firstPath['instructions'] : []
+                    ),
                 ];
             }
         }
@@ -150,7 +154,8 @@ class GraphHopperRoutingService
                 $points
             ),
             'points_encoded' => false,
-            'instructions' => false,
+            'instructions' => true,
+            'locale' => 'es',
             'calc_points' => true,
         ];
 

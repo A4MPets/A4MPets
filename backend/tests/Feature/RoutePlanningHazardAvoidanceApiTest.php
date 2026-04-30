@@ -62,6 +62,16 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
                                 [-76.5400, 3.4600],
                             ],
                         ],
+                        'instructions' => [
+                            [
+                                'distance' => 25.0,
+                                'time' => 8000,
+                                'sign' => 2,
+                                'interval' => [0, 1],
+                                'text' => 'Gira a la derecha',
+                                'street_name' => 'Calle 1',
+                            ],
+                        ],
                     ],
                 ],
             ], 200),
@@ -80,13 +90,18 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
         $response
             ->assertOk()
             ->assertJsonPath('data.used_hazard_avoidance', true)
-            ->assertJsonPath('data.hazards_considered', 1);
+            ->assertJsonPath('data.hazards_considered', 1)
+            ->assertJsonPath('data.navigation_instructions.0.sign', 2)
+            ->assertJsonPath('data.navigation_instructions.0.point_start_index', 0)
+            ->assertJsonPath('data.navigation_instructions.0.point_end_index', 1);
 
         Http::assertSent(function ($request): bool {
             $data = $request->data();
             $areas = $data['custom_model']['areas'] ?? [];
 
-            return count($areas) === 1;
+            return count($areas) === 1 &&
+                ($data['instructions'] ?? null) === true &&
+                ($data['locale'] ?? null) === 'es';
         });
     }
 
@@ -143,6 +158,7 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
                                 [-76.5400, 3.4600],
                             ],
                         ],
+                        'instructions' => [],
                     ],
                 ],
             ], 200),
@@ -168,7 +184,9 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
             $data = $request->data();
             $areas = $data['custom_model']['areas'] ?? [];
 
-            return count($areas) === 1;
+            return count($areas) === 1 &&
+                ($data['instructions'] ?? null) === true &&
+                ($data['locale'] ?? null) === 'es';
         });
     }
 
@@ -204,6 +222,7 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
                                 [-76.5400, 3.4600],
                             ],
                         ],
+                        'instructions' => [],
                     ],
                 ],
             ], 200),
@@ -227,7 +246,9 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
         Http::assertSent(function ($request): bool {
             $data = $request->data();
 
-            return ! array_key_exists('custom_model', $data);
+            return ! array_key_exists('custom_model', $data) &&
+                ($data['instructions'] ?? null) === true &&
+                ($data['locale'] ?? null) === 'es';
         });
     }
 }

@@ -182,7 +182,7 @@ class _GenericReportPanelContentState
     if (resolvedLocation == null) {
       setState(() {
         _locationErrorText =
-            'Necesitamos una ubicacion valida para crear el reporte.';
+            'Necesitamos una ubicación valida para crear el reporte.';
       });
     }
 
@@ -278,7 +278,7 @@ class _GenericReportPanelContentState
                   child: ReportingTextField(
                     isDarkMode: widget.isDarkMode,
                     controller: _descriptionController,
-                    hintText: 'Describe lo que esta ocurriendo',
+                    hintText: 'Describe lo que está ocurriendo',
                     maxLines: 3,
                     errorText: _descriptionErrorText,
                     onChanged: (_) {
@@ -335,7 +335,7 @@ class _GenericReportPanelContentState
                 if (_isPetDanger) ...[
                   const SizedBox(height: 8),
                   ReportingLabeledField(
-                    label: 'Radio de afectacion',
+                    label: 'Radio de afectación',
                     child: ReportingDropdownField(
                       isDarkMode: widget.isDarkMode,
                       value: _selectedImpactRadiusCode,

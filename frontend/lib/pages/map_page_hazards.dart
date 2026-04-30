@@ -210,11 +210,11 @@ extension _MapPageHazardsState on _MapPageState {
   _PanelRoute _buildHazardLayersSettingsRoute() {
     return _PanelRoute(
       transitionKey: ++_panelTransitionSeed,
-      title: 'ConfiguraciÃ³n de mapa',
+      title: 'Configuración de mapa',
       anchor: PanelAnchor.topRight,
       width: 360,
-      height: 360,
-      maxHeight: 420,
+      height: 420,
+      maxHeight: 500,
       adaptHeightToContent: false,
       expandHorizontal: false,
       expandVertical: true,
@@ -225,6 +225,9 @@ extension _MapPageHazardsState on _MapPageState {
         return Consumer(
           builder: (BuildContext context, WidgetRef ref, Widget? child) {
             final bool currentDarkMode = ref.watch(themeModeProvider);
+            final bool audioFeedbackEnabled = ref.watch(
+              audioFeedbackEnabledProvider,
+            );
 
             return HazardLayersPanelContent(
               isDarkMode: currentDarkMode,
@@ -235,8 +238,14 @@ extension _MapPageHazardsState on _MapPageState {
               showLostPetReports: _showLostPetReports,
               showFoundPetReports: _showFoundPetReports,
               showGenericReports: _showGenericReports,
+              audioFeedbackEnabled: audioFeedbackEnabled,
               onToggleDarkMode: (bool value) {
                 ref.read(themeModeProvider.notifier).setThemeMode(value);
+              },
+              onToggleAudioFeedback: (bool value) {
+                ref
+                    .read(audioFeedbackEnabledProvider.notifier)
+                    .setEnabled(value);
               },
               onToggleLowRisk: (bool value) {
                 _updatePageState(() {

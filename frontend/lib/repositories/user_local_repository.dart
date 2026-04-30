@@ -167,10 +167,14 @@ class UserLocalRepository {
     return databaseManager.getPetsCount();
   }
 
-  Future<void> addPet({required String name, String? photoPath}) async {
-    await databaseManager.addPet(name: name, photoPath: photoPath);
+  Future<int> addPet({required String name, String? photoPath}) async {
+    final int petId = await databaseManager.addPet(
+      name: name,
+      photoPath: photoPath,
+    );
     await databaseManager.markUserDataForFutureSync();
     unawaited(syncCoordinator.scheduleSync());
+    return petId;
   }
 
   Future<void> updatePet({
@@ -201,13 +205,17 @@ class UserLocalRepository {
     return databaseManager.getRoutesCount();
   }
 
-  Future<void> addRoute({
+  Future<int> addRoute({
     required String name,
     required List<RoutePoint> points,
   }) async {
-    await databaseManager.addRoute(name: name, points: points);
+    final int routeId = await databaseManager.addRoute(
+      name: name,
+      points: points,
+    );
     await databaseManager.markUserDataForFutureSync();
     unawaited(syncCoordinator.scheduleSync());
+    return routeId;
   }
 
   Future<void> deleteRoute({required int routeId}) async {
@@ -610,7 +618,7 @@ class UserLocalRepository {
     if (token == null || token.isEmpty) {
       if (requiredSuccess) {
         throw Exception(
-          'No hay una sesion autenticada para borrar este registro remoto.',
+          'No hay una sesión autenticada para borrar este registro remoto.',
         );
       }
       return;

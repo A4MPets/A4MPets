@@ -151,7 +151,7 @@ class ManagePetsPanelContent extends ConsumerWidget {
 
 class AddPetPanelContent extends ConsumerStatefulWidget {
   final bool isDarkMode;
-  final VoidCallback onSaved;
+  final Future<void> Function(int petId) onSaved;
 
   const AddPetPanelContent({
     super.key,
@@ -252,7 +252,7 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
         : _nameController.text.trim();
 
     try {
-      await ref
+      final int petId = await ref
           .read(petsControllerProvider.notifier)
           .addPet(name: resolvedName, photoPath: _storedPhotoPath);
 
@@ -260,7 +260,7 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
         return;
       }
 
-      widget.onSaved();
+      await widget.onSaved(petId);
     } catch (_) {
       if (!mounted) {
         return;

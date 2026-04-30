@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,11 +13,18 @@ import '../models/hazard_report_record.dart';
 import '../models/local_user_profile.dart';
 import '../models/lost_pet_report_record.dart';
 import '../models/pet_record.dart';
+import '../models/planned_route_result.dart';
+import '../models/route_navigation_instruction.dart';
 import '../models/route_record.dart';
+import '../providers/audio_feedback_provider.dart';
+import '../providers/audio_feedback_settings_provider.dart';
 import '../providers/local_data_providers.dart';
 import '../providers/theme_provider.dart';
-import '../services/osm_routing_service.dart';
+import '../providers/trip_transport_preference_provider.dart';
+import '../services/navigation_audio_message_builder.dart';
+import '../services/navigation_audio_progress.dart';
 import '../services/hazard_risk_filtering.dart';
+import '../services/osm_routing_service.dart';
 import '../services/route_hazard_visualizer_service.dart';
 import '../services/trip_navigation_support.dart';
 import '../theme/app_palette.dart';
@@ -119,6 +128,11 @@ class _MapPageState extends ConsumerState<MapPage> {
   int _userLocationRefreshRevision = 0;
   List<LatLng> _tripRemainingWaypoints = <LatLng>[];
   bool _isTripStartPanelMinimized = false;
+  List<RouteNavigationInstruction> _activeNavigationInstructions =
+      const <RouteNavigationInstruction>[];
+  final Set<String> _spokenFarApproachInstructionIds = <String>{};
+  final Set<String> _spokenApproachInstructionIds = <String>{};
+  final Set<String> _spokenImmediateInstructionIds = <String>{};
 
   // Auth panel state.
   bool _isAuthRequestLoading = false;
@@ -133,6 +147,33 @@ class _MapPageState extends ConsumerState<MapPage> {
         minDistanceMeters: _tripRerouteMinDistanceMeters,
         minInterval: _tripRerouteMinInterval,
       );
+  ProviderSubscription<String>? _tripTransportPreferenceSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _tripTransportPreferenceSubscription = ref.listenManual<String>(
+      tripTransportPreferenceProvider,
+      (String? previous, String next) {
+        final _TripTransportMethod resolved = _tripTransportMethodFromName(next);
+        if (_selectedTripTransport == resolved || !mounted) {
+          return;
+        }
+
+        _updatePageState(() {
+          _selectedTripTransport = resolved;
+        });
+        _refreshTripRoutePreviewForPreferences();
+      },
+      fireImmediately: true,
+    );
+  }
+
+  @override
+  void dispose() {
+    _tripTransportPreferenceSubscription?.close();
+    super.dispose();
+  }
 
   bool get _hasOpenPanels => _panelStack.isNotEmpty;
 
@@ -193,6 +234,16 @@ class _MapPageState extends ConsumerState<MapPage> {
           route.isTripRouteSelectionPanel ||
           route.isTripPetSelectionPanel,
     );
+  }
+
+  bool get _isAudioFeedbackEnabled {
+    return ref.read(audioFeedbackEnabledProvider);
+  }
+
+  _TripTransportMethod _tripTransportMethodFromName(String value) {
+    return value == _TripTransportMethod.vehicle.name
+        ? _TripTransportMethod.vehicle
+        : _TripTransportMethod.walking;
   }
 
   void _syncAndReloadData() {

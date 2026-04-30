@@ -71,7 +71,7 @@ class GenericReportDetailsPanelContent extends StatelessWidget {
                 if (report.impactRadiusMeters > 0) ...[
                   const SizedBox(height: 8),
                   _DetailsRow(
-                    label: 'Radio de afectacion',
+                    label: 'Radio de afectación',
                     value: '${report.impactRadiusMeters} m',
                   ),
                 ],

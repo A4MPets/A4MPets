@@ -1,6 +1,22 @@
 part of 'map_page.dart';
 
 extension _MapPageReportsState on _MapPageState {
+  void _showProximityAlert(_ProximityAlertTarget target) {
+    _updatePageState(() {
+      _activeProximityAlert = target;
+    });
+
+    if (!_isAudioFeedbackEnabled) {
+      return;
+    }
+
+    unawaited(
+      ref.read(audioFeedbackServiceProvider).playDangerAlertWithSpeech(
+        NavigationAudioMessageBuilder.buildDangerMessage(),
+      ),
+    );
+  }
+
   List<LostPetReportRecord> get _visibleLostPetReports {
     if (!_showLostPetReports) {
       return const <LostPetReportRecord>[];
@@ -565,6 +581,13 @@ extension _MapPageReportsState on _MapPageState {
     }
     _currentProximityZoneKeys = nextZoneKeys;
 
+    final _ProximityAlertTarget? activeAlert = _activeProximityAlert;
+    if (activeAlert != null && !nextZoneKeys.contains(activeAlert.zoneKey)) {
+      _updatePageState(() {
+        _activeProximityAlert = null;
+      });
+    }
+
     if (_activeProximityAlert != null) {
       return;
     }
@@ -574,9 +597,7 @@ extension _MapPageReportsState on _MapPageState {
         continue;
       }
 
-      _updatePageState(() {
-        _activeProximityAlert = target;
-      });
+      _showProximityAlert(target);
       return;
     }
   }

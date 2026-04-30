@@ -222,7 +222,7 @@ class _ReportCommentsPanelContentState
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Text(
-                      'Todavia no hay comentarios para este reporte.',
+                      'Todavía no hay comentarios para este reporte.',
                       style: TextStyle(
                         color: AppPalette.textPrimary(widget.isDarkMode),
                         fontSize: 13,

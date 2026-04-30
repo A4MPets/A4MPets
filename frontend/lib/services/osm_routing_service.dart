@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
+import '../models/planned_route_result.dart';
+import '../models/route_navigation_instruction.dart';
+
 class OsmRoutingService {
   static const String _configuredApiBaseUrl = String.fromEnvironment(
     'A4M_API_BASE_URL',
@@ -31,14 +34,21 @@ class OsmRoutingService {
         .toList(growable: false);
   }
 
-  Future<List<LatLng>> buildRoadRoute({
+  Future<PlannedRouteResult> buildRoadRoute({
     required List<LatLng> waypoints,
     List<String> hazardRiskFilters = const <String>[],
     String travelMode = 'walking',
     Map<String, Object?>? tripConfig,
   }) async {
     if (waypoints.length < 2) {
-      return waypoints;
+      return PlannedRouteResult(
+        polyline: List<LatLng>.from(waypoints),
+        navigationInstructions: const <RouteNavigationInstruction>[],
+        distanceMeters: 0,
+        durationSeconds: 0,
+        profile: travelMode,
+        hazardsConsidered: 0,
+      );
     }
 
     final List<String> normalizedRiskFilters = hazardRiskFilters
@@ -106,9 +116,26 @@ class OsmRoutingService {
       throw Exception('La geometría de la ruta llegó vacía.');
     }
 
-    return coords.map((dynamic raw) {
+    final List<LatLng> polyline = coords.map((dynamic raw) {
       final List<dynamic> pair = raw as List<dynamic>;
       return LatLng((pair[1] as num).toDouble(), (pair[0] as num).toDouble());
-    }).toList();
+    }).toList(growable: false);
+    final List<RouteNavigationInstruction> navigationInstructions =
+        (data?['navigation_instructions'] as List<dynamic>? ?? const <dynamic>[])
+            .map(
+              (dynamic raw) => RouteNavigationInstruction.fromMap(
+                (raw as Map<String, dynamic>),
+              ),
+            )
+            .toList(growable: false);
+
+    return PlannedRouteResult(
+      polyline: polyline,
+      navigationInstructions: navigationInstructions,
+      distanceMeters: (data?['distance_meters'] as num?)?.toDouble() ?? 0,
+      durationSeconds: (data?['duration_seconds'] as num?)?.toDouble() ?? 0,
+      profile: data?['profile']?.toString() ?? travelMode,
+      hazardsConsidered: (data?['hazards_considered'] as num?)?.toInt() ?? 0,
+    );
   }
 }

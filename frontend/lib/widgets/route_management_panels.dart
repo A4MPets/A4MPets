@@ -310,8 +310,8 @@ class AddRoutePanelContent extends ConsumerStatefulWidget {
   final bool isEditingExistingRoute;
   final String? initialRouteName;
   final int? routeId;
-  final Future<void> Function(String name) onSaveRoute;
-  final VoidCallback onSavedComplete;
+  final Future<int> Function(String name) onSaveRoute;
+  final ValueChanged<int> onSavedComplete;
 
   const AddRoutePanelContent({
     super.key,
@@ -381,13 +381,13 @@ class _AddRoutePanelContentState extends ConsumerState<AddRoutePanelContent> {
     setState(() => _isSaving = true);
 
     try {
-      await widget.onSaveRoute(name);
+      final int savedRouteId = await widget.onSaveRoute(name);
       if (!mounted) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) {
           return;
         }
-        widget.onSavedComplete();
+        widget.onSavedComplete(savedRouteId);
       });
     } catch (_) {
       if (!mounted) return;

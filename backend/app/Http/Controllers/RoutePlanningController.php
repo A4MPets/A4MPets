@@ -48,6 +48,7 @@ class RoutePlanningController extends Controller
                     'profile' => $route['profile'],
                     'used_hazard_avoidance' => $avoidHazards,
                     'hazards_considered' => $route['hazards_considered'],
+                    'navigation_instructions' => $route['navigation_instructions'],
                 ],
                 'meta' => [
                     'travel_mode' => $travelMode,

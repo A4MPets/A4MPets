@@ -154,7 +154,7 @@ class _ProximityAlertCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'Estas dentro del radio de afectacion de un peligro.',
+                    'Estás dentro del radio de afectación de un peligro.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: textColor,
@@ -275,42 +275,32 @@ class _TripStartPanelContent extends StatelessWidget {
                   color: titleColor,
                 ),
                 const SizedBox(height: 6),
-                SizedBox(
-                  height: 46,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: grayButton,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<_TripTransportMethod>(
-                        value: selectedTransport,
-                        dropdownColor: grayButton,
-                        isExpanded: true,
-                        style: TextStyle(
-                          color: textColor,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+                Row(
+                  children: [
+                    Expanded(
+                      child: _TripTransportButton(
+                        label: 'A pie',
+                        isDarkMode: isDarkMode,
+                        isSelected:
+                            selectedTransport == _TripTransportMethod.walking,
+                        onPressed: () => onTransportChanged(
+                          _TripTransportMethod.walking,
                         ),
-                        items: const <DropdownMenuItem<_TripTransportMethod>>[
-                          DropdownMenuItem<_TripTransportMethod>(
-                            value: _TripTransportMethod.walking,
-                            child: Text('A Pie'),
-                          ),
-                          DropdownMenuItem<_TripTransportMethod>(
-                            value: _TripTransportMethod.vehicle,
-                            child: Text('En Vehículo'),
-                          ),
-                        ],
-                        onChanged: (_TripTransportMethod? value) {
-                          if (value != null) {
-                            onTransportChanged(value);
-                          }
-                        },
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _TripTransportButton(
+                        label: 'En vehículo',
+                        isDarkMode: isDarkMode,
+                        isSelected:
+                            selectedTransport == _TripTransportMethod.vehicle,
+                        onPressed: () => onTransportChanged(
+                          _TripTransportMethod.vehicle,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 10),
                 _TripFieldTitle(label: 'Evitar peligros', color: titleColor),
@@ -617,18 +607,53 @@ class _TripPetSelectionPanelContent extends StatelessWidget {
 
 class _TripActivePanelContent extends StatelessWidget {
   final bool isDarkMode;
+  final _TripTransportMethod selectedTransport;
+  final ValueChanged<_TripTransportMethod> onTransportChanged;
   final VoidCallback onFinishTrip;
 
   const _TripActivePanelContent({
     required this.isDarkMode,
+    required this.selectedTransport,
+    required this.onTransportChanged,
     required this.onFinishTrip,
   });
 
   @override
   Widget build(BuildContext context) {
+    final Color titleColor = isDarkMode
+        ? AppPalette.textMutedDark
+        : AppPalette.iconGray;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _TripFieldTitle(label: 'Método de transporte', color: titleColor),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: _TripTransportButton(
+                label: 'A pie',
+                isDarkMode: isDarkMode,
+                isSelected:
+                    selectedTransport == _TripTransportMethod.walking,
+                onPressed: () =>
+                    onTransportChanged(_TripTransportMethod.walking),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _TripTransportButton(
+                label: 'En vehículo',
+                isDarkMode: isDarkMode,
+                isSelected:
+                    selectedTransport == _TripTransportMethod.vehicle,
+                onPressed: () =>
+                    onTransportChanged(_TripTransportMethod.vehicle),
+              ),
+            ),
+          ],
+        ),
         const Spacer(),
         SizedBox(
           height: 48,
@@ -751,6 +776,52 @@ class _TripGrayActionButton extends StatelessWidget {
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TripTransportButton extends StatelessWidget {
+  final String label;
+  final bool isDarkMode;
+  final bool isSelected;
+  final VoidCallback onPressed;
+
+  const _TripTransportButton({
+    required this.label,
+    required this.isDarkMode,
+    required this.isSelected,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 46,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isSelected
+              ? AppPalette.primaryBlue
+              : AppPalette.cardBackground(isDarkMode),
+          foregroundColor: isSelected
+              ? AppPalette.white
+              : AppPalette.primaryBlue,
+          elevation: 0,
+          side: BorderSide(
+            color: isSelected
+                ? AppPalette.primaryBlue
+                : AppPalette.primaryBlue.withValues(alpha: 0.45),
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
       ),
     );

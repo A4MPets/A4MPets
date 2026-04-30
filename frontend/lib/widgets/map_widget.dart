@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
@@ -154,6 +156,7 @@ class _MapWidgetState extends State<MapWidget>
   bool _isCustomPositionMode = false;
   LatLng? _customUserLocation;
   StreamSubscription<Position>? _positionStreamSub;
+  StreamSubscription<CompassEvent>? _compassStreamSub;
   bool _isResolvingLocation = false;
   String? _userLocationErrorText;
 
@@ -177,11 +180,21 @@ class _MapWidgetState extends State<MapWidget>
     return _isCustomPositionMode ? _customUserLocation : _userLocation;
   }
 
+  bool get _supportsCompass {
+    if (kIsWeb) {
+      return false;
+    }
+
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     mapController = MapController();
+    _startCompassTracking();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _requestLocationPermission();
     });
@@ -203,7 +216,7 @@ class _MapWidgetState extends State<MapWidget>
         }
         _emitUserLocationStatus(
           isLoading: false,
-          errorText: 'Activa la ubicacion del dispositivo para continuar.',
+          errorText: 'Activa la ubicación del dispositivo para continuar.',
         );
         return;
       }
@@ -216,7 +229,7 @@ class _MapWidgetState extends State<MapWidget>
         }
         _emitUserLocationStatus(
           isLoading: false,
-          errorText: 'Debes habilitar los permisos de ubicacion.',
+          errorText: 'Debes habilitar los permisos de ubicación.',
         );
       } else if (permission == LocationPermission.deniedForever) {
         if (mounted) {
@@ -225,7 +238,7 @@ class _MapWidgetState extends State<MapWidget>
         _emitUserLocationStatus(
           isLoading: false,
           errorText:
-              'Los permisos de ubicacion estan bloqueados. Debes habilitarlos manualmente.',
+              'Los permisos de ubicación están bloqueados. Debes habilitarlos manualmente.',
         );
       } else {
         if (mounted) {
@@ -238,7 +251,7 @@ class _MapWidgetState extends State<MapWidget>
       debugPrint('Error requesting location permission: $e');
       _emitUserLocationStatus(
         isLoading: false,
-        errorText: 'No se pudo solicitar la ubicacion actual.',
+        errorText: 'No se pudo solicitar la ubicación actual.',
       );
     } finally {
       _isResolvingLocation = false;
@@ -268,7 +281,7 @@ class _MapWidgetState extends State<MapWidget>
       debugPrint('Error getting current location: $e');
       _emitUserLocationStatus(
         isLoading: false,
-        errorText: 'No se pudo obtener tu ubicacion actual.',
+        errorText: 'No se pudo obtener tu ubicación actual.',
       );
     }
   }
@@ -307,7 +320,7 @@ class _MapWidgetState extends State<MapWidget>
             _emitUserLocationStatus(
               isLoading: false,
               errorText:
-                  'Se perdio la actualizacion de ubicacion. Reintentando.',
+                  'Se perdió la actualización de ubicación. Reintentando.',
             );
 
             if (!mounted) {
@@ -334,6 +347,29 @@ class _MapWidgetState extends State<MapWidget>
             });
           },
         );
+  }
+
+  void _startCompassTracking() {
+    if (!_supportsCompass) {
+      return;
+    }
+
+    _compassStreamSub?.cancel();
+    _compassStreamSub = FlutterCompass.events?.listen(
+      (CompassEvent event) {
+        final double? heading = event.heading;
+        if (heading == null || heading.isNaN || !mounted) {
+          return;
+        }
+
+        setState(() {
+          _userHeading = heading;
+        });
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('Compass stream error: $error');
+      },
+    );
   }
 
   Future<void> _toggleCustomPositionMode() async {
@@ -402,6 +438,7 @@ class _MapWidgetState extends State<MapWidget>
     WidgetsBinding.instance.removeObserver(this);
     _disposeCameraAnimation();
     _positionStreamSub?.cancel();
+    _compassStreamSub?.cancel();
     mapController.dispose();
     super.dispose();
   }
@@ -416,6 +453,7 @@ class _MapWidgetState extends State<MapWidget>
       if (!mounted) {
         return;
       }
+      _startCompassTracking();
       _requestLocationPermission();
     });
   }
@@ -671,11 +709,11 @@ class _MapWidgetState extends State<MapWidget>
   }
 
   Color _genericReportBorderColor(GenericReportRecord report) {
-    return _hazardBorderColorForRiskLevel(report.riskLevelCode);
+    return AppPalette.borderLight;
   }
 
   Color _genericReportFillColor(GenericReportRecord report) {
-    return _hazardFillColorForRiskLevel(report.riskLevelCode);
+    return AppPalette.borderLight.withValues(alpha: 0.45);
   }
 
   LatLng _applyPixelDeltaToLatLng({
@@ -1056,12 +1094,8 @@ class _MapWidgetState extends State<MapWidget>
                   circles: [
                     CircleMarker(
                       point: widget.genericReportDraftLocation!,
-                      color: _hazardFillColorForRiskLevel(
-                        widget.genericReportDraftRiskLevelCode,
-                      ),
-                      borderColor: _hazardBorderColorForRiskLevel(
-                        widget.genericReportDraftRiskLevelCode,
-                      ),
+                      color: AppPalette.borderLight.withValues(alpha: 0.45),
+                      borderColor: AppPalette.borderLight,
                       borderStrokeWidth: 1.5,
                       useRadiusInMeter: true,
                       radius: widget.genericReportDraftImpactRadiusMeters!

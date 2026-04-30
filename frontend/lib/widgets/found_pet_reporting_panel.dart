@@ -154,7 +154,7 @@ class _FoundPetReportingPanelContentState
     if (resolvedLocation == null) {
       setState(() {
         _locationErrorText =
-            'Necesitamos una ubicacion valida para reportar la mascota encontrada.';
+            'Necesitamos una ubicación valida para reportar la mascota encontrada.';
       });
     }
 

@@ -1,0 +1,1137 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Requisitos No Funcionales de A4MPets</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 18mm 12mm 18mm 12mm;
+      }
+
+      :root {
+        --ink: #1f2933;
+        --muted: #52606d;
+        --line: #d9e2ec;
+        --surface: #f7f9fb;
+        --accent: #5984bc;
+        --accent-soft: #d9e8ff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family: "Segoe UI", Arial, sans-serif;
+        font-size: 10.2pt;
+        line-height: 1.35;
+      }
+
+      h1, h2, h3 {
+        margin: 0;
+      }
+
+      .cover {
+        min-height: 250mm;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 18mm;
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, #ffffff 0%, #f4f8ff 100%);
+      }
+
+      .cover-label {
+        color: var(--accent);
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-bottom: 10mm;
+      }
+
+      .cover h1 {
+        font-size: 24pt;
+        margin-bottom: 8mm;
+      }
+
+      .cover p {
+        margin: 0 0 4mm 0;
+        color: var(--muted);
+        font-size: 11pt;
+      }
+
+      .section {
+        margin-top: 10mm;
+      }
+
+      .section h2 {
+        font-size: 14pt;
+        margin-bottom: 4mm;
+        color: var(--accent);
+      }
+
+      .section p {
+        margin: 0;
+      }
+
+      .meta-grid {
+        margin-top: 10mm;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4mm;
+      }
+
+      .meta-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 4mm;
+      }
+
+      .meta-card strong {
+        display: block;
+        color: var(--accent);
+        margin-bottom: 1.5mm;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .requirements-table {
+        margin-top: 5mm;
+        table-layout: fixed;
+      }
+
+      .requirements-table thead th {
+        position: sticky;
+        top: 0;
+        background: var(--accent-soft);
+        color: var(--ink);
+        font-size: 9.2pt;
+      }
+
+      .requirements-table th,
+      .requirements-table td,
+      .glossary-table th,
+      .glossary-table td {
+        border: 1px solid var(--line);
+        padding: 2.3mm;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      .requirements-table tr {
+        page-break-inside: avoid;
+      }
+
+      .requirements-table tbody tr:nth-child(even) {
+        background: var(--surface);
+      }
+
+      .id-cell {
+        width: 12%;
+        font-weight: 700;
+        color: var(--accent);
+      }
+
+      .term-cell {
+        width: 24%;
+        font-weight: 700;
+      }
+
+      .footer-note {
+        margin-top: 6mm;
+        color: var(--muted);
+        font-size: 8.7pt;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="cover">
+      <div class="cover-label">A4MPets</div>
+      <h1>Requisitos No Funcionales de A4MPets</h1>
+      <p>Definir las condiciones de calidad, rendimiento, seguridad, disponibilidad, usabilidad, mantenibilidad, compatibilidad y trazabilidad que el sistema A4MPets debe cumplir para ser aceptable durante su operación y evolución.</p>
+      <div class="meta-grid">
+        <div class="meta-card">
+          <strong>Contexto</strong>
+          <span>A4MPets opera sobre una arquitectura Flutter + Laravel con persistencia local offline-first, sincronización con backend, geolocalización, navegación asistida y planeación de rutas con GraphHopper, por lo que requiere requisitos no funcionales que garanticen continuidad, confiabilidad y evolución controlada.</span>
+        </div>
+        <div class="meta-card">
+          <strong>Generado</strong>
+          <span>28 de abril de 2026 a las 11:56 p. m.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Propósito del documento</h2>
+      <p>Definir las condiciones de calidad, rendimiento, seguridad, disponibilidad, usabilidad, mantenibilidad, compatibilidad y trazabilidad que el sistema A4MPets debe cumplir para ser aceptable durante su operación y evolución.</p>
+    </section>
+
+    <section class="section">
+      <h2>Contexto del sistema</h2>
+      <p>A4MPets opera sobre una arquitectura Flutter + Laravel con persistencia local offline-first, sincronización con backend, geolocalización, navegación asistida y planeación de rutas con GraphHopper, por lo que requiere requisitos no funcionales que garanticen continuidad, confiabilidad y evolución controlada.</p>
+    </section>
+
+    
+    <section class="section">
+      <h2>Glosario</h2>
+      <table class="glossary-table">
+        <thead>
+          <tr>
+            <th>Término</th>
+            <th>Definición</th>
+          </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td class="term-cell">Offline-first</td>
+          <td>Estrategia en la que la aplicación prioriza la disponibilidad local y sincroniza con el backend cuando existe conectividad.</td>
+        </tr>
+        <tr>
+          <td class="term-cell">Rendimiento</td>
+          <td>Capacidad del sistema para responder dentro de tiempos aceptables y usar recursos de forma razonable.</td>
+        </tr>
+        <tr>
+          <td class="term-cell">Disponibilidad</td>
+          <td>Capacidad del sistema o subsistema para permanecer operativo cuando el usuario lo necesita.</td>
+        </tr>
+        <tr>
+          <td class="term-cell">Verificación</td>
+          <td>Mecanismo objetivo mediante prueba, inspección o medición para confirmar el cumplimiento de un requisito.</td>
+        </tr>
+        <tr>
+          <td class="term-cell">Trazabilidad</td>
+          <td>Relación del requisito con módulos, servicios, endpoints, configuraciones o pruebas del sistema.</td>
+        </tr></tbody>
+      </table>
+    </section>
+  
+
+    <section class="section">
+      <h2>Tabla de requisitos</h2>
+      <table class="requirements-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Título</th>
+            <th>Requisito</th>
+            <th>Prioridad</th>
+            <th>Fuente / Justificación</th>
+            <th>Verificación</th>
+            <th>Trazabilidad</th>
+          </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td class="id-cell">RNF-001</td>
+          <td>Arranque del frontend</td>
+          <td>El sistema debe mostrar la pantalla principal de la aplicación en un tiempo no mayor a 5 segundos sobre un dispositivo objetivo soportado, partiendo de un arranque en frío y con datos locales disponibles.</td>
+          <td>Alta</td>
+          <td>Necesidad de uso rápido en campo.</td>
+          <td>Medición</td>
+          <td>Frontend/main.dart + MapPage + LocalDatabaseManager startup flow</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-002</td>
+          <td>Carga local sin backend</td>
+          <td>El sistema debe poder cargar la interfaz principal y los datos almacenados localmente aun cuando el backend no esté disponible en el momento del arranque.</td>
+          <td>Alta</td>
+          <td>Necesidad de continuidad operativa offline-first.</td>
+          <td>Prueba</td>
+          <td>Frontend/LocalDatabaseManager + Providers + UserDataSyncCoordinator deferred sync</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-003</td>
+          <td>Disponibilidad de datos locales</td>
+          <td>El sistema debe mantener accesibles localmente las rutas, mascotas y reportes ya almacenados durante fallas temporales de conectividad.</td>
+          <td>Alta</td>
+          <td>Necesidad de operación en movilidad con red inestable.</td>
+          <td>Prueba</td>
+          <td>Frontend/SQLite or SharedPreferences local managers + controllers</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-004</td>
+          <td>Tolerancia a latencia de red</td>
+          <td>El sistema no debe bloquear el cierre exitoso de formularios ya persistidos localmente por demoras o errores posteriores de sincronización remota.</td>
+          <td>Alta</td>
+          <td>Necesidad observada durante uso real en calle.</td>
+          <td>Prueba</td>
+          <td>Frontend local save flows + UserDataSyncCoordinator + repository optimistic operations</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-005</td>
+          <td>Recuperación del stream de ubicación</td>
+          <td>El sistema debe intentar recuperar automáticamente el seguimiento de ubicación cuando el stream de localización falle o la aplicación vuelva a primer plano.</td>
+          <td>Alta</td>
+          <td>Necesidad de resiliencia en geolocalización móvil.</td>
+          <td>Prueba</td>
+          <td>Frontend/MapWidget lifecycle + geolocation stream recovery</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-006</td>
+          <td>Persistencia de preferencias</td>
+          <td>El sistema debe conservar las preferencias persistidas del usuario, como tema, audio y transporte, entre reinicios de la aplicación.</td>
+          <td>Media</td>
+          <td>Necesidad de continuidad de experiencia.</td>
+          <td>Prueba</td>
+          <td>Frontend/theme provider + audio settings provider + trip transport preference provider</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-007</td>
+          <td>Disponibilidad del endpoint de salud</td>
+          <td>El backend debe exponer un endpoint de salud accesible sin autenticación que responda con un estado verificable mientras el servicio esté levantado.</td>
+          <td>Media</td>
+          <td>Necesidad de monitoreo básico del backend.</td>
+          <td>Prueba</td>
+          <td>Backend/routes/api.php health endpoint</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-008</td>
+          <td>Aislamiento de fallo de GraphHopper</td>
+          <td>El sistema debe seguir permitiendo gestión local de datos aun cuando el servicio de GraphHopper no esté disponible o responda con error.</td>
+          <td>Alta</td>
+          <td>Necesidad de que la navegación no degrade todo el sistema.</td>
+          <td>Prueba</td>
+          <td>Frontend/OsmRoutingService + Backend/GraphHopperRoutingService + route save/report flows</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-009</td>
+          <td>Reintento de sincronización</td>
+          <td>El sistema debe poder reintentar sincronizaciones fallidas sin requerir reiniciar la aplicación y sin corromper el estado local existente.</td>
+          <td>Alta</td>
+          <td>Necesidad de recuperación ante fallas transitorias de red.</td>
+          <td>Prueba</td>
+          <td>Frontend/UserDataSyncCoordinator retry queue + SyncApiGateway</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-010</td>
+          <td>Resistencia a datos remotos eliminados</td>
+          <td>El sistema debe purgar o excluir de la interfaz los registros marcados como eliminados durante la sincronización para evitar reapariciones inconsistentes.</td>
+          <td>Alta</td>
+          <td>Necesidad de consistencia entre estados local y remoto.</td>
+          <td>Prueba</td>
+          <td>Frontend/UserDataSyncCoordinator deleted sync handling + backend sync_status deleted</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-011</td>
+          <td>Tiempo de apertura de panel estándar</td>
+          <td>El sistema debe abrir cualquier panel modal principal en un tiempo percibido no mayor a 500 milisegundos bajo condiciones normales de ejecución.</td>
+          <td>Media</td>
+          <td>Necesidad de interfaz reactiva.</td>
+          <td>Medición</td>
+          <td>Frontend/PanelModal + MapPage panel routing</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-012</td>
+          <td>Tiempo de listado local</td>
+          <td>El sistema debe mostrar listados locales de mascotas, rutas y reportes en no más de 1 segundo cuando los datos ya estén persistidos localmente.</td>
+          <td>Media</td>
+          <td>Necesidad de consulta rápida en movilidad.</td>
+          <td>Medición</td>
+          <td>Frontend controllers + LocalDatabaseManager + list panels</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-013</td>
+          <td>Tiempo de render del mapa base</td>
+          <td>El sistema debe dejar operativo el mapa para interacción del usuario en no más de 3 segundos después de abrir la pantalla principal, excluyendo la carga de teselas remotas externas.</td>
+          <td>Media</td>
+          <td>Necesidad de interacción temprana con el contexto geográfico.</td>
+          <td>Medición</td>
+          <td>Frontend/MapWidget + flutter_map initialization</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-014</td>
+          <td>Tiempo de guardado local de reporte</td>
+          <td>El sistema debe completar el guardado local de un reporte o una ruta en no más de 2 segundos bajo condiciones normales del dispositivo objetivo.</td>
+          <td>Alta</td>
+          <td>Necesidad de confirmación rápida en campo.</td>
+          <td>Medición</td>
+          <td>Frontend repository create flows + LocalDatabaseManager write operations</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-015</td>
+          <td>Tiempo de actualización de ubicación</td>
+          <td>El sistema debe propagar un cambio de ubicación recibido por el stream de geolocalización a la lógica del viaje en menos de 1 segundo.</td>
+          <td>Alta</td>
+          <td>Necesidad de navegación y alertas oportunas.</td>
+          <td>Medición</td>
+          <td>Frontend/MapWidget onUserLocationChanged + MapPageTrip handler</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-016</td>
+          <td>Tiempo de aviso de proximidad</td>
+          <td>El sistema debe mostrar la alerta de proximidad en menos de 1 segundo después de detectar la entrada del usuario al radio de afectación de un riesgo visible.</td>
+          <td>Alta</td>
+          <td>Necesidad de advertencia oportuna ante riesgos.</td>
+          <td>Medición</td>
+          <td>Frontend/MapPageReports proximity evaluation + alert rendering</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-017</td>
+          <td>Tiempo de emisión de audio de navegación</td>
+          <td>El sistema debe iniciar la reproducción del mensaje de audio de navegación en menos de 1 segundo después de determinar que corresponde emitir una instrucción.</td>
+          <td>Media</td>
+          <td>Necesidad de sincronía entre posición e instrucción.</td>
+          <td>Medición</td>
+          <td>Frontend/NavigationAudioProgress + AudioFeedbackService</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-018</td>
+          <td>Tiempo de cálculo de ruta</td>
+          <td>El backend debe responder la solicitud de planeación de ruta en un tiempo no mayor a 8 segundos bajo condiciones nominales de GraphHopper y red interna.</td>
+          <td>Alta</td>
+          <td>Necesidad de espera aceptable en inicio o recálculo de viaje.</td>
+          <td>Medición</td>
+          <td>Backend/RoutePlanningController + GraphHopperRoutingService + API POST /api/routes/plan</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-019</td>
+          <td>Tiempo de recálculo de ruta en viaje</td>
+          <td>El sistema debe completar un recálculo de polilínea durante un viaje activo en un tiempo no mayor a 8 segundos bajo condiciones nominales.</td>
+          <td>Alta</td>
+          <td>Necesidad de corregir trayecto sin perder utilidad operativa.</td>
+          <td>Medición</td>
+          <td>Frontend/TripRerouteController + OsmRoutingService + Backend route planning</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-020</td>
+          <td>Escalamiento de listados moderados</td>
+          <td>El sistema debe seguir operando de forma funcional con al menos 500 registros combinados entre mascotas, rutas y reportes almacenados localmente para un usuario.</td>
+          <td>Media</td>
+          <td>Necesidad de crecimiento razonable del historial del usuario.</td>
+          <td>Prueba</td>
+          <td>Frontend controllers + local database schema + panel listing components</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-021</td>
+          <td>Consistencia de identificadores locales</td>
+          <td>El sistema debe asignar y conservar identificadores locales estables para entidades creadas offline hasta que exista correspondencia remota en el backend.</td>
+          <td>Alta</td>
+          <td>Necesidad de trazabilidad y reconciliación offline-first.</td>
+          <td>Prueba</td>
+          <td>Frontend local record models + backend sync local_id/remote_id pattern</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-022</td>
+          <td>No duplicación en sincronización</td>
+          <td>El sistema no debe duplicar entidades ni comentarios como resultado de reintentos de sincronización sobre la misma carga funcional.</td>
+          <td>Alta</td>
+          <td>Necesidad de integridad de datos sincronizados.</td>
+          <td>Prueba</td>
+          <td>Backend sync services + ReportCommentService content hash + frontend sync coordinator</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-023</td>
+          <td>Orden temporal de comentarios</td>
+          <td>El sistema debe conservar el orden temporal verificable de los comentarios al recuperarlos y sincronizarlos entre frontend y backend.</td>
+          <td>Media</td>
+          <td>Necesidad de interpretación cronológica de la conversación.</td>
+          <td>Prueba</td>
+          <td>ReportCommentService + response formatters + shared comments panel</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-024</td>
+          <td>Persistencia de estado de sincronización</td>
+          <td>El sistema debe mantener visible y procesable el estado de sincronización de cada entidad local mediante campos persistidos de control.</td>
+          <td>Media</td>
+          <td>Necesidad de distinguir datos creados, sincronizados o eliminados.</td>
+          <td>Inspección</td>
+          <td>Frontend record models syncStatus/needsSync + backend sync_status columns</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-025</td>
+          <td>Integridad de medios locales</td>
+          <td>El sistema debe conservar la referencia local de una imagen seleccionada mientras el registro que la usa no haya sido descartado por el usuario.</td>
+          <td>Media</td>
+          <td>Necesidad de que evidencias y avatares no desaparezcan antes de sincronizarse.</td>
+          <td>Prueba</td>
+          <td>LocalMediaStorageService + media source encoder + local record mappings</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-026</td>
+          <td>Integridad del radio de afectación</td>
+          <td>El sistema debe preservar el valor exacto del radio de afectación almacenado para peligros y reportes genéricos durante persistencia, sincronización y visualización.</td>
+          <td>Alta</td>
+          <td>Necesidad de no distorsionar el impacto espacial del riesgo.</td>
+          <td>Prueba</td>
+          <td>HazardReportRecord + GenericReportRecord + backend services + map circles</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-027</td>
+          <td>Integridad de puntos de ruta</td>
+          <td>El sistema debe conservar el orden de los puntos de una ruta durante creación, edición, almacenamiento local y sincronización remota.</td>
+          <td>Alta</td>
+          <td>Necesidad de mantener la forma real del trayecto.</td>
+          <td>Prueba</td>
+          <td>RouteRecord points_json + TravelRouteService + local database route mapping</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-028</td>
+          <td>Aplicación consistente de filtros de riesgo</td>
+          <td>El sistema debe aplicar la misma semántica de filtrado de riesgos en frontend, backend y visualización de ruta.</td>
+          <td>Alta</td>
+          <td>Necesidad de evitar contradicciones entre análisis y planeación.</td>
+          <td>Prueba</td>
+          <td>Frontend/HazardRiskFiltering + RouteHazardVisualizerService + Backend/HazardRoutingRiskFilter + GraphHopperRoutingService</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-029</td>
+          <td>Tratamiento consistente de riesgo indefinido</td>
+          <td>El sistema debe tratar el riesgo no definido como riesgo alto en todos los procesos donde intervenga evitación de ruta o clasificación de riesgo.</td>
+          <td>Alta</td>
+          <td>Regla funcional central para coherencia del sistema.</td>
+          <td>Prueba</td>
+          <td>Frontend/HazardRiskFiltering + Backend/HazardRoutingRiskFilter + route visualizer tests</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-030</td>
+          <td>Cierre consistente de flujos reportados</td>
+          <td>El sistema debe garantizar que un formulario de creación ya guardado localmente no permanezca abierto por fallos posteriores de recarga o sincronización.</td>
+          <td>Alta</td>
+          <td>Necesidad de prevenir duplicaciones y errores de operación del usuario.</td>
+          <td>Prueba</td>
+          <td>Frontend save flows for hazards/reports + background reload behavior</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-031</td>
+          <td>Control de acceso autenticado</td>
+          <td>El backend debe exigir autenticación válida para todas las operaciones protegidas sobre perfil, mascotas, rutas, reportes, comentarios y medios de usuario.</td>
+          <td>Alta</td>
+          <td>Necesidad de proteger datos y operaciones por usuario.</td>
+          <td>Prueba</td>
+          <td>Backend/routes/api.php middleware api.token + controllers</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-032</td>
+          <td>Separación de datos por usuario</td>
+          <td>El sistema debe impedir que un usuario autenticado acceda o modifique entidades pertenecientes a otro usuario cuando la operación sea de ámbito personal.</td>
+          <td>Alta</td>
+          <td>Necesidad de privacidad e integridad multiusuario.</td>
+          <td>Prueba</td>
+          <td>Backend service queryForUser patterns + controller authorization rules</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-033</td>
+          <td>Validación de entrada backend</td>
+          <td>El backend debe validar de forma explícita los datos recibidos en sus endpoints mutables antes de ejecutar lógica de negocio.</td>
+          <td>Alta</td>
+          <td>Necesidad de integridad y seguridad de datos.</td>
+          <td>Inspección</td>
+          <td>Backend FormRequest classes + controllers</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-034</td>
+          <td>No exposición de secretos</td>
+          <td>El sistema no debe exponer tokens, claves o secretos operativos en respuestas API, archivos de salida documental ni trazas funcionales visibles al usuario.</td>
+          <td>Alta</td>
+          <td>Necesidad de seguridad operativa.</td>
+          <td>Inspección</td>
+          <td>Backend responses + frontend logs + configuration files</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-035</td>
+          <td>Restricción de buckets de medios</td>
+          <td>El backend debe limitar la recuperación pública de medios únicamente a los buckets definidos explícitamente por el sistema.</td>
+          <td>Media</td>
+          <td>Necesidad de reducir superficie de exposición de archivos.</td>
+          <td>Prueba</td>
+          <td>Backend/routes/api.php media route constraints + MediaController</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-036</td>
+          <td>Saneamiento de nombres de archivo</td>
+          <td>El sistema debe aceptar para exposición pública solo nombres de archivo compatibles con el patrón de seguridad definido por la ruta de medios.</td>
+          <td>Media</td>
+          <td>Necesidad de mitigar traversal y nombres maliciosos.</td>
+          <td>Prueba</td>
+          <td>Backend/routes/api.php fileName regex + MediaController</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-037</td>
+          <td>Protección ante entradas inválidas de planeación</td>
+          <td>El backend debe rechazar solicitudes de planeación de ruta malformadas o sin waypoints válidos antes de invocar GraphHopper.</td>
+          <td>Alta</td>
+          <td>Necesidad de robustez y ahorro de recursos.</td>
+          <td>Prueba</td>
+          <td>Backend/RoutePlanningController request validation</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-038</td>
+          <td>Manejo controlado de errores externos</td>
+          <td>El sistema debe encapsular los errores de GraphHopper y de red en respuestas controladas sin filtrar trazas internas a la interfaz de usuario.</td>
+          <td>Alta</td>
+          <td>Necesidad de seguridad y experiencia robusta.</td>
+          <td>Prueba</td>
+          <td>Backend/GraphHopperRoutingService + Frontend/OsmRoutingService error handling</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-039</td>
+          <td>Protección de sesión local</td>
+          <td>El sistema debe conservar el estado de sesión local únicamente en el almacenamiento previsto por la aplicación y no en salidas públicas de depuración.</td>
+          <td>Media</td>
+          <td>Necesidad de minimizar exposición accidental de sesión.</td>
+          <td>Inspección</td>
+          <td>Frontend local profile persistence + repository auth flows</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-040</td>
+          <td>Integridad de borrado lógico o físico</td>
+          <td>El sistema debe garantizar que una operación de eliminación deje el dato en un estado consistente y no reutilizable por flujos posteriores no autorizados.</td>
+          <td>Alta</td>
+          <td>Necesidad de evitar reaparición o uso residual de registros eliminados.</td>
+          <td>Prueba</td>
+          <td>Delete flows in pet, route, hazard and report services + frontend purge behavior</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-041</td>
+          <td>Privacidad de datos de contacto</td>
+          <td>El sistema debe mostrar y transferir el teléfono de un reporte de mascota perdida solo dentro de los contextos funcionales del propio reporte.</td>
+          <td>Alta</td>
+          <td>Necesidad de proteger datos de contacto del reportante.</td>
+          <td>Inspección</td>
+          <td>LostPetReport panels + API payload/response scope</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-042</td>
+          <td>Minimización de datos en respuestas</td>
+          <td>El backend debe responder únicamente con los campos necesarios para que el frontend ejecute sus flujos sin exponer datos irrelevantes de persistencia interna.</td>
+          <td>Media</td>
+          <td>Necesidad de reducir exposición de información interna.</td>
+          <td>Inspección</td>
+          <td>Backend response formatters + controllers</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-043</td>
+          <td>Trazabilidad de comentario a autor</td>
+          <td>El sistema debe preservar la relación verificable entre cada comentario y su autor o identidad anónima definida.</td>
+          <td>Media</td>
+          <td>Necesidad de responsabilidad y seguimiento del intercambio.</td>
+          <td>Prueba</td>
+          <td>ReportComment model/service + shared comment records</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-044</td>
+          <td>Consistencia de fechas sincronizadas</td>
+          <td>El sistema debe normalizar y conservar las fechas de modificación y sincronización con un formato consistente entre frontend y backend.</td>
+          <td>Media</td>
+          <td>Necesidad de trazabilidad temporal de cambios.</td>
+          <td>Prueba</td>
+          <td>SyncDateTimeAndCodes + backend sync services + record models</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-045</td>
+          <td>Protección ante datos faltantes en medios</td>
+          <td>El frontend debe mostrar un placeholder verificable cuando una imagen remota o local no esté disponible, en lugar de bloquear la interfaz.</td>
+          <td>Media</td>
+          <td>Necesidad de robustez visual ante medios ausentes.</td>
+          <td>Prueba</td>
+          <td>LocalImageWidget + pet/report detail panels</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-046</td>
+          <td>Protección ante ubicación no disponible</td>
+          <td>El sistema debe informar al usuario cuando no se pueda obtener la ubicación actual y debe evitar acciones que dependan críticamente de ella sin señalizar el problema.</td>
+          <td>Alta</td>
+          <td>Necesidad de operación segura y comprensible.</td>
+          <td>Prueba</td>
+          <td>MapWidget location status callbacks + MapPage error state</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-047</td>
+          <td>Privacidad del avatar</td>
+          <td>El sistema debe tratar el avatar del usuario como recurso de perfil y no reutilizarlo fuera de contextos donde el usuario ya acepta su visualización.</td>
+          <td>Media</td>
+          <td>Necesidad de protección básica de identidad visual.</td>
+          <td>Inspección</td>
+          <td>Profile menu, shared user identity header, media buckets</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-048</td>
+          <td>Tolerancia a teselas no disponibles</td>
+          <td>La aplicación debe seguir permitiendo interacción con controles, paneles y datos locales aun cuando el proveedor de teselas del mapa falle.</td>
+          <td>Alta</td>
+          <td>Necesidad de que fallas visuales externas no inutilicen el sistema.</td>
+          <td>Prueba</td>
+          <td>MapWidget + flutter_map behavior + panel overlay system</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-049</td>
+          <td>No bloqueo por audio</td>
+          <td>Las fallas del subsistema de audio no deben impedir la continuación del viaje ni el funcionamiento de alertas visuales del sistema.</td>
+          <td>Media</td>
+          <td>Necesidad de degradación funcional controlada.</td>
+          <td>Prueba</td>
+          <td>AudioFeedbackService exception handling + MapPageTrip + proximity alert UI</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-050</td>
+          <td>No bloqueo por brújula</td>
+          <td>La ausencia o falla de datos de brújula no debe impedir el funcionamiento del mapa, la ubicación ni el flujo de viaje.</td>
+          <td>Media</td>
+          <td>Necesidad de compatibilidad con dispositivos heterogéneos.</td>
+          <td>Prueba</td>
+          <td>MapWidget compass fallback to GPS heading</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-051</td>
+          <td>Claridad de mensajes de error</td>
+          <td>La interfaz debe presentar mensajes de error comprensibles en español cuando falle una operación funcional relevante.</td>
+          <td>Alta</td>
+          <td>Necesidad de comprensión operativa en situaciones de fallo.</td>
+          <td>Inspección</td>
+          <td>Frontend panels + repository error text + dialogs</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-052</td>
+          <td>Consistencia visual entre paneles</td>
+          <td>Los paneles principales de la aplicación deben compartir una estructura visual coherente de títulos, acciones y contenedores.</td>
+          <td>Media</td>
+          <td>Necesidad de reducir carga cognitiva del usuario.</td>
+          <td>Inspección</td>
+          <td>PanelModal + panel content widgets + AppPalette</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-053</td>
+          <td>Consistencia terminológica</td>
+          <td>La interfaz debe usar denominaciones consistentes para rutas, mascotas, peligros, reportes, comentarios y viaje a lo largo del sistema.</td>
+          <td>Media</td>
+          <td>Necesidad de evitar ambigüedad para el usuario.</td>
+          <td>Inspección</td>
+          <td>Frontend labels across MapPage components and report panels</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-054</td>
+          <td>Persistencia de selección de transporte visible</td>
+          <td>La selección de transporte debe presentarse al usuario de forma estable y reconocible entre sesiones y entre paneles de inicio y viaje activo.</td>
+          <td>Media</td>
+          <td>Necesidad de continuidad de contexto de navegación.</td>
+          <td>Prueba</td>
+          <td>Trip transport preference provider + start/active trip panels</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-055</td>
+          <td>Visibilidad permanente de scrollbar</td>
+          <td>Los paneles desplazables deben mantener visible el scrollbar para reforzar la percepción de contenido adicional.</td>
+          <td>Media</td>
+          <td>Necesidad de descubribilidad del desplazamiento.</td>
+          <td>Inspección</td>
+          <td>PanelScrollView + PanelModal scrollable body</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-056</td>
+          <td>Contraste del scrollbar</td>
+          <td>El scrollbar debe usar un contraste suficiente entre track y thumb para ser distinguible tanto en tema claro como oscuro.</td>
+          <td>Media</td>
+          <td>Necesidad de legibilidad y percepción del estado de scroll.</td>
+          <td>Inspección</td>
+          <td>PanelScrollView + PanelModal scrollbar theme colors</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-057</td>
+          <td>Legibilidad de formularios</td>
+          <td>Los formularios de reporte, autenticación y gestión deben mantener etiquetas y campos legibles en tema claro y oscuro.</td>
+          <td>Alta</td>
+          <td>Necesidad de captura confiable de datos.</td>
+          <td>Inspección</td>
+          <td>AppPalette + auth/report/pet/route form widgets</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-058</td>
+          <td>Visibilidad de estado seleccionado</td>
+          <td>Las opciones seleccionadas en controles de viaje, capas y acciones rápidas deben ser distinguibles visualmente de las no seleccionadas.</td>
+          <td>Media</td>
+          <td>Necesidad de prevenir errores de configuración.</td>
+          <td>Inspección</td>
+          <td>Trip transport buttons + hazard risk filters + map settings widgets</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-059</td>
+          <td>Interacción segura en móvil</td>
+          <td>La interfaz móvil debe mantenerse operable en orientación vertical sin exigir rotación del dispositivo.</td>
+          <td>Alta</td>
+          <td>Necesidad de ergonomía en uso caminando o conduciendo.</td>
+          <td>Prueba</td>
+          <td>main.dart portrait lock + AndroidManifest + mobile layouts</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-060</td>
+          <td>Descubribilidad de acciones principales</td>
+          <td>Las acciones primarias de reportar, iniciar viaje, perfil y configuración deben permanecer localizables sin navegación profunda desde la pantalla principal.</td>
+          <td>Media</td>
+          <td>Necesidad de acceso rápido a funciones núcleo.</td>
+          <td>Inspección</td>
+          <td>MapWidget controls + panel routing from MapPage</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-061</td>
+          <td>Accesibilidad de etiquetas críticas</td>
+          <td>Los textos de botones y mensajes críticos deben ser suficientemente explícitos para que un usuario pueda entender la acción antes de ejecutarla.</td>
+          <td>Media</td>
+          <td>Necesidad de prevenir errores de operación.</td>
+          <td>Inspección</td>
+          <td>Panel labels, dialogs, alert cards, report forms</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-062</td>
+          <td>Retroalimentación al guardar</td>
+          <td>La aplicación debe ofrecer una señal verificable de éxito o error cuando se complete o falle una operación de guardado relevante.</td>
+          <td>Alta</td>
+          <td>Necesidad de confianza operativa del usuario.</td>
+          <td>Prueba</td>
+          <td>Form submit flows + panel closing behavior + error text states</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-063</td>
+          <td>Retroalimentación de carga</td>
+          <td>La interfaz debe indicar cuándo una operación asíncrona relevante se encuentra en curso, especialmente en autenticación, ubicación, sincronización y envío de formularios.</td>
+          <td>Alta</td>
+          <td>Necesidad de evitar repeticiones y confusión.</td>
+          <td>Prueba</td>
+          <td>Loading states in auth, map location, sync and form panels</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-064</td>
+          <td>Degradación con teselas lentas</td>
+          <td>La lentitud del proveedor de teselas no debe impedir la lectura de paneles ni el acceso a controles funcionales sobrepuestos al mapa.</td>
+          <td>Media</td>
+          <td>Necesidad de uso con redes móviles inestables.</td>
+          <td>Prueba</td>
+          <td>MapWidget overlays + panel system</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-065</td>
+          <td>Persistencia de acentos y caracteres</td>
+          <td>Los textos visibles del frontend deben conservar codificación UTF-8 correcta para mostrar tildes y signos del idioma español.</td>
+          <td>Media</td>
+          <td>Necesidad de legibilidad y profesionalismo documental en la interfaz.</td>
+          <td>Inspección</td>
+          <td>Frontend source strings + rendered UI labels</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-066</td>
+          <td>Coherencia de audio con visuales</td>
+          <td>Los mensajes de audio deben corresponder al mismo evento funcional que se refleja visualmente en la interfaz.</td>
+          <td>Media</td>
+          <td>Necesidad de evitar instrucciones contradictorias.</td>
+          <td>Prueba</td>
+          <td>NavigationAudioProgress + proximity alerts + arrival dialog</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-067</td>
+          <td>No repetición excesiva de audio</td>
+          <td>El sistema no debe repetir indefinidamente un mismo aviso de navegación o proximidad mientras el usuario permanezca en el mismo contexto espacial.</td>
+          <td>Media</td>
+          <td>Necesidad de reducir fatiga auditiva.</td>
+          <td>Prueba</td>
+          <td>Spoken instruction ID sets + acknowledged proximity zone keys</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-068</td>
+          <td>Restablecimiento de estado entre viajes</td>
+          <td>El sistema debe reiniciar correctamente el estado interno del viaje al terminar uno e iniciar otro para no arrastrar waypoints, audio o reruteo anteriores.</td>
+          <td>Alta</td>
+          <td>Necesidad detectada en pruebas reales de calle.</td>
+          <td>Prueba</td>
+          <td>MapPageTrip reset routines + TripRerouteController tests</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-069</td>
+          <td>Robustez ante cierre y reapertura</td>
+          <td>La aplicación debe poder cerrarse y reabrirse sin corromper su base local ni perder entidades ya persistidas.</td>
+          <td>Alta</td>
+          <td>Necesidad de confiabilidad general del cliente móvil.</td>
+          <td>Prueba</td>
+          <td>Local database managers + repository load flows</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-070</td>
+          <td>Robustez ante reinicio del backend</td>
+          <td>El sistema debe tolerar reinicios del backend sin requerir reinstalar la app ni borrar el almacenamiento local para recuperar la operación normal.</td>
+          <td>Media</td>
+          <td>Necesidad de mantenibilidad operativa del entorno.</td>
+          <td>Prueba</td>
+          <td>Backend API + frontend retry/sync flows</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-071</td>
+          <td>Modularidad del frontend</td>
+          <td>La base de código frontend debe mantener separación verificable entre interfaz, estado, repositorio y servicios.</td>
+          <td>Media</td>
+          <td>Necesidad de mantenimiento y evolución del sistema.</td>
+          <td>Inspección</td>
+          <td>Frontend folders: pages, widgets, providers, repositories, services</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-072</td>
+          <td>Modularidad del backend</td>
+          <td>La base de código backend debe mantener separación verificable entre controladores, requests, servicios, modelos y formateadores.</td>
+          <td>Media</td>
+          <td>Necesidad de mantenimiento y reducción de acoplamiento.</td>
+          <td>Inspección</td>
+          <td>Backend app/Http/Controllers, Requests, Services, Models</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-073</td>
+          <td>Controladores delgados</td>
+          <td>La lógica de negocio del backend debe residir prioritariamente en servicios o actions y no en controladores monolíticos.</td>
+          <td>Media</td>
+          <td>Necesidad de claridad y testabilidad del backend.</td>
+          <td>Inspección</td>
+          <td>Backend controllers delegating to services</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-074</td>
+          <td>Proveedores de estado reutilizables</td>
+          <td>Los controladores de datos del frontend deben reutilizar abstracciones comunes para recarga y actualización asíncrona cuando apliquen.</td>
+          <td>Media</td>
+          <td>Necesidad de reducir duplicación en estado local.</td>
+          <td>Inspección</td>
+          <td>AsyncListController + local data providers</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-075</td>
+          <td>Documentación mínima suficiente</td>
+          <td>El sistema debe conservar comentarios y documentación técnica solo cuando aporten comprensión verificable de lógica no trivial.</td>
+          <td>Baja</td>
+          <td>Necesidad de mantener código legible sin sobrecomentarlo.</td>
+          <td>Inspección</td>
+          <td>Dart docs + PHPDoc + docs inventory</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-076</td>
+          <td>Pruebas automatizadas de lógica crítica</td>
+          <td>El proyecto debe mantener pruebas automatizadas sobre componentes críticos de navegación, filtros de riesgo, audio y settings persistidos.</td>
+          <td>Alta</td>
+          <td>Necesidad de prevenir regresiones en flujos complejos.</td>
+          <td>Inspección</td>
+          <td>Frontend test suite + backend feature tests</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-077</td>
+          <td>Estilo consistente de código</td>
+          <td>El código backend y frontend debe poder pasar las herramientas de análisis y estilo establecidas por el proyecto sin errores activos.</td>
+          <td>Media</td>
+          <td>Necesidad de base mantenible y homogénea.</td>
+          <td>Prueba</td>
+          <td>flutter analyze + flutter test + php artisan test + pint</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-078</td>
+          <td>Evolución sin dependencias innecesarias</td>
+          <td>El sistema debe evitar introducir dependencias externas que no aporten una capacidad verificable al producto o al pipeline documental.</td>
+          <td>Baja</td>
+          <td>Necesidad de controlar complejidad tecnológica.</td>
+          <td>Inspección</td>
+          <td>package.json + pubspec.yaml + composer dependencies</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-079</td>
+          <td>Separación de configuración sensible</td>
+          <td>La configuración operativa del backend debe permanecer fuera del código duro y resolverse mediante archivos o variables de entorno apropiadas.</td>
+          <td>Alta</td>
+          <td>Necesidad de despliegue seguro y portable.</td>
+          <td>Inspección</td>
+          <td>Laravel config/services + env usage + docker compose env files</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-080</td>
+          <td>Regeneración reproducible de documentación</td>
+          <td>La generación documental de requisitos debe poder ejecutarse mediante un comando reproducible del repositorio sin edición manual posterior obligatoria.</td>
+          <td>Media</td>
+          <td>Necesidad de mantener documentos actualizables en el tiempo.</td>
+          <td>Prueba</td>
+          <td>Node docs:requirements script + JSON document sources</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-081</td>
+          <td>Compatibilidad móvil y web</td>
+          <td>El frontend debe mantener comportamiento funcional base en plataformas móviles y web soportadas por el proyecto.</td>
+          <td>Alta</td>
+          <td>Necesidad de cobertura multiplataforma del producto.</td>
+          <td>Prueba</td>
+          <td>Flutter platform-specific services + conditional exports</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-082</td>
+          <td>Adaptación de persistencia por plataforma</td>
+          <td>El sistema debe usar un mecanismo de persistencia local compatible con la plataforma de ejecución sin cambiar el contrato funcional expuesto al resto del frontend.</td>
+          <td>Alta</td>
+          <td>Necesidad de portabilidad entre web, móvil y escritorio.</td>
+          <td>Prueba</td>
+          <td>LocalDatabaseManager interface + IO/Web implementations</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-083</td>
+          <td>Adaptación de medios por plataforma</td>
+          <td>El sistema debe resolver selección y codificación de medios con adaptadores específicos por plataforma manteniendo la misma intención funcional.</td>
+          <td>Media</td>
+          <td>Necesidad de compatibilidad de imágenes entre plataformas.</td>
+          <td>Prueba</td>
+          <td>LocalMediaStorageService and MediaSourceEncoder conditional exports</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-084</td>
+          <td>Compatibilidad con orientación móvil prevista</td>
+          <td>La aplicación móvil debe comportarse de manera consistente en orientación vertical soportada sin requerir layouts landscape equivalentes.</td>
+          <td>Media</td>
+          <td>Necesidad de simplificar y estabilizar el uso en calle.</td>
+          <td>Prueba</td>
+          <td>main.dart orientation lock + mobile panel layouts</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-085</td>
+          <td>Compatibilidad de audio por plataforma</td>
+          <td>El sistema debe degradar con gracia cuando una plataforma no permita reproducir audio o voz en el momento exacto solicitado.</td>
+          <td>Media</td>
+          <td>Necesidad de tolerar restricciones de navegador o dispositivo.</td>
+          <td>Prueba</td>
+          <td>AudioFeedbackService exception handling + web autoplay caveats</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-086</td>
+          <td>Compatibilidad de brújula por plataforma</td>
+          <td>El sistema debe usar la brújula solo en plataformas donde exista soporte y debe conservar un fallback funcional en las demás.</td>
+          <td>Media</td>
+          <td>Necesidad de evitar fallos por APIs no uniformes.</td>
+          <td>Prueba</td>
+          <td>MapWidget _supportsCompass + GPS heading fallback</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-087</td>
+          <td>Compatibilidad de URLs backend</td>
+          <td>El cliente debe poder trabajar con URLs backend alternativas o de fallback sin requerir recompilación del resto del sistema.</td>
+          <td>Media</td>
+          <td>Necesidad de operar en distintos entornos de red y pruebas.</td>
+          <td>Prueba</td>
+          <td>BackendApiClient fallback URLs + runtime/cloudflare flows</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-088</td>
+          <td>Compatibilidad con túneles de desarrollo</td>
+          <td>El ecosistema de scripts debe permitir desacoplar el frontend del proceso que publica el backend por túnel cuando se use Cloudflare durante pruebas.</td>
+          <td>Baja</td>
+          <td>Necesidad operativa de pruebas móviles remotas.</td>
+          <td>Prueba</td>
+          <td>package.json scripts + run-backend.js + run-frontend.js</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-089</td>
+          <td>Compatibilidad de exportación documental</td>
+          <td>La generación de PDFs de requisitos debe ejecutarse con Node y la dependencia declarada por el repositorio sin requerir herramientas manuales de ofimática.</td>
+          <td>Baja</td>
+          <td>Necesidad de automatizar entregables documentales.</td>
+          <td>Prueba</td>
+          <td>scripts/generate-requirements-pdfs.js + package.json docs:requirements</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-090</td>
+          <td>Compatibilidad con reanudación de app</td>
+          <td>El frontend debe recuperar sus servicios de localización y orientación después de reanudar desde segundo plano en móviles soportados.</td>
+          <td>Alta</td>
+          <td>Necesidad observada durante pruebas en calle.</td>
+          <td>Prueba</td>
+          <td>MapWidget lifecycle observer + location/compass restart</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-091</td>
+          <td>Trazabilidad de requisito a módulo</td>
+          <td>Cada capacidad crítica implementada en el sistema debe poder rastrearse al menos hasta un módulo funcional o servicio de dominio identificable.</td>
+          <td>Media</td>
+          <td>Necesidad de gobierno técnico y mantenimiento evolutivo.</td>
+          <td>Inspección</td>
+          <td>Project docs inventory + layered architecture folders</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-092</td>
+          <td>Trazabilidad de cambios sincronizados</td>
+          <td>Las entidades sincronizadas deben mantener fechas y estados suficientes para reconstruir el último cambio relevante observado por el sistema.</td>
+          <td>Media</td>
+          <td>Necesidad de diagnóstico y resolución de inconsistencias.</td>
+          <td>Inspección</td>
+          <td>sync_status, last_modified_at, synced_at in models and tables</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-093</td>
+          <td>Mensajes de log útiles en backend</td>
+          <td>El backend debe registrar errores críticos de sincronización y conexión externa con suficiente contexto técnico para su diagnóstico sin exponer datos sensibles al cliente.</td>
+          <td>Media</td>
+          <td>Necesidad de soporte operativo del backend.</td>
+          <td>Inspección</td>
+          <td>Laravel Log usage in sync services and GraphHopper service</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-094</td>
+          <td>Mensajes de depuración controlados en frontend</td>
+          <td>El frontend debe limitar sus impresiones de depuración a mensajes útiles para desarrollo y no debe depender de ellas para el funcionamiento del producto.</td>
+          <td>Baja</td>
+          <td>Necesidad de mantener claridad y seguridad en ejecución.</td>
+          <td>Inspección</td>
+          <td>debugPrint usage in map, audio and routing services</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-095</td>
+          <td>Modificabilidad de catálogos de riesgo</td>
+          <td>Los catálogos de categorías, duraciones y niveles de riesgo deben poder actualizarse sin rediseñar los flujos principales del sistema.</td>
+          <td>Media</td>
+          <td>Necesidad de evolución futura de taxonomías.</td>
+          <td>Inspección</td>
+          <td>Hazard categories/durations schema + form selectors + response formatters</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-096</td>
+          <td>Modificabilidad de documentos de requisitos</td>
+          <td>Los datasets de requisitos deben permitir modificaciones puntuales por requisito sin regenerar manualmente el contenido completo del documento.</td>
+          <td>Baja</td>
+          <td>Necesidad de mantenimiento documental controlado.</td>
+          <td>Inspección</td>
+          <td>JSON sources under docs/requirements + generation script</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-097</td>
+          <td>Ausencia de contradicción documental</td>
+          <td>Los requisitos no funcionales no deben contradecir los requisitos funcionales ni los de interfaz respecto al comportamiento esperado del sistema.</td>
+          <td>Alta</td>
+          <td>Necesidad de consistencia de especificación.</td>
+          <td>Inspección</td>
+          <td>Cross-document review in generated requirements artifacts</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-098</td>
+          <td>Factibilidad tecnológica</td>
+          <td>Cada requisito no funcional definido para el sistema debe poder cumplirse con la arquitectura actual o una evolución razonable sin reemplazar el núcleo Flutter + Laravel + GraphHopper.</td>
+          <td>Alta</td>
+          <td>Necesidad de especificación realista y ejecutable.</td>
+          <td>Inspección</td>
+          <td>Current architecture documented in repo and requirement docs</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-099</td>
+          <td>Calidad de verificación automatizable</td>
+          <td>Los requisitos no funcionales críticos del sistema deben ser susceptibles de verificarse mediante pruebas o mediciones repetibles siempre que la infraestructura lo permita.</td>
+          <td>Media</td>
+          <td>Necesidad de control de calidad continuo.</td>
+          <td>Inspección</td>
+          <td>Automated tests, CLI checks and measurable runtime behaviors</td>
+        </tr>
+        <tr>
+          <td class="id-cell">RNF-100</td>
+          <td>Mantenibilidad general del sistema</td>
+          <td>La estructura del sistema debe permitir introducir cambios localizados en dominios como viaje, reportes, sync o audio sin exigir una reescritura completa del producto.</td>
+          <td>Alta</td>
+          <td>Necesidad de evolución sostenible del proyecto.</td>
+          <td>Inspección</td>
+          <td>Layered frontend/backend structure + services/controllers/providers split</td>
+        </tr></tbody>
+      </table>
+      <p class="footer-note">
+        Documento elaborado bajo criterios de claridad, consistencia, verificabilidad y trazabilidad alineados con la definición de requisito empleada en RUP.
+      </p>
+    </section>
+  </body>
+</html>

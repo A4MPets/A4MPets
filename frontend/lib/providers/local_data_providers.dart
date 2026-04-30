@@ -68,9 +68,13 @@ class PetsController extends AsyncListController<PetRecord> {
     return count + 1;
   }
 
-  Future<void> addPet({required String name, String? photoPath}) async {
-    await _repository.addPet(name: name, photoPath: photoPath);
+  Future<int> addPet({required String name, String? photoPath}) async {
+    final int petId = await _repository.addPet(
+      name: name,
+      photoPath: photoPath,
+    );
     await reload();
+    return petId;
   }
 
   Future<void> updatePet({
@@ -107,12 +111,13 @@ class RoutesController extends AsyncListController<RouteRecord> {
     return count + 1;
   }
 
-  Future<void> addRoute({
+  Future<int> addRoute({
     required String name,
     required List<RoutePoint> points,
   }) async {
-    await _repository.addRoute(name: name, points: points);
+    final int routeId = await _repository.addRoute(name: name, points: points);
     await reload();
+    return routeId;
   }
 
   Future<void> deleteRoute({required int routeId}) async {

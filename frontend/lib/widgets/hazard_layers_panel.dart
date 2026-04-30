@@ -12,7 +12,9 @@ class HazardLayersPanelContent extends StatelessWidget {
   final bool showLostPetReports;
   final bool showFoundPetReports;
   final bool showGenericReports;
+  final bool audioFeedbackEnabled;
   final ValueChanged<bool> onToggleDarkMode;
+  final ValueChanged<bool> onToggleAudioFeedback;
   final ValueChanged<bool> onToggleLowRisk;
   final ValueChanged<bool> onToggleMediumRisk;
   final ValueChanged<bool> onToggleHighRisk;
@@ -30,7 +32,9 @@ class HazardLayersPanelContent extends StatelessWidget {
     required this.showLostPetReports,
     required this.showFoundPetReports,
     required this.showGenericReports,
+    required this.audioFeedbackEnabled,
     required this.onToggleDarkMode,
+    required this.onToggleAudioFeedback,
     required this.onToggleLowRisk,
     required this.onToggleMediumRisk,
     required this.onToggleHighRisk,
@@ -81,6 +85,36 @@ class HazardLayersPanelContent extends StatelessWidget {
                     alpha: 0.45,
                   ),
                   onChanged: onToggleDarkMode,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppPalette.border(isDarkMode)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Audio de navegacion y alertas',
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Switch.adaptive(
+                  value: audioFeedbackEnabled,
+                  activeThumbColor: AppPalette.primaryBlue,
+                  activeTrackColor: AppPalette.primaryBlue.withValues(
+                    alpha: 0.45,
+                  ),
+                  onChanged: onToggleAudioFeedback,
                 ),
               ],
             ),
