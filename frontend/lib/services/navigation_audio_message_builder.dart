@@ -42,8 +42,8 @@ class NavigationAudioMessageBuilder {
     switch (sign) {
       case -3:
         return immediate
-            ? 'Gira ahora pronunciadamente a la izquierda'
-            : 'gira pronunciadamente a la izquierda';
+            ? 'Gira ahora a la izquierda'
+            : 'gira a la izquierda';
       case -2:
         return immediate ? 'Gira ahora a la izquierda' : 'gira a la izquierda';
       case -1:
@@ -58,8 +58,8 @@ class NavigationAudioMessageBuilder {
         return immediate ? 'Gira ahora a la derecha' : 'gira a la derecha';
       case 3:
         return immediate
-            ? 'Gira ahora pronunciadamente a la derecha'
-            : 'gira pronunciadamente a la derecha';
+            ? 'Gira ahora a la derecha'
+            : 'gira a la derecha';
       case 6:
         return immediate
             ? 'Entra ahora a la rotonda'

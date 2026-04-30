@@ -55,6 +55,7 @@ class NavigationAudioProgress {
           distanceMeters: distanceMeters,
         );
       }
+      /* let's remove this for now since it can overlap with the far approach or the inmediate cues and we don't have a clear UX strategy for handling that yet. We can always reintroduce it later if we find it's needed.
       if (distanceMeters <= approachThresholdMeters &&
           !spokenApproachIds.contains(instruction.id) &&
           !spokenImmediateIds.contains(instruction.id)) {
@@ -63,7 +64,7 @@ class NavigationAudioProgress {
           type: NavigationAudioCueType.approach,
           distanceMeters: distanceMeters,
         );
-      }
+      }*/
 
       if (distanceMeters <= farApproachThresholdMeters &&
           !spokenFarApproachIds.contains(instruction.id) &&

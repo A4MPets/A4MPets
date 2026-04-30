@@ -37,6 +37,7 @@ class UserDataSyncCoordinator {
   Timer? _autoSyncTimer;
 
   void _log(String message) {
+    return;
     debugPrint('[HazardSync] $message');
   }
 
@@ -325,9 +326,9 @@ class UserDataSyncCoordinator {
             localUuid: localUuid,
             remoteId: remoteId,
           );
-          _log(
-            'pull: hazard archivado removido local_uuid=$localUuid remote_id=$remoteId',
-          );
+          //_log(
+          //'pull: hazard archivado removido local_uuid=$localUuid remote_id=$remoteId',
+          //);
           continue;
         }
 
@@ -366,9 +367,9 @@ class UserDataSyncCoordinator {
               jsonEncode(hazard['comments'] ?? <dynamic>[]),
         );
 
-        _log(
-          'pull: upsert local_uuid=$localUuid remote_id=$remoteId status=$syncStatus',
-        );
+        //_log(
+        //  'pull: upsert local_uuid=$localUuid remote_id=$remoteId status=$syncStatus',
+        //);
       }
 
       final Map<String, dynamic> pagination =

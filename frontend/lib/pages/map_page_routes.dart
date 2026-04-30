@@ -514,7 +514,8 @@ extension _MapPageRoutesState on _MapPageState {
         _analyzeRouteForHazards();
       });
       if (_isTripNavigationContext) {
-        ref.read(audioFeedbackServiceProvider).stopSpeech();
+        //I don't get why we stop the speech here, but it was in the original code. Maybe to prevent overlapping instructions during route refreshes?
+        //ref.read(audioFeedbackServiceProvider).stopSpeech();
       }
     } catch (_) {
       if (!mounted || requestVersion != _routePolylineRequestVersion) {

@@ -23,10 +23,6 @@ void main() {
       'En 100 metros, gira a la derecha',
     );
     expect(
-      NavigationAudioMessageBuilder.buildApproachMessage(rightTurnInstruction),
-      'En 30 metros, gira a la derecha',
-    );
-    expect(
       NavigationAudioMessageBuilder.buildImmediateMessage(rightTurnInstruction),
       'Gira ahora a la derecha',
     );
