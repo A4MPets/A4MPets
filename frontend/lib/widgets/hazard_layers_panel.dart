@@ -120,6 +120,16 @@ class HazardLayersPanelContent extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+          const SizedBox(height: 12),
+          Text(
+            'Peligros',
+            style: TextStyle(
+              color: textColor,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
           _LayerCheckbox(
             label: 'Circulos de peligros - nivel bajo',
             checked: showLowRiskCircles,
@@ -143,7 +153,16 @@ class HazardLayersPanelContent extends StatelessWidget {
             onChanged: onToggleHighRisk,
             isDarkMode: isDarkMode,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+          Text(
+            'Problemáticas Zoosociales',
+            style: TextStyle(
+              color: textColor,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
           _LayerCheckbox(
             label: 'Mascotas perdidas',
             checked: showLostPetReports,

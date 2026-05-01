@@ -646,99 +646,69 @@ class LocalDatabaseManager {
     await prefs.setString(_petsKey, jsonEncode(encoded));
   }
 
-  Future<void> upsertPetFromRemote({
-    required String localIdString,
-    required String? remoteId,
-    required String syncStatus,
-    required DateTime remoteLastModifiedAt,
-    required String name,
-    required String? photoPath,
-  }) async {
+  Future<void> upsertPetsFromRemoteBatch(List<PetRecord> batch) async {
+    if (batch.isEmpty) return;
     final SharedPreferences prefs = await _prefs;
-    final List<PetRecord> current = await getPets();
+    final List<PetRecord> current = (await getPets()).toList();
+    
+    int nextId = current.isEmpty
+        ? 1
+        : current.map((PetRecord p) => p.id).reduce((int a, int b) => a > b ? a : b) + 1;
 
-    PetRecord? existing;
-    for (final PetRecord pet in current) {
-      if (remoteId != null && pet.remoteId == remoteId) {
-        existing = pet;
-        break;
-      }
-    }
-
-    if (existing == null && localIdString.startsWith('pt_')) {
-      final List<String> parts = localIdString.split('_');
-      if (parts.length >= 3) {
-        final int? parsedId = int.tryParse(parts[1]);
-        final int? parsedCreatedAt = int.tryParse(parts[2]);
-        if (parsedId != null && parsedCreatedAt != null) {
-          for (final PetRecord pet in current) {
-            if (pet.id == parsedId &&
-                pet.createdAt.millisecondsSinceEpoch == parsedCreatedAt) {
-              existing = pet;
-              break;
-            }
-          }
+    for (final PetRecord incoming in batch) {
+      PetRecord? existing;
+      for (final PetRecord pet in current) {
+        if (incoming.remoteId != null && pet.remoteId == incoming.remoteId) {
+          existing = pet;
+          break;
         }
       }
-    }
 
-    final int nextId = current.isEmpty
-        ? 1
-        : current
-                  .map((PetRecord pet) => pet.id)
-                  .reduce((int a, int b) => a > b ? a : b) +
-              1;
-
-    if (existing == null) {
-      final PetRecord inserted = PetRecord(
-        id: nextId,
-        remoteId: remoteId,
-        name: name,
-        photoPath: photoPath,
-        syncStatus: syncStatus,
-        lastModifiedAt: remoteLastModifiedAt,
-        createdAt: remoteLastModifiedAt,
-        updatedAt: remoteLastModifiedAt,
-        needsSync: false,
-      );
-
-      final List<Map<String, Object?>> encoded = <Map<String, Object?>>[
-        ...current.map((PetRecord pet) => pet.toMap()),
-        inserted.toMap(),
-      ];
-      await prefs.setString(_petsKey, jsonEncode(encoded));
-      return;
-    }
-
-    if (existing.needsSync &&
-        existing.lastModifiedAt.isAfter(remoteLastModifiedAt)) {
-      return;
-    }
-
-    final String? resolvedPhotoPath = _preferOfflineImageSource(
-      currentSource: existing.photoPath,
-      remoteSource: photoPath,
-    );
-
-    final List<Map<String, Object?>> encoded = current
-        .map((PetRecord pet) {
-          if (pet.id != existing!.id) {
-            return pet.toMap();
+      if (existing == null && incoming.id > 0) {
+          for (final PetRecord pet in current) {
+              if (pet.id == incoming.id && pet.createdAt.millisecondsSinceEpoch == incoming.createdAt.millisecondsSinceEpoch) {
+                  existing = pet;
+                  break;
+              }
           }
-          return PetRecord(
-            id: pet.id,
-            remoteId: remoteId ?? pet.remoteId,
-            name: name,
-            photoPath: resolvedPhotoPath,
-            syncStatus: syncStatus,
-            lastModifiedAt: remoteLastModifiedAt,
-            createdAt: pet.createdAt,
+      }
+      
+      if (existing == null) {
+        current.add(PetRecord(
+          id: nextId++,
+          remoteId: incoming.remoteId,
+          name: incoming.name,
+          photoPath: incoming.photoPath,
+          syncStatus: incoming.syncStatus,
+          lastModifiedAt: incoming.lastModifiedAt,
+          createdAt: incoming.createdAt,
+          updatedAt: incoming.updatedAt,
+          needsSync: false,
+        ));
+      } else {
+        if (existing.needsSync && existing.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
+          continue;
+        }
+        
+        final int index = current.indexOf(existing);
+        current[index] = PetRecord(
+            id: existing.id,
+            remoteId: incoming.remoteId ?? existing.remoteId,
+            name: incoming.name,
+            photoPath: _preferOfflineImageSource(
+              currentSource: existing.photoPath,
+              remoteSource: incoming.photoPath,
+            ),
+            syncStatus: incoming.syncStatus,
+            lastModifiedAt: incoming.lastModifiedAt,
+            createdAt: existing.createdAt,
             updatedAt: DateTime.now(),
             needsSync: false,
-          ).toMap();
-        })
-        .toList(growable: false);
+        );
+      }
+    }
 
+    final List<Map<String, Object?>> encoded = current.map((PetRecord p) => p.toMap()).toList(growable: false);
     await prefs.setString(_petsKey, jsonEncode(encoded));
   }
 
@@ -799,94 +769,66 @@ class LocalDatabaseManager {
     await prefs.setString(_routesKey, jsonEncode(encoded));
   }
 
-  Future<void> upsertRouteFromRemote({
-    required String localIdString,
-    required String? remoteId,
-    required String syncStatus,
-    required DateTime remoteLastModifiedAt,
-    required String name,
-    required List<RoutePoint> points,
-  }) async {
+  Future<void> upsertRoutesFromRemoteBatch(List<RouteRecord> batch) async {
+    if (batch.isEmpty) return;
     final SharedPreferences prefs = await _prefs;
-    final List<RouteRecord> current = await getRoutes();
+    final List<RouteRecord> current = (await getRoutes()).toList();
+    
+    int nextId = current.isEmpty
+        ? 1
+        : current.map((RouteRecord r) => r.id).reduce((int a, int b) => a > b ? a : b) + 1;
 
-    RouteRecord? existing;
-    for (final RouteRecord route in current) {
-      if (remoteId != null && route.remoteId == remoteId) {
-        existing = route;
-        break;
-      }
-    }
-
-    if (existing == null && localIdString.startsWith('rt_')) {
-      final List<String> parts = localIdString.split('_');
-      if (parts.length >= 3) {
-        final int? parsedId = int.tryParse(parts[1]);
-        final int? parsedCreatedAt = int.tryParse(parts[2]);
-        if (parsedId != null && parsedCreatedAt != null) {
-          for (final RouteRecord route in current) {
-            if (route.id == parsedId &&
-                route.createdAt.millisecondsSinceEpoch == parsedCreatedAt) {
-              existing = route;
-              break;
-            }
-          }
+    for (final RouteRecord incoming in batch) {
+      RouteRecord? existing;
+      for (final RouteRecord route in current) {
+        if (incoming.remoteId != null && route.remoteId == incoming.remoteId) {
+          existing = route;
+          break;
         }
       }
-    }
 
-    final int nextId = current.isEmpty
-        ? 1
-        : current
-                  .map((RouteRecord route) => route.id)
-                  .reduce((int a, int b) => a > b ? a : b) +
-              1;
-
-    if (existing == null) {
-      final RouteRecord inserted = RouteRecord(
-        id: nextId,
-        remoteId: remoteId,
-        name: name,
-        points: points,
-        syncStatus: syncStatus,
-        lastModifiedAt: remoteLastModifiedAt,
-        createdAt: remoteLastModifiedAt,
-        updatedAt: remoteLastModifiedAt,
-        needsSync: false,
-      );
-
-      final List<Map<String, Object?>> encoded = <Map<String, Object?>>[
-        ...current.map((RouteRecord route) => route.toMap()),
-        inserted.toMap(),
-      ];
-      await prefs.setString(_routesKey, jsonEncode(encoded));
-      return;
-    }
-
-    if (existing.needsSync &&
-        existing.lastModifiedAt.isAfter(remoteLastModifiedAt)) {
-      return;
-    }
-
-    final List<Map<String, Object?>> encoded = current
-        .map((RouteRecord route) {
-          if (route.id != existing!.id) {
-            return route.toMap();
+      if (existing == null && incoming.id > 0) {
+          for (final RouteRecord route in current) {
+              if (route.id == incoming.id && route.createdAt.millisecondsSinceEpoch == incoming.createdAt.millisecondsSinceEpoch) {
+                  existing = route;
+                  break;
+              }
           }
-          return RouteRecord(
-            id: route.id,
-            remoteId: remoteId ?? route.remoteId,
-            name: name,
-            points: points,
-            syncStatus: syncStatus,
-            lastModifiedAt: remoteLastModifiedAt,
-            createdAt: route.createdAt,
+      }
+      
+      if (existing == null) {
+        current.add(RouteRecord(
+          id: nextId++,
+          remoteId: incoming.remoteId,
+          name: incoming.name,
+          points: incoming.points,
+          syncStatus: incoming.syncStatus,
+          lastModifiedAt: incoming.lastModifiedAt,
+          createdAt: incoming.createdAt,
+          updatedAt: incoming.updatedAt,
+          needsSync: false,
+        ));
+      } else {
+        if (existing.needsSync && existing.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
+          continue;
+        }
+        
+        final int index = current.indexOf(existing);
+        current[index] = RouteRecord(
+            id: existing.id,
+            remoteId: incoming.remoteId ?? existing.remoteId,
+            name: incoming.name,
+            points: incoming.points,
+            syncStatus: incoming.syncStatus,
+            lastModifiedAt: incoming.lastModifiedAt,
+            createdAt: existing.createdAt,
             updatedAt: DateTime.now(),
             needsSync: false,
-          ).toMap();
-        })
-        .toList(growable: false);
+        );
+      }
+    }
 
+    final List<Map<String, Object?>> encoded = current.map((RouteRecord r) => r.toMap()).toList(growable: false);
     await prefs.setString(_routesKey, jsonEncode(encoded));
   }
 
@@ -941,123 +883,81 @@ class LocalDatabaseManager {
     await prefs.setString(_hazardsKey, jsonEncode(encoded));
   }
 
-  Future<void> upsertHazardFromRemote({
-    required String localUuid,
-    required String? remoteId,
-    required String syncStatus,
-    required DateTime remoteLastModifiedAt,
-    required double incidentLatitude,
-    required double incidentLongitude,
-    required int impactRadiusMeters,
-    required String categoryCode,
-    required String riskLevelCode,
-    required String narrativeDescription,
-    required String estimatedDurationCode,
-    required DateTime reportedAt,
-    required String? evidencePhotoUrl,
-    required String reportedByUsername,
-    String? commentsJson,
-  }) async {
+  Future<void> upsertHazardsFromRemoteBatch(List<HazardReportRecord> batch) async {
+    if (batch.isEmpty) return;
     final SharedPreferences prefs = await _prefs;
     await _ensureDefaultUser(prefs);
-    final List<HazardReportRecord> current = await getHazardReports();
+    final List<HazardReportRecord> current = (await getHazardReports()).toList();
+    
+    int nextId = current.isEmpty
+        ? 1
+        : current.map((HazardReportRecord h) => h.id).reduce((int a, int b) => a > b ? a : b) + 1;
 
-    HazardReportRecord? existing;
-    for (final HazardReportRecord report in current) {
-      if (report.localUuid == localUuid ||
-          (remoteId != null && report.remoteId == remoteId)) {
-        existing = report;
-        break;
+    for (final HazardReportRecord incoming in batch) {
+      HazardReportRecord? existing;
+      for (final HazardReportRecord report in current) {
+        if (report.localUuid == incoming.localUuid || (incoming.remoteId != null && report.remoteId == incoming.remoteId)) {
+          existing = report;
+          break;
+        }
+      }
+
+      if (existing == null) {
+        current.add(HazardReportRecord(
+          id: nextId++,
+          localUuid: incoming.localUuid,
+          remoteId: incoming.remoteId,
+          syncStatus: incoming.syncStatus,
+          lastModifiedAt: incoming.lastModifiedAt,
+          incidentLatitude: incoming.incidentLatitude,
+          incidentLongitude: incoming.incidentLongitude,
+          impactRadiusMeters: incoming.impactRadiusMeters,
+          categoryCode: incoming.categoryCode,
+          narrativeDescription: incoming.narrativeDescription,
+          reportedAt: incoming.reportedAt,
+          estimatedDurationCode: incoming.estimatedDurationCode,
+          riskLevelCode: incoming.riskLevelCode,
+          evidencePhotoUrl: incoming.evidencePhotoUrl,
+          reportedByUsername: incoming.reportedByUsername,
+          comments: incoming.comments,
+          createdAt: incoming.createdAt,
+          updatedAt: incoming.updatedAt,
+          needsSync: false,
+        ));
+      } else {
+        if (existing.needsSync && existing.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
+          continue;
+        }
+        
+        final int index = current.indexOf(existing);
+        current[index] = HazardReportRecord(
+            id: existing.id,
+            localUuid: incoming.localUuid,
+            remoteId: incoming.remoteId ?? existing.remoteId,
+            syncStatus: incoming.syncStatus,
+            lastModifiedAt: incoming.lastModifiedAt,
+            incidentLatitude: incoming.incidentLatitude,
+            incidentLongitude: incoming.incidentLongitude,
+            impactRadiusMeters: incoming.impactRadiusMeters,
+            categoryCode: incoming.categoryCode,
+            narrativeDescription: incoming.narrativeDescription,
+            reportedAt: incoming.reportedAt,
+            estimatedDurationCode: incoming.estimatedDurationCode,
+            riskLevelCode: incoming.riskLevelCode,
+            evidencePhotoUrl: _preferOfflineImageSource(
+              currentSource: existing.evidencePhotoUrl,
+              remoteSource: incoming.evidencePhotoUrl,
+            ),
+            reportedByUsername: incoming.reportedByUsername,
+            comments: incoming.comments,
+            createdAt: existing.createdAt,
+            updatedAt: DateTime.now(),
+            needsSync: false,
+        );
       }
     }
 
-    final int nextId = current.isEmpty
-        ? 1
-        : current
-                  .map((HazardReportRecord report) => report.id)
-                  .reduce((int a, int b) => a > b ? a : b) +
-              1;
-
-    if (existing == null) {
-      final List<HazardCommentRecord> parsedComments = commentsJson == null
-          ? const <HazardCommentRecord>[]
-          : _decodeReportComments(commentsJson);
-
-      final HazardReportRecord inserted = HazardReportRecord(
-        id: nextId,
-        localUuid: localUuid,
-        remoteId: remoteId,
-        syncStatus: syncStatus,
-        lastModifiedAt: remoteLastModifiedAt,
-        incidentLatitude: incidentLatitude,
-        incidentLongitude: incidentLongitude,
-        impactRadiusMeters: impactRadiusMeters,
-        categoryCode: categoryCode,
-        narrativeDescription: narrativeDescription,
-        reportedAt: reportedAt,
-        estimatedDurationCode: estimatedDurationCode,
-        riskLevelCode: riskLevelCode,
-        evidencePhotoUrl: evidencePhotoUrl,
-        reportedByUsername: reportedByUsername,
-        comments: parsedComments,
-        createdAt: remoteLastModifiedAt,
-        updatedAt: remoteLastModifiedAt,
-        needsSync: false,
-      );
-
-      final List<Map<String, Object?>> encoded = <Map<String, Object?>>[
-        ...current.map((HazardReportRecord report) => report.toMap()),
-        inserted.toMap(),
-      ];
-      await prefs.setString(_hazardsKey, jsonEncode(encoded));
-      return;
-    }
-
-    if (existing.needsSync &&
-        existing.lastModifiedAt.isAfter(remoteLastModifiedAt)) {
-      return;
-    }
-
-    final String? resolvedEvidencePhoto = _preferOfflineImageSource(
-      currentSource: existing.evidencePhotoUrl,
-      remoteSource: evidencePhotoUrl,
-    );
-
-    final List<Map<String, Object?>> encoded = current
-        .map((HazardReportRecord report) {
-          if (report.id != existing!.id) {
-            return report.toMap();
-          }
-
-          final List<HazardCommentRecord> resolvedComments =
-              commentsJson == null
-              ? report.comments
-              : _decodeReportComments(commentsJson);
-
-          return HazardReportRecord(
-            id: report.id,
-            localUuid: localUuid,
-            remoteId: remoteId ?? report.remoteId,
-            syncStatus: syncStatus,
-            lastModifiedAt: remoteLastModifiedAt,
-            incidentLatitude: incidentLatitude,
-            incidentLongitude: incidentLongitude,
-            impactRadiusMeters: impactRadiusMeters,
-            categoryCode: categoryCode,
-            narrativeDescription: narrativeDescription,
-            reportedAt: reportedAt,
-            estimatedDurationCode: estimatedDurationCode,
-            riskLevelCode: riskLevelCode,
-            evidencePhotoUrl: resolvedEvidencePhoto,
-            reportedByUsername: reportedByUsername,
-            comments: resolvedComments,
-            createdAt: report.createdAt,
-            updatedAt: DateTime.now(),
-            needsSync: false,
-          ).toMap();
-        })
-        .toList(growable: false);
-
+    final List<Map<String, Object?>> encoded = current.map((HazardReportRecord h) => h.toMap()).toList(growable: false);
     await prefs.setString(_hazardsKey, jsonEncode(encoded));
   }
 
@@ -1217,105 +1117,75 @@ class LocalDatabaseManager {
     await prefs.setString(_lostPetReportsKey, jsonEncode(encoded));
   }
 
-  Future<void> upsertLostPetReportFromRemote({
-    required String localUuid,
-    required String? remoteId,
-    required String syncStatus,
-    required DateTime remoteLastModifiedAt,
-    required double lastSeenLatitude,
-    required double lastSeenLongitude,
-    required String name,
-    required String details,
-    required DateTime disappearanceDate,
-    required String? photoUrl,
-    required String? phone,
-    String? commentsJson,
-  }) async {
+  Future<void> upsertLostPetReportsFromRemoteBatch(List<LostPetReportRecord> batch) async {
+    if (batch.isEmpty) return;
     final SharedPreferences prefs = await _prefs;
     await _ensureDefaultUser(prefs);
-    final List<LostPetReportRecord> current = await getLostPetReports();
+    final List<LostPetReportRecord> current = (await getLostPetReports()).toList();
+    
+    int nextId = current.isEmpty
+        ? 1
+        : current.map((LostPetReportRecord r) => r.id).reduce((int a, int b) => a > b ? a : b) + 1;
 
-    LostPetReportRecord? existing;
-    for (final LostPetReportRecord report in current) {
-      if (report.localUuid == localUuid ||
-          (remoteId != null && report.remoteId == remoteId)) {
-        existing = report;
-        break;
+    for (final LostPetReportRecord incoming in batch) {
+      LostPetReportRecord? existing;
+      for (final LostPetReportRecord report in current) {
+        if (report.localUuid == incoming.localUuid || (incoming.remoteId != null && report.remoteId == incoming.remoteId)) {
+          existing = report;
+          break;
+        }
+      }
+
+      if (existing == null) {
+        current.add(LostPetReportRecord(
+          id: nextId++,
+          localUuid: incoming.localUuid,
+          remoteId: incoming.remoteId,
+          syncStatus: incoming.syncStatus,
+          lastModifiedAt: incoming.lastModifiedAt,
+          lastSeenLatitude: incoming.lastSeenLatitude,
+          lastSeenLongitude: incoming.lastSeenLongitude,
+          name: incoming.name,
+          details: incoming.details,
+          disappearanceDate: incoming.disappearanceDate,
+          photoUrl: incoming.photoUrl,
+          phone: incoming.phone,
+          comments: incoming.comments,
+          createdAt: incoming.createdAt,
+          updatedAt: incoming.updatedAt,
+          needsSync: false,
+        ));
+      } else {
+        if (existing.needsSync && existing.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
+          continue;
+        }
+        
+        final int index = current.indexOf(existing);
+        current[index] = LostPetReportRecord(
+            id: existing.id,
+            localUuid: incoming.localUuid,
+            remoteId: incoming.remoteId ?? existing.remoteId,
+            syncStatus: incoming.syncStatus,
+            lastModifiedAt: incoming.lastModifiedAt,
+            lastSeenLatitude: incoming.lastSeenLatitude,
+            lastSeenLongitude: incoming.lastSeenLongitude,
+            name: incoming.name,
+            details: incoming.details,
+            disappearanceDate: incoming.disappearanceDate,
+            photoUrl: _preferOfflineImageSource(
+              currentSource: existing.photoUrl,
+              remoteSource: incoming.photoUrl,
+            ),
+            phone: incoming.phone,
+            comments: incoming.comments,
+            createdAt: existing.createdAt,
+            updatedAt: DateTime.now(),
+            needsSync: false,
+        );
       }
     }
 
-    final int nextId = current.isEmpty
-        ? 1
-        : current
-                  .map((LostPetReportRecord report) => report.id)
-                  .reduce((int a, int b) => a > b ? a : b) +
-              1;
-
-    if (existing == null) {
-      final LostPetReportRecord inserted = LostPetReportRecord(
-        id: nextId,
-        localUuid: localUuid,
-        remoteId: remoteId,
-        syncStatus: syncStatus,
-        lastModifiedAt: remoteLastModifiedAt,
-        lastSeenLatitude: lastSeenLatitude,
-        lastSeenLongitude: lastSeenLongitude,
-        name: name,
-        details: details,
-        disappearanceDate: disappearanceDate,
-        photoUrl: photoUrl,
-        phone: phone,
-        comments: _decodeReportComments(commentsJson ?? '[]'),
-        createdAt: remoteLastModifiedAt,
-        updatedAt: remoteLastModifiedAt,
-        needsSync: false,
-      );
-
-      final List<Map<String, Object?>> encoded = <Map<String, Object?>>[
-        ...current.map((LostPetReportRecord report) => report.toMap()),
-        inserted.toMap(),
-      ];
-      await prefs.setString(_lostPetReportsKey, jsonEncode(encoded));
-      return;
-    }
-
-    if (existing.needsSync &&
-        existing.lastModifiedAt.isAfter(remoteLastModifiedAt)) {
-      return;
-    }
-
-    final List<Map<String, Object?>> encoded = current
-        .map((LostPetReportRecord report) {
-          if (report.id != existing!.id) {
-            return report.toMap();
-          }
-          return LostPetReportRecord(
-            id: report.id,
-            localUuid: localUuid,
-            remoteId: remoteId ?? report.remoteId,
-            syncStatus: syncStatus,
-            lastModifiedAt: remoteLastModifiedAt,
-            lastSeenLatitude: lastSeenLatitude,
-            lastSeenLongitude: lastSeenLongitude,
-            name: name,
-            details: details,
-            disappearanceDate: disappearanceDate,
-            photoUrl: _preferOfflineImageSource(
-              currentSource: report.photoUrl,
-              remoteSource: photoUrl,
-            ),
-            phone: phone,
-            comments: _resolveRemoteComments(
-              currentComments: report.comments,
-              commentsJson: commentsJson,
-            ),
-            createdAt: report.createdAt,
-            updatedAt: DateTime.now(),
-            needsSync: false,
-          ).toMap();
-        })
-        .toList(growable: false);
-
+    final List<Map<String, Object?>> encoded = current.map((LostPetReportRecord r) => r.toMap()).toList(growable: false);
     await prefs.setString(_lostPetReportsKey, jsonEncode(encoded));
   }
 
@@ -1471,102 +1341,73 @@ class LocalDatabaseManager {
     await prefs.setString(_foundPetReportsKey, jsonEncode(encoded));
   }
 
-  Future<void> upsertFoundPetReportFromRemote({
-    required String localUuid,
-    required String? remoteId,
-    required String syncStatus,
-    required DateTime remoteLastModifiedAt,
-    required double latitude,
-    required double longitude,
-    required String details,
-    required DateTime foundDate,
-    required String? photoUrl,
-    required String? phone,
-    String? commentsJson,
-  }) async {
+  Future<void> upsertFoundPetReportsFromRemoteBatch(List<FoundPetReportRecord> batch) async {
+    if (batch.isEmpty) return;
     final SharedPreferences prefs = await _prefs;
     await _ensureDefaultUser(prefs);
-    final List<FoundPetReportRecord> current = await getFoundPetReports();
+    final List<FoundPetReportRecord> current = (await getFoundPetReports()).toList();
+    
+    int nextId = current.isEmpty
+        ? 1
+        : current.map((FoundPetReportRecord r) => r.id).reduce((int a, int b) => a > b ? a : b) + 1;
 
-    FoundPetReportRecord? existing;
-    for (final FoundPetReportRecord report in current) {
-      if (report.localUuid == localUuid ||
-          (remoteId != null && report.remoteId == remoteId)) {
-        existing = report;
-        break;
+    for (final FoundPetReportRecord incoming in batch) {
+      FoundPetReportRecord? existing;
+      for (final FoundPetReportRecord report in current) {
+        if (report.localUuid == incoming.localUuid || (incoming.remoteId != null && report.remoteId == incoming.remoteId)) {
+          existing = report;
+          break;
+        }
+      }
+
+      if (existing == null) {
+        current.add(FoundPetReportRecord(
+          id: nextId++,
+          localUuid: incoming.localUuid,
+          remoteId: incoming.remoteId,
+          syncStatus: incoming.syncStatus,
+          lastModifiedAt: incoming.lastModifiedAt,
+          latitude: incoming.latitude,
+          longitude: incoming.longitude,
+          details: incoming.details,
+          foundDate: incoming.foundDate,
+          photoUrl: incoming.photoUrl,
+          phone: incoming.phone,
+          comments: incoming.comments,
+          createdAt: incoming.createdAt,
+          updatedAt: incoming.updatedAt,
+          needsSync: false,
+        ));
+      } else {
+        if (existing.needsSync && existing.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
+          continue;
+        }
+        
+        final int index = current.indexOf(existing);
+        current[index] = FoundPetReportRecord(
+            id: existing.id,
+            localUuid: incoming.localUuid,
+            remoteId: incoming.remoteId ?? existing.remoteId,
+            syncStatus: incoming.syncStatus,
+            lastModifiedAt: incoming.lastModifiedAt,
+            latitude: incoming.latitude,
+            longitude: incoming.longitude,
+            details: incoming.details,
+            foundDate: incoming.foundDate,
+            photoUrl: _preferOfflineImageSource(
+              currentSource: existing.photoUrl,
+              remoteSource: incoming.photoUrl,
+            ),
+            phone: incoming.phone,
+            comments: incoming.comments,
+            createdAt: existing.createdAt,
+            updatedAt: DateTime.now(),
+            needsSync: false,
+        );
       }
     }
 
-    final int nextId = current.isEmpty
-        ? 1
-        : current
-                  .map((FoundPetReportRecord report) => report.id)
-                  .reduce((int a, int b) => a > b ? a : b) +
-              1;
-
-    if (existing == null) {
-      final FoundPetReportRecord inserted = FoundPetReportRecord(
-        id: nextId,
-        localUuid: localUuid,
-        remoteId: remoteId,
-        syncStatus: syncStatus,
-        lastModifiedAt: remoteLastModifiedAt,
-        latitude: latitude,
-        longitude: longitude,
-        details: details,
-        foundDate: foundDate,
-        photoUrl: photoUrl,
-        phone: phone,
-        comments: _decodeReportComments(commentsJson ?? '[]'),
-        createdAt: remoteLastModifiedAt,
-        updatedAt: remoteLastModifiedAt,
-        needsSync: false,
-      );
-
-      final List<Map<String, Object?>> encoded = <Map<String, Object?>>[
-        ...current.map((FoundPetReportRecord report) => report.toMap()),
-        inserted.toMap(),
-      ];
-      await prefs.setString(_foundPetReportsKey, jsonEncode(encoded));
-      return;
-    }
-
-    if (existing.needsSync &&
-        existing.lastModifiedAt.isAfter(remoteLastModifiedAt)) {
-      return;
-    }
-
-    final List<Map<String, Object?>> encoded = current
-        .map((FoundPetReportRecord report) {
-          if (report.id != existing!.id) {
-            return report.toMap();
-          }
-          return FoundPetReportRecord(
-            id: report.id,
-            localUuid: localUuid,
-            remoteId: remoteId ?? report.remoteId,
-            syncStatus: syncStatus,
-            lastModifiedAt: remoteLastModifiedAt,
-            latitude: latitude,
-            longitude: longitude,
-            details: details,
-            foundDate: foundDate,
-            photoUrl: _preferOfflineImageSource(
-              currentSource: report.photoUrl,
-              remoteSource: photoUrl,
-            ),
-            phone: phone,
-            comments: _resolveRemoteComments(
-              currentComments: report.comments,
-              commentsJson: commentsJson,
-            ),
-            createdAt: report.createdAt,
-            updatedAt: DateTime.now(),
-            needsSync: false,
-          ).toMap();
-        })
-        .toList(growable: false);
-
+    final List<Map<String, Object?>> encoded = current.map((FoundPetReportRecord r) => r.toMap()).toList(growable: false);
     await prefs.setString(_foundPetReportsKey, jsonEncode(encoded));
   }
 
@@ -1726,132 +1567,79 @@ class LocalDatabaseManager {
     await prefs.setString(_genericReportsKey, jsonEncode(encoded));
   }
 
-  Future<void> upsertGenericReportFromRemote({
-    required String localUuid,
-    required String? remoteId,
-    required String syncStatus,
-    required DateTime remoteLastModifiedAt,
-    required double latitude,
-    required double longitude,
-    required String description,
-    required DateTime reportedDate,
-    required String riskLevelCode,
-    required int impactRadiusMeters,
-    required String? photoUrl,
-    String? commentsJson,
-  }) async {
+  Future<void> upsertGenericReportsFromRemoteBatch(List<GenericReportRecord> batch) async {
+    if (batch.isEmpty) return;
     final SharedPreferences prefs = await _prefs;
     await _ensureDefaultUser(prefs);
-    final List<GenericReportRecord> current = await getGenericReports();
+    final List<GenericReportRecord> current = (await getGenericReports()).toList();
+    
+    int nextId = current.isEmpty
+        ? 1
+        : current.map((GenericReportRecord r) => r.id).reduce((int a, int b) => a > b ? a : b) + 1;
 
-    GenericReportRecord? existing;
-    for (final GenericReportRecord report in current) {
-      if (report.localUuid == localUuid ||
-          (remoteId != null && report.remoteId == remoteId)) {
-        existing = report;
-        break;
+    for (final GenericReportRecord incoming in batch) {
+      GenericReportRecord? existing;
+      for (final GenericReportRecord report in current) {
+        if (report.localUuid == incoming.localUuid || (incoming.remoteId != null && report.remoteId == incoming.remoteId)) {
+          existing = report;
+          break;
+        }
+      }
+
+      if (existing == null) {
+        current.add(GenericReportRecord(
+          id: nextId++,
+          localUuid: incoming.localUuid,
+          remoteId: incoming.remoteId,
+          syncStatus: incoming.syncStatus,
+          lastModifiedAt: incoming.lastModifiedAt,
+          latitude: incoming.latitude,
+          longitude: incoming.longitude,
+          description: incoming.description,
+          reportedDate: incoming.reportedDate,
+          riskLevelCode: incoming.riskLevelCode,
+          impactRadiusMeters: incoming.impactRadiusMeters,
+          photoUrl: incoming.photoUrl,
+          comments: incoming.comments,
+          createdAt: incoming.createdAt,
+          updatedAt: incoming.updatedAt,
+          needsSync: false,
+        ));
+      } else {
+        if (existing.needsSync && existing.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
+          continue;
+        }
+        
+        final int index = current.indexOf(existing);
+        current[index] = GenericReportRecord(
+            id: existing.id,
+            localUuid: incoming.localUuid,
+            remoteId: incoming.remoteId ?? existing.remoteId,
+            syncStatus: incoming.syncStatus,
+            lastModifiedAt: incoming.lastModifiedAt,
+            latitude: incoming.latitude,
+            longitude: incoming.longitude,
+            description: incoming.description,
+            reportedDate: incoming.reportedDate,
+            riskLevelCode: incoming.riskLevelCode,
+            impactRadiusMeters: incoming.impactRadiusMeters,
+            photoUrl: _preferOfflineImageSource(
+              currentSource: existing.photoUrl,
+              remoteSource: incoming.photoUrl,
+            ),
+            comments: incoming.comments,
+            createdAt: existing.createdAt,
+            updatedAt: DateTime.now(),
+            needsSync: false,
+        );
       }
     }
 
-    final int nextId = current.isEmpty
-        ? 1
-        : current
-                  .map((GenericReportRecord report) => report.id)
-                  .reduce((int a, int b) => a > b ? a : b) +
-              1;
-
-    if (existing == null) {
-      final GenericReportRecord inserted = GenericReportRecord(
-        id: nextId,
-        localUuid: localUuid,
-        remoteId: remoteId,
-        syncStatus: syncStatus,
-        lastModifiedAt: remoteLastModifiedAt,
-        latitude: latitude,
-        longitude: longitude,
-        description: description,
-        reportedDate: reportedDate,
-        riskLevelCode: riskLevelCode,
-        impactRadiusMeters: impactRadiusMeters,
-        photoUrl: photoUrl,
-        comments: _decodeReportComments(commentsJson ?? '[]'),
-        createdAt: remoteLastModifiedAt,
-        updatedAt: remoteLastModifiedAt,
-        needsSync: false,
-      );
-
-      final List<Map<String, Object?>> encoded = <Map<String, Object?>>[
-        ...current.map((GenericReportRecord report) => report.toMap()),
-        inserted.toMap(),
-      ];
-      await prefs.setString(_genericReportsKey, jsonEncode(encoded));
-      return;
-    }
-
-    if (existing.needsSync &&
-        existing.lastModifiedAt.isAfter(remoteLastModifiedAt)) {
-      return;
-    }
-
-    final List<Map<String, Object?>> encoded = current
-        .map((GenericReportRecord report) {
-          if (report.id != existing!.id) {
-            return report.toMap();
-          }
-          return GenericReportRecord(
-            id: report.id,
-            localUuid: localUuid,
-            remoteId: remoteId ?? report.remoteId,
-            syncStatus: syncStatus,
-            lastModifiedAt: remoteLastModifiedAt,
-            latitude: latitude,
-            longitude: longitude,
-            description: description,
-            reportedDate: reportedDate,
-            riskLevelCode: riskLevelCode,
-            impactRadiusMeters: impactRadiusMeters,
-            photoUrl: _preferOfflineImageSource(
-              currentSource: report.photoUrl,
-              remoteSource: photoUrl,
-            ),
-            comments: _resolveRemoteComments(
-              currentComments: report.comments,
-              commentsJson: commentsJson,
-            ),
-            createdAt: report.createdAt,
-            updatedAt: DateTime.now(),
-            needsSync: false,
-          ).toMap();
-        })
-        .toList(growable: false);
-
+    final List<Map<String, Object?>> encoded = current.map((GenericReportRecord r) => r.toMap()).toList(growable: false);
     await prefs.setString(_genericReportsKey, jsonEncode(encoded));
   }
 
-  List<ReportCommentRecord> _decodeReportComments(String commentsJson) {
-    try {
-      final List<dynamic> decoded = jsonDecode(commentsJson) as List<dynamic>;
-      return decoded
-          .map(
-            (dynamic row) =>
-                ReportCommentRecord.fromMap((row as Map<String, dynamic>)),
-          )
-          .toList(growable: false);
-    } catch (_) {
-      return const <ReportCommentRecord>[];
-    }
-  }
 
-  List<ReportCommentRecord> _resolveRemoteComments({
-    required List<ReportCommentRecord> currentComments,
-    required String? commentsJson,
-  }) {
-    if (commentsJson == null || commentsJson.isEmpty) {
-      return currentComments;
-    }
-
-    return _decodeReportComments(commentsJson);
-  }
 
   Future<void> _appendCommentToStoredReports<T>({
     required String storageKey,

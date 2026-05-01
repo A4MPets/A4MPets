@@ -480,16 +480,17 @@ extension _MapPageTripState on _MapPageState {
       return;
     }
 
-    final bool returningToTripRouteSelection =
+    final bool returningToTripStartOrSelection =
         _panelStack.length > 1 &&
-        _panelStack[_panelStack.length - 2].isTripRouteSelectionPanel;
+        (_panelStack[_panelStack.length - 2].isTripRouteSelectionPanel ||
+         _panelStack[_panelStack.length - 2].isTripStartPanel);
 
     _updatePageState(() {
       _clearDraftRouteVisuals();
       _panelStack.removeLast();
     });
 
-    if (returningToTripRouteSelection) {
+    if (returningToTripStartOrSelection) {
       await ref.read(routesControllerProvider.notifier).reload();
       if (!mounted) {
         return;

@@ -836,131 +836,141 @@ class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
     final Color borderColor = AppPalette.border(widget.isDarkMode);
     final Color textColor = AppPalette.textPrimary(widget.isDarkMode);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _PetPhotoEditor(
-          photoPath: _storedPhotoPath,
-          borderColor: borderColor,
-          isBusy: _isPickingPhoto,
-          onEditPressed: _pickPhoto,
-        ),
-        const SizedBox(height: 16),
-        ValueListenableBuilder<TextEditingValue>(
-          valueListenable: _nameController,
-          builder:
-              (BuildContext context, TextEditingValue value, Widget? child) {
-                final String previewName = value.text.trim().isEmpty
-                    ? widget.pet.name
-                    : value.text.trim();
-                return Text(
-                  previewName,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
+    final double bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return SafeArea(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _PetPhotoEditor(
+                photoPath: _storedPhotoPath,
+                borderColor: borderColor,
+                isBusy: _isPickingPhoto,
+                onEditPressed: _pickPhoto,
+              ),
+              const SizedBox(height: 16),
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _nameController,
+                builder:
+                    (BuildContext context, TextEditingValue value, Widget? child) {
+                      final String previewName = value.text.trim().isEmpty
+                          ? widget.pet.name
+                          : value.text.trim();
+                      return Text(
+                        previewName,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: textColor,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      );
+                    },
+              ),
+              const SizedBox(height: 24),
+              _PetNameField(
+                isDarkMode: widget.isDarkMode,
+                controller: _nameController,
+                onSubmitted: (_) {
+                  if (!_isSaving && !_isDeleting) {
+                    _updatePet();
+                  }
+                },
+              ),
+              if (_errorText != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  _errorText!,
+                  style: const TextStyle(
+                    color: AppPalette.dangerRed,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
                   ),
-                );
-              },
-        ),
-        const Spacer(),
-        _PetNameField(
-          isDarkMode: widget.isDarkMode,
-          controller: _nameController,
-          onSubmitted: (_) {
-            if (!_isSaving && !_isDeleting) {
-              _updatePet();
-            }
-          },
-        ),
-        if (_errorText != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            _errorText!,
-            style: const TextStyle(
-              color: AppPalette.dangerRed,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: _isDeleting || _isSaving
+                            ? null
+                            : _showDeleteConfirmation,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppPalette.dangerRed,
+                          foregroundColor: AppPalette.white,
+                          elevation: 0,
+                          disabledBackgroundColor: AppPalette.dangerRed.withValues(
+                            alpha: 0.6,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: _isDeleting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppPalette.white,
+                                ),
+                              )
+                            : const Text(
+                                'Eliminar',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: SizedBox(
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: _isSaving || _isDeleting ? null : _updatePet,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppPalette.primaryBlue,
+                          foregroundColor: AppPalette.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: _isSaving
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppPalette.white,
+                                ),
+                              )
+                            : const Text(
+                                'Guardar',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: SizedBox(
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: _isDeleting || _isSaving
-                      ? null
-                      : _showDeleteConfirmation,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppPalette.dangerRed,
-                    foregroundColor: AppPalette.white,
-                    elevation: 0,
-                    disabledBackgroundColor: AppPalette.dangerRed.withValues(
-                      alpha: 0.6,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: _isDeleting
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppPalette.white,
-                          ),
-                        )
-                      : const Text(
-                          'Eliminar',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: SizedBox(
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: _isSaving || _isDeleting ? null : _updatePet,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppPalette.primaryBlue,
-                    foregroundColor: AppPalette.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: _isSaving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppPalette.white,
-                          ),
-                        )
-                      : const Text(
-                          'Guardar',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                ),
-              ),
-            ),
-          ],
         ),
-      ],
+      ),
     );
   }
 }

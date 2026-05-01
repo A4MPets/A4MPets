@@ -8,6 +8,7 @@ import '../models/hazard_report_record.dart';
 import '../models/lost_pet_report_record.dart';
 import '../models/found_pet_report_record.dart';
 import '../models/generic_report_record.dart';
+import '../models/report_comment_record.dart';
 import '../models/local_user_profile.dart';
 import '../models/pet_record.dart';
 import '../models/route_record.dart';
@@ -37,7 +38,7 @@ class UserDataSyncCoordinator {
   Timer? _autoSyncTimer;
 
   void _log(String message) {
-    return;
+    // return;
     debugPrint('[HazardSync] $message');
   }
 
@@ -267,15 +268,25 @@ class UserDataSyncCoordinator {
         .whereType<String>()
         .toSet();
 
+    final Map<String, String> successfulMappings = <String, String>{};
+    for (final dynamic item in details) {
+      final Map<String, dynamic> row = item as Map<String, dynamic>;
+      final String? locId = row['local_id']?.toString();
+      final String? remId = row['remote_id']?.toString();
+      if (locId != null && remId != null && row['status'] != 'error') {
+        successfulMappings[locId] = remId;
+      }
+    }
+
     for (final HazardReportRecord hazard in transferableHazards) {
-      if (failedLocalIds.contains(hazard.localUuid)) {
+      if (failedLocalIds.contains(hazard.localUuid) && !successfulMappings.containsKey(hazard.localUuid)) {
         _log('push: hazard en conflicto/error, local_id=${hazard.localUuid}');
         continue;
       }
 
       await _databaseManager.markHazardAsSynced(
         localUuid: hazard.localUuid,
-        remoteId: hazard.remoteId,
+        remoteId: successfulMappings[hazard.localUuid] ?? hazard.remoteId,
         syncStatus: 'synced',
         lastModifiedAt: hazard.lastModifiedAt,
       );
@@ -313,6 +324,7 @@ class UserDataSyncCoordinator {
 
       _log('pull: page=$page recibió ${data.length} hazards remotos.');
 
+      final List<HazardReportRecord> batch = <HazardReportRecord>[];
       for (final dynamic item in data) {
         final Map<String, dynamic> hazard = item as Map<String, dynamic>;
         final String localUuid =
@@ -326,50 +338,36 @@ class UserDataSyncCoordinator {
             localUuid: localUuid,
             remoteId: remoteId,
           );
-          //_log(
-          //'pull: hazard archivado removido local_uuid=$localUuid remote_id=$remoteId',
-          //);
           continue;
         }
 
-        await _databaseManager.upsertHazardFromRemote(
-          localUuid: localUuid,
-          remoteId: remoteId,
-          syncStatus: syncStatus,
-          remoteLastModifiedAt: _parseBackendDateTime(
-            hazard['last_modified_at'],
-          ),
-          incidentLatitude:
-              (hazard['incident_latitude'] as num?)?.toDouble() ?? 0,
-          incidentLongitude:
-              (hazard['incident_longitude'] as num?)?.toDouble() ?? 0,
-          impactRadiusMeters:
-              (hazard['impact_radius_meters'] as num?)?.round() ?? 100,
-          categoryCode: _normalizeCategoryCode(
-            hazard['category_code']?.toString(),
-          ),
-          riskLevelCode: _normalizeRiskLevelCode(
-            hazard['risk_level_code']?.toString(),
-          ),
-          narrativeDescription:
-              hazard['narrative_description']?.toString() ??
-              hazard['description']?.toString() ??
-              '',
-          estimatedDurationCode: _normalizeDurationCode(
-            hazard['estimated_duration_code']?.toString(),
-          ),
-          reportedAt: _parseBackendDateTime(hazard['reported_at']),
-          evidencePhotoUrl: hazard['evidence_photo_url']?.toString(),
-          reportedByUsername:
-              hazard['reported_by_username']?.toString() ?? 'Anónimo',
-          commentsJson:
-              hazard['comments_json']?.toString() ??
-              jsonEncode(hazard['comments'] ?? <dynamic>[]),
+        batch.add(
+          HazardReportRecord(
+            id: 0,
+            localUuid: localUuid,
+            remoteId: remoteId,
+            syncStatus: syncStatus,
+            lastModifiedAt: _parseBackendDateTime(hazard['last_modified_at']),
+            incidentLatitude: (hazard['incident_latitude'] as num?)?.toDouble() ?? 0,
+            incidentLongitude: (hazard['incident_longitude'] as num?)?.toDouble() ?? 0,
+            impactRadiusMeters: (hazard['impact_radius_meters'] as num?)?.round() ?? 100,
+            categoryCode: _normalizeCategoryCode(hazard['category_code']?.toString()),
+            riskLevelCode: _normalizeRiskLevelCode(hazard['risk_level_code']?.toString()),
+            narrativeDescription: hazard['narrative_description']?.toString() ?? hazard['description']?.toString() ?? '',
+            estimatedDurationCode: _normalizeDurationCode(hazard['estimated_duration_code']?.toString()),
+            reportedAt: _parseBackendDateTime(hazard['reported_at']),
+            evidencePhotoUrl: hazard['evidence_photo_url']?.toString(),
+            reportedByUsername: hazard['reported_by_username']?.toString() ?? 'Anónimo',
+            comments: (jsonDecode(hazard['comments_json']?.toString() ?? jsonEncode(hazard['comments'] ?? <dynamic>[])) as List<dynamic>).map((c) => HazardCommentRecord.fromMap(c as Map<String, dynamic>)).toList(),
+            createdAt: _parseBackendDateTime(hazard['last_modified_at']),
+            updatedAt: _parseBackendDateTime(hazard['last_modified_at']),
+            needsSync: false,
+          )
         );
+      }
 
-        //_log(
-        //  'pull: upsert local_uuid=$localUuid remote_id=$remoteId status=$syncStatus',
-        //);
+      if (batch.isNotEmpty) {
+        await _databaseManager.upsertHazardsFromRemoteBatch(batch);
       }
 
       final Map<String, dynamic> pagination =
@@ -466,13 +464,23 @@ class UserDataSyncCoordinator {
         .whereType<String>()
         .toSet();
 
+    final Map<String, String> successfulMappings = <String, String>{};
+    for (final dynamic item in details) {
+      final Map<String, dynamic> row = item as Map<String, dynamic>;
+      final String? locId = row['local_id']?.toString();
+      final String? remId = row['remote_id']?.toString();
+      if (locId != null && remId != null && row['status'] != 'error') {
+        successfulMappings[locId] = remId;
+      }
+    }
+
     for (final LostPetReportRecord report in transferable) {
-      if (failedLocalIds.contains(report.localUuid)) {
+      if (failedLocalIds.contains(report.localUuid) && !successfulMappings.containsKey(report.localUuid)) {
         continue;
       }
       await _databaseManager.markLostPetReportAsSynced(
         localUuid: report.localUuid,
-        remoteId: report.remoteId,
+        remoteId: successfulMappings[report.localUuid] ?? report.remoteId,
         syncStatus: 'synced',
         lastModifiedAt: report.lastModifiedAt,
       );
@@ -497,34 +505,36 @@ class UserDataSyncCoordinator {
       final List<dynamic> data =
           (payload['data'] as List<dynamic>? ?? <dynamic>[]);
 
+      final List<LostPetReportRecord> batch = <LostPetReportRecord>[];
       for (final dynamic item in data) {
         final Map<String, dynamic> report = item as Map<String, dynamic>;
-        final String localUuid =
-            report['local_id']?.toString() ?? 'remote-${report['id']}';
-        final String? remoteId =
-            report['remote_id']?.toString() ?? report['id']?.toString();
-        await _databaseManager.upsertLostPetReportFromRemote(
-          localUuid: localUuid,
-          remoteId: remoteId,
-          syncStatus: report['sync_status']?.toString() ?? 'synced',
-          remoteLastModifiedAt: _parseBackendDateTime(
-            report['last_modified_at'],
-          ),
-          lastSeenLatitude:
-              (report['last_seen_latitude'] as num?)?.toDouble() ?? 0,
-          lastSeenLongitude:
-              (report['last_seen_longitude'] as num?)?.toDouble() ?? 0,
-          name: report['name']?.toString() ?? '',
-          details: report['details']?.toString() ?? '',
-          disappearanceDate: _parseBackendDateTime(
-            report['disappearance_date'],
-          ),
-          photoUrl: report['photo_url']?.toString(),
-          phone: report['phone']?.toString(),
-          commentsJson:
-              report['comments_json']?.toString() ??
-              jsonEncode(report['comments'] ?? <dynamic>[]),
+        final String localUuid = report['local_id']?.toString() ?? 'remote-${report['id']}';
+        final String? remoteId = report['remote_id']?.toString() ?? report['id']?.toString();
+        
+        batch.add(
+          LostPetReportRecord(
+            id: 0,
+            localUuid: localUuid,
+            remoteId: remoteId,
+            syncStatus: report['sync_status']?.toString() ?? 'synced',
+            lastModifiedAt: _parseBackendDateTime(report['last_modified_at']),
+            lastSeenLatitude: (report['last_seen_latitude'] as num?)?.toDouble() ?? 0,
+            lastSeenLongitude: (report['last_seen_longitude'] as num?)?.toDouble() ?? 0,
+            name: report['name']?.toString() ?? '',
+            details: report['details']?.toString() ?? '',
+            disappearanceDate: _parseBackendDateTime(report['disappearance_date']),
+            photoUrl: report['photo_url']?.toString(),
+            phone: report['phone']?.toString(),
+            comments: (jsonDecode(report['comments_json']?.toString() ?? jsonEncode(report['comments'] ?? <dynamic>[])) as List<dynamic>).map((c) => ReportCommentRecord.fromMap(c as Map<String, dynamic>)).toList(),
+            createdAt: _parseBackendDateTime(report['last_modified_at']),
+            updatedAt: _parseBackendDateTime(report['last_modified_at']),
+            needsSync: false,
+          )
         );
+      }
+      
+      if (batch.isNotEmpty) {
+        await _databaseManager.upsertLostPetReportsFromRemoteBatch(batch);
       }
 
       final Map<String, dynamic> pagination =
@@ -617,13 +627,23 @@ class UserDataSyncCoordinator {
         .whereType<String>()
         .toSet();
 
+    final Map<String, String> successfulMappings = <String, String>{};
+    for (final dynamic item in details) {
+      final Map<String, dynamic> row = item as Map<String, dynamic>;
+      final String? locId = row['local_id']?.toString();
+      final String? remId = row['remote_id']?.toString();
+      if (locId != null && remId != null && row['status'] != 'error') {
+        successfulMappings[locId] = remId;
+      }
+    }
+
     for (final FoundPetReportRecord report in transferable) {
-      if (failedLocalIds.contains(report.localUuid)) {
+      if (failedLocalIds.contains(report.localUuid) && !successfulMappings.containsKey(report.localUuid)) {
         continue;
       }
       await _databaseManager.markFoundPetReportAsSynced(
         localUuid: report.localUuid,
-        remoteId: report.remoteId,
+        remoteId: successfulMappings[report.localUuid] ?? report.remoteId,
         syncStatus: 'synced',
         lastModifiedAt: report.lastModifiedAt,
       );
@@ -648,29 +668,35 @@ class UserDataSyncCoordinator {
       final List<dynamic> data =
           (payload['data'] as List<dynamic>? ?? <dynamic>[]);
 
+      final List<FoundPetReportRecord> batch = <FoundPetReportRecord>[];
       for (final dynamic item in data) {
         final Map<String, dynamic> report = item as Map<String, dynamic>;
-        final String localUuid =
-            report['local_id']?.toString() ?? 'remote-${report['id']}';
-        final String? remoteId =
-            report['remote_id']?.toString() ?? report['id']?.toString();
-        await _databaseManager.upsertFoundPetReportFromRemote(
-          localUuid: localUuid,
-          remoteId: remoteId,
-          syncStatus: report['sync_status']?.toString() ?? 'synced',
-          remoteLastModifiedAt: _parseBackendDateTime(
-            report['last_modified_at'],
-          ),
-          latitude: (report['latitude'] as num?)?.toDouble() ?? 0,
-          longitude: (report['longitude'] as num?)?.toDouble() ?? 0,
-          details: report['details']?.toString() ?? '',
-          foundDate: _parseBackendDateTime(report['found_date']),
-          photoUrl: report['photo_url']?.toString(),
-          phone: report['phone']?.toString(),
-          commentsJson:
-              report['comments_json']?.toString() ??
-              jsonEncode(report['comments'] ?? <dynamic>[]),
+        final String localUuid = report['local_id']?.toString() ?? 'remote-${report['id']}';
+        final String? remoteId = report['remote_id']?.toString() ?? report['id']?.toString();
+        
+        batch.add(
+          FoundPetReportRecord(
+            id: 0,
+            localUuid: localUuid,
+            remoteId: remoteId,
+            syncStatus: report['sync_status']?.toString() ?? 'synced',
+            lastModifiedAt: _parseBackendDateTime(report['last_modified_at']),
+            latitude: (report['latitude'] as num?)?.toDouble() ?? 0,
+            longitude: (report['longitude'] as num?)?.toDouble() ?? 0,
+            details: report['details']?.toString() ?? '',
+            foundDate: _parseBackendDateTime(report['found_date']),
+            photoUrl: report['photo_url']?.toString(),
+            phone: report['phone']?.toString(),
+            comments: (jsonDecode(report['comments_json']?.toString() ?? jsonEncode(report['comments'] ?? <dynamic>[])) as List<dynamic>).map((c) => ReportCommentRecord.fromMap(c as Map<String, dynamic>)).toList(),
+            createdAt: _parseBackendDateTime(report['last_modified_at']),
+            updatedAt: _parseBackendDateTime(report['last_modified_at']),
+            needsSync: false,
+          )
         );
+      }
+      
+      if (batch.isNotEmpty) {
+        await _databaseManager.upsertFoundPetReportsFromRemoteBatch(batch);
       }
 
       final Map<String, dynamic> pagination =
@@ -764,13 +790,23 @@ class UserDataSyncCoordinator {
         .whereType<String>()
         .toSet();
 
+    final Map<String, String> successfulMappings = <String, String>{};
+    for (final dynamic item in details) {
+      final Map<String, dynamic> row = item as Map<String, dynamic>;
+      final String? locId = row['local_id']?.toString();
+      final String? remId = row['remote_id']?.toString();
+      if (locId != null && remId != null && row['status'] != 'error') {
+        successfulMappings[locId] = remId;
+      }
+    }
+
     for (final GenericReportRecord report in transferable) {
-      if (failedLocalIds.contains(report.localUuid)) {
+      if (failedLocalIds.contains(report.localUuid) && !successfulMappings.containsKey(report.localUuid)) {
         continue;
       }
       await _databaseManager.markGenericReportAsSynced(
         localUuid: report.localUuid,
-        remoteId: report.remoteId,
+        remoteId: successfulMappings[report.localUuid] ?? report.remoteId,
         syncStatus: 'synced',
         lastModifiedAt: report.lastModifiedAt,
       );
@@ -795,33 +831,36 @@ class UserDataSyncCoordinator {
       final List<dynamic> data =
           (payload['data'] as List<dynamic>? ?? <dynamic>[]);
 
+      final List<GenericReportRecord> batch = <GenericReportRecord>[];
       for (final dynamic item in data) {
         final Map<String, dynamic> report = item as Map<String, dynamic>;
-        final String localUuid =
-            report['local_id']?.toString() ?? 'remote-${report['id']}';
-        final String? remoteId =
-            report['remote_id']?.toString() ?? report['id']?.toString();
-        await _databaseManager.upsertGenericReportFromRemote(
-          localUuid: localUuid,
-          remoteId: remoteId,
-          syncStatus: report['sync_status']?.toString() ?? 'synced',
-          remoteLastModifiedAt: _parseBackendDateTime(
-            report['last_modified_at'],
-          ),
-          latitude: (report['latitude'] as num?)?.toDouble() ?? 0,
-          longitude: (report['longitude'] as num?)?.toDouble() ?? 0,
-          description: report['description']?.toString() ?? '',
-          reportedDate: _parseBackendDateTime(report['reported_date']),
-          riskLevelCode: _normalizeRiskLevelCode(
-            report['risk_level_code']?.toString(),
-          ),
-          impactRadiusMeters:
-              (report['impact_radius_meters'] as num?)?.round() ?? 0,
-          photoUrl: report['photo_url']?.toString(),
-          commentsJson:
-              report['comments_json']?.toString() ??
-              jsonEncode(report['comments'] ?? <dynamic>[]),
+        final String localUuid = report['local_id']?.toString() ?? 'remote-${report['id']}';
+        final String? remoteId = report['remote_id']?.toString() ?? report['id']?.toString();
+        
+        batch.add(
+          GenericReportRecord(
+            id: 0,
+            localUuid: localUuid,
+            remoteId: remoteId,
+            syncStatus: report['sync_status']?.toString() ?? 'synced',
+            lastModifiedAt: _parseBackendDateTime(report['last_modified_at']),
+            latitude: (report['latitude'] as num?)?.toDouble() ?? 0,
+            longitude: (report['longitude'] as num?)?.toDouble() ?? 0,
+            description: report['description']?.toString() ?? '',
+            reportedDate: _parseBackendDateTime(report['reported_date']),
+            riskLevelCode: _normalizeRiskLevelCode(report['risk_level_code']?.toString()),
+            impactRadiusMeters: (report['impact_radius_meters'] as num?)?.round() ?? 0,
+            photoUrl: report['photo_url']?.toString(),
+            comments: (jsonDecode(report['comments_json']?.toString() ?? jsonEncode(report['comments'] ?? <dynamic>[])) as List<dynamic>).map((c) => ReportCommentRecord.fromMap(c as Map<String, dynamic>)).toList(),
+            createdAt: _parseBackendDateTime(report['last_modified_at']),
+            updatedAt: _parseBackendDateTime(report['last_modified_at']),
+            needsSync: false,
+          )
         );
+      }
+      
+      if (batch.isNotEmpty) {
+        await _databaseManager.upsertGenericReportsFromRemoteBatch(batch);
       }
 
       final Map<String, dynamic> pagination =
@@ -912,20 +951,33 @@ class UserDataSyncCoordinator {
     final List<dynamic> details =
         (syncResults['details'] as List<dynamic>?) ?? <dynamic>[];
 
-    final Map<String, String> remoteIdMap = <String, String>{};
+    final Set<String> failedLocalIds = details
+        .map(
+          (dynamic item) =>
+              (item as Map<String, dynamic>)['local_id']?.toString(),
+        )
+        .whereType<String>()
+        .toSet();
+
+    final Map<String, String> successfulMappings = <String, String>{};
     for (final dynamic item in details) {
-      final Map<String, dynamic> detail = item as Map<String, dynamic>;
-      final String? locId = detail['local_id']?.toString();
-      final String? remId = detail['remote_id']?.toString();
-      if (locId != null && remId != null) {
-        remoteIdMap[locId] = remId;
+      final Map<String, dynamic> row = item as Map<String, dynamic>;
+      final String? locId = row['local_id']?.toString();
+      final String? remId = row['remote_id']?.toString();
+      if (locId != null && remId != null && row['status'] != 'error') {
+        successfulMappings[locId] = remId;
       }
     }
 
     for (final PetRecord pet in transferablePets) {
       final String pseudoLocalId =
           'pt_${pet.id}_${pet.createdAt.millisecondsSinceEpoch}';
-      final String? newlyAssignedRemoteId = remoteIdMap[pseudoLocalId];
+          
+      if (failedLocalIds.contains(pseudoLocalId) && !successfulMappings.containsKey(pseudoLocalId)) {
+        continue;
+      }
+      
+      final String? newlyAssignedRemoteId = successfulMappings[pseudoLocalId];
       final String? finalRemoteId = pet.remoteId ?? newlyAssignedRemoteId;
 
       await _databaseManager.markPetAsSynced(
@@ -989,20 +1041,33 @@ class UserDataSyncCoordinator {
     final List<dynamic> details =
         (syncResults['details'] as List<dynamic>?) ?? <dynamic>[];
 
-    final Map<String, String> remoteIdMap = <String, String>{};
+    final Set<String> failedLocalIds = details
+        .map(
+          (dynamic item) =>
+              (item as Map<String, dynamic>)['local_id']?.toString(),
+        )
+        .whereType<String>()
+        .toSet();
+
+    final Map<String, String> successfulMappings = <String, String>{};
     for (final dynamic item in details) {
-      final Map<String, dynamic> detail = item as Map<String, dynamic>;
-      final String? locId = detail['local_id']?.toString();
-      final String? remId = detail['remote_id']?.toString();
-      if (locId != null && remId != null) {
-        remoteIdMap[locId] = remId;
+      final Map<String, dynamic> row = item as Map<String, dynamic>;
+      final String? locId = row['local_id']?.toString();
+      final String? remId = row['remote_id']?.toString();
+      if (locId != null && remId != null && row['status'] != 'error') {
+        successfulMappings[locId] = remId;
       }
     }
 
     for (final RouteRecord route in pending) {
       final String pseudoLocalId =
           'rt_${route.id}_${route.createdAt.millisecondsSinceEpoch}';
-      final String? newlyAssignedRemoteId = remoteIdMap[pseudoLocalId];
+          
+      if (failedLocalIds.contains(pseudoLocalId) && !successfulMappings.containsKey(pseudoLocalId)) {
+        continue;
+      }
+      
+      final String? newlyAssignedRemoteId = successfulMappings[pseudoLocalId];
       final String? finalRemoteId = route.remoteId ?? newlyAssignedRemoteId;
 
       await _databaseManager.markRouteAsSynced(
@@ -1045,16 +1110,39 @@ class UserDataSyncCoordinator {
       final List<dynamic> data =
           (payload['data'] as List<dynamic>? ?? <dynamic>[]);
 
+      final List<PetRecord> batch = <PetRecord>[];
       for (final dynamic item in data) {
         final Map<String, dynamic> pet = item as Map<String, dynamic>;
-        await _databaseManager.upsertPetFromRemote(
-          localIdString: pet['local_id']?.toString() ?? '',
-          remoteId: pet['remote_id']?.toString() ?? pet['id']?.toString(),
-          syncStatus: pet['sync_status']?.toString() ?? 'synced',
-          remoteLastModifiedAt: _parseBackendDateTime(pet['last_modified_at']),
-          name: pet['name']?.toString() ?? '',
-          photoPath: pet['photo_path']?.toString(),
+        final String localIdString = pet['local_id']?.toString() ?? '';
+        final String? remoteId = pet['remote_id']?.toString() ?? pet['id']?.toString();
+        
+        int fakeId = 0;
+        int fakeCreatedAtMs = DateTime.now().millisecondsSinceEpoch;
+        if (localIdString.startsWith('pt_')) {
+           final parts = localIdString.split('_');
+           if (parts.length >= 3) {
+             fakeId = int.tryParse(parts[1]) ?? fakeId;
+             fakeCreatedAtMs = int.tryParse(parts[2]) ?? fakeCreatedAtMs;
+           }
+        }
+        
+        batch.add(
+          PetRecord(
+            id: fakeId,
+            remoteId: remoteId,
+            name: pet['name']?.toString() ?? '',
+            photoPath: pet['photo_path']?.toString(),
+            syncStatus: pet['sync_status']?.toString() ?? 'synced',
+            lastModifiedAt: _parseBackendDateTime(pet['last_modified_at']),
+            createdAt: DateTime.fromMillisecondsSinceEpoch(fakeCreatedAtMs),
+            updatedAt: _parseBackendDateTime(pet['last_modified_at']),
+            needsSync: false,
+          )
         );
+      }
+      
+      if (batch.isNotEmpty) {
+        await _databaseManager.upsertPetsFromRemoteBatch(batch);
       }
 
       final Map<String, dynamic> pagination =
@@ -1102,6 +1190,7 @@ class UserDataSyncCoordinator {
       final List<dynamic> data =
           (payload['data'] as List<dynamic>? ?? <dynamic>[]);
 
+      final List<RouteRecord> batch = <RouteRecord>[];
       for (final dynamic item in data) {
         final Map<String, dynamic> route = item as Map<String, dynamic>;
         final String pointsJson = route['points_json']?.toString() ?? '[]';
@@ -1113,16 +1202,38 @@ class UserDataSyncCoordinator {
             )
             .toList(growable: false);
 
-        await _databaseManager.upsertRouteFromRemote(
-          localIdString: route['local_id']?.toString() ?? '',
-          remoteId: route['remote_id']?.toString() ?? route['id']?.toString(),
-          syncStatus: route['sync_status']?.toString() ?? 'synced',
-          remoteLastModifiedAt: _parseBackendDateTime(
-            route['last_modified_at'],
-          ),
-          name: route['name']?.toString() ?? '',
-          points: points,
+        final String localIdString = route['local_id']?.toString() ?? '';
+        final String? remoteId = route['remote_id']?.toString() ?? route['id']?.toString();
+        
+        int fakeId = 0;
+        int fakeCreatedAtMs = DateTime.now().millisecondsSinceEpoch;
+        if (localIdString.startsWith('rt_')) {
+           final parts = localIdString.split('_');
+           if (parts.length >= 3) {
+             fakeId = int.tryParse(parts[1]) ?? fakeId;
+             fakeCreatedAtMs = int.tryParse(parts[2]) ?? fakeCreatedAtMs;
+           }
+        } else {
+           fakeId = int.tryParse(localIdString) ?? fakeId;
+        }
+
+        batch.add(
+          RouteRecord(
+            id: fakeId,
+            remoteId: remoteId,
+            name: route['name']?.toString() ?? '',
+            points: points,
+            syncStatus: route['sync_status']?.toString() ?? 'synced',
+            lastModifiedAt: _parseBackendDateTime(route['last_modified_at']),
+            createdAt: DateTime.fromMillisecondsSinceEpoch(fakeCreatedAtMs),
+            updatedAt: _parseBackendDateTime(route['last_modified_at']),
+            needsSync: false,
+          )
         );
+      }
+      
+      if (batch.isNotEmpty) {
+        await _databaseManager.upsertRoutesFromRemoteBatch(batch);
       }
 
       final Map<String, dynamic> pagination =
