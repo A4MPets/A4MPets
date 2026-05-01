@@ -1,16 +1,14 @@
-// ignore_for_file: invalid_use_of_protected_member
-
 part of 'map_page.dart';
 
 extension _MapPagePanelsState on _MapPageState {
   void _pushPanel(_PanelRoute route) {
-    setState(() {
+    _updatePageState(() {
       _panelStack.add(route);
     });
   }
 
   void _replaceTopPanel(_PanelRoute route) {
-    setState(() {
+    _updatePageState(() {
       if (_panelStack.isNotEmpty) {
         _panelStack.removeLast();
       }
@@ -30,7 +28,7 @@ extension _MapPagePanelsState on _MapPageState {
         _panelStack[_panelStack.length - 2].isTripRouteSelectionPanel;
 
     if (currentPanel.isTripStartPanel) {
-      setState(() {
+      _updatePageState(() {
         _clearTripSetupState();
         _isTripStartPanelMinimized = false;
         _panelStack.removeWhere(
@@ -61,7 +59,7 @@ extension _MapPagePanelsState on _MapPageState {
         return;
       }
 
-      setState(() {
+      _updatePageState(() {
         _clearDraftRouteVisuals();
         _panelStack.removeLast();
       });
@@ -71,7 +69,7 @@ extension _MapPagePanelsState on _MapPageState {
       return;
     }
 
-    setState(() {
+    _updatePageState(() {
       if (currentPanel.isAddRoutePanel) {
         _clearDraftRouteVisuals();
       }
@@ -83,12 +81,35 @@ extension _MapPagePanelsState on _MapPageState {
       }
       if (currentPanel.isReportHazardPanel) {
         _isSelectingHazardLocationOnMap = false;
+        _activeReportSelectionContext = null;
         _manualHazardLocation = null;
         _hazardDraftPreview = null;
         _isReportHazardPanelMinimized = false;
       }
+      if (currentPanel.isLostPetReportPanel) {
+        _activeReportSelectionContext = null;
+        _manualLostPetLocation = null;
+      }
+      if (currentPanel.isFoundPetReportPanel) {
+        _activeReportSelectionContext = null;
+        _manualFoundPetLocation = null;
+      }
+      if (currentPanel.isGenericReportPanel) {
+        _activeReportSelectionContext = null;
+        _manualGenericReportLocation = null;
+        _genericReportDraftPreview = null;
+      }
       if (currentPanel.isHazardDetailsPanel) {
         _selectedHazard = null;
+      }
+      if (currentPanel.isLostPetDetailsPanel) {
+        _selectedLostPetReport = null;
+      }
+      if (currentPanel.isFoundPetDetailsPanel) {
+        _selectedFoundPetReport = null;
+      }
+      if (currentPanel.isGenericReportDetailsPanel) {
+        _selectedGenericReport = null;
       }
       _panelStack.removeLast();
     });
@@ -201,15 +222,32 @@ extension _MapPagePanelsState on _MapPageState {
     }
 
     if (panel.isHazardDetailsPanel ||
+        panel.isLostPetDetailsPanel ||
+        panel.isFoundPetDetailsPanel ||
+        panel.isGenericReportDetailsPanel ||
         panel.isHazardCommentsPanel ||
         panel.isHazardSettingsPanel) {
       final AsyncValue<List<HazardReportRecord>> hazardsValue = ref.watch(
         hazardReportsControllerProvider,
       );
-      loading = loading || hazardsValue.isLoading;
+      final AsyncValue<List<LostPetReportRecord>> lostPetReportsValue = ref
+          .watch(lostPetReportsControllerProvider);
+      final AsyncValue<List<FoundPetReportRecord>> foundPetReportsValue = ref
+          .watch(foundPetReportsControllerProvider);
+      final AsyncValue<List<GenericReportRecord>> genericReportsValue = ref
+          .watch(genericReportsControllerProvider);
+      loading =
+          loading ||
+          hazardsValue.isLoading ||
+          lostPetReportsValue.isLoading ||
+          foundPetReportsValue.isLoading ||
+          genericReportsValue.isLoading;
     }
 
-    if (panel.isReportHazardPanel) {
+    if (panel.isReportHazardPanel ||
+        panel.isLostPetReportPanel ||
+        panel.isFoundPetReportPanel ||
+        panel.isGenericReportPanel) {
       loading = loading || _isUserLocationLoading;
     }
 

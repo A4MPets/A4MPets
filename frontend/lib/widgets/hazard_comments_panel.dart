@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/found_pet_report_record.dart';
+import '../models/generic_report_record.dart';
 import '../models/hazard_report_record.dart';
 import '../models/local_user_profile.dart';
+import '../models/lost_pet_report_record.dart';
+import '../models/report_comment_record.dart';
 import '../providers/local_data_providers.dart';
 import '../theme/app_palette.dart';
 import 'shared/local_image_widget.dart';
+import 'shared/panel_scroll_view.dart';
 
-class HazardCommentsPanelContent extends ConsumerStatefulWidget {
+enum ReportCommentSubjectType { hazard, lostPet, foundPet, generic }
+
+class HazardCommentsPanelContent extends StatelessWidget {
   final bool isDarkMode;
   final HazardReportRecord hazard;
 
@@ -19,15 +26,44 @@ class HazardCommentsPanelContent extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<HazardCommentsPanelContent> createState() =>
-      _HazardCommentsPanelContentState();
+  Widget build(BuildContext context) {
+    return ReportCommentsPanelContent(
+      isDarkMode: isDarkMode,
+      subjectType: ReportCommentSubjectType.hazard,
+      reportId: hazard.id,
+    );
+  }
 }
 
-class _HazardCommentsPanelContentState
-    extends ConsumerState<HazardCommentsPanelContent> {
+class ReportCommentsPanelContent extends ConsumerStatefulWidget {
+  final bool isDarkMode;
+  final ReportCommentSubjectType subjectType;
+  final int reportId;
+
+  const ReportCommentsPanelContent({
+    super.key,
+    required this.isDarkMode,
+    required this.subjectType,
+    required this.reportId,
+  });
+
+  @override
+  ConsumerState<ReportCommentsPanelContent> createState() =>
+      _ReportCommentsPanelContentState();
+}
+
+class _ReportCommentsPanelContentState
+    extends ConsumerState<ReportCommentsPanelContent> {
+  static const String _confirmHazardText =
+      'Confirmo que hay un peligro en este area';
+  static const String _denyHazardText = 'No veo que haya peligro en este area';
+
   late final TextEditingController _commentController;
   bool _isSending = false;
   String? _sendErrorText;
+
+  bool get _showsQuickHazardActions =>
+      widget.subjectType == ReportCommentSubjectType.hazard;
 
   @override
   void initState() {
@@ -41,36 +77,66 @@ class _HazardCommentsPanelContentState
     super.dispose();
   }
 
-  Future<void> _sendComment() async {
-    final String text = _commentController.text.trim();
+  Future<void> _sendComment([String? presetText]) async {
+    final String text = (presetText ?? _commentController.text).trim();
     if (text.isEmpty) {
       return;
     }
 
     setState(() {
       _sendErrorText = null;
-    });
-
-    setState(() {
       _isSending = true;
     });
 
     try {
-      final LocalUserProfile profile =
-          await ref.read(localUserProfileProvider.future);
+      final LocalUserProfile profile = await ref.read(
+        localUserProfileProvider.future,
+      );
 
-      final HazardCommentRecord comment = HazardCommentRecord(
-        authorUsername: profile.isAuthenticated ? profile.username : 'Anónimo',
+      final ReportCommentRecord comment = ReportCommentRecord(
+        authorUsername: profile.isAuthenticated ? profile.username : 'Anonimo',
         authorAvatarUrl: profile.isAuthenticated ? profile.avatarPath : null,
         isAnonymous: !profile.isAuthenticated,
         commentText: text,
         createdAt: DateTime.now(),
       );
 
-      await ref.read(hazardReportsControllerProvider.notifier).addCommentToHazard(
-            hazardId: widget.hazard.id,
-            comment: comment,
-          );
+      switch (widget.subjectType) {
+        case ReportCommentSubjectType.hazard:
+          await ref
+              .read(hazardReportsControllerProvider.notifier)
+              .addCommentToHazard(
+                hazardId: widget.reportId,
+                comment: HazardCommentRecord(
+                  authorUsername: comment.authorUsername,
+                  authorAvatarUrl: comment.authorAvatarUrl,
+                  isAnonymous: comment.isAnonymous,
+                  commentText: comment.commentText,
+                  createdAt: comment.createdAt,
+                ),
+              );
+        case ReportCommentSubjectType.lostPet:
+          await ref
+              .read(lostPetReportsControllerProvider.notifier)
+              .addCommentToLostPetReport(
+                reportId: widget.reportId,
+                comment: comment,
+              );
+        case ReportCommentSubjectType.foundPet:
+          await ref
+              .read(foundPetReportsControllerProvider.notifier)
+              .addCommentToFoundPetReport(
+                reportId: widget.reportId,
+                comment: comment,
+              );
+        case ReportCommentSubjectType.generic:
+          await ref
+              .read(genericReportsControllerProvider.notifier)
+              .addCommentToGenericReport(
+                reportId: widget.reportId,
+                comment: comment,
+              );
+      }
 
       if (!mounted) {
         return;
@@ -93,47 +159,137 @@ class _HazardCommentsPanelContentState
     }
   }
 
+  List<ReportCommentRecord> _currentComments() {
+    switch (widget.subjectType) {
+      case ReportCommentSubjectType.hazard:
+        final List<HazardReportRecord> hazards =
+            ref.watch(hazardReportsControllerProvider).asData?.value ??
+            const <HazardReportRecord>[];
+        return hazards
+                .where((HazardReportRecord item) => item.id == widget.reportId)
+                .firstOrNull
+                ?.comments ??
+            const <ReportCommentRecord>[];
+      case ReportCommentSubjectType.lostPet:
+        final List<LostPetReportRecord> reports =
+            ref.watch(lostPetReportsControllerProvider).asData?.value ??
+            const <LostPetReportRecord>[];
+        return reports
+                .where((LostPetReportRecord item) => item.id == widget.reportId)
+                .firstOrNull
+                ?.comments ??
+            const <ReportCommentRecord>[];
+      case ReportCommentSubjectType.foundPet:
+        final List<FoundPetReportRecord> reports =
+            ref.watch(foundPetReportsControllerProvider).asData?.value ??
+            const <FoundPetReportRecord>[];
+        return reports
+                .where(
+                  (FoundPetReportRecord item) => item.id == widget.reportId,
+                )
+                .firstOrNull
+                ?.comments ??
+            const <ReportCommentRecord>[];
+      case ReportCommentSubjectType.generic:
+        final List<GenericReportRecord> reports =
+            ref.watch(genericReportsControllerProvider).asData?.value ??
+            const <GenericReportRecord>[];
+        return reports
+                .where((GenericReportRecord item) => item.id == widget.reportId)
+                .firstOrNull
+                ?.comments ??
+            const <ReportCommentRecord>[];
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final AsyncValue<List<HazardReportRecord>> hazardsAsync =
-        ref.watch(hazardReportsControllerProvider);
-
-    final List<HazardReportRecord> allHazards =
-        hazardsAsync.asData?.value ?? const <HazardReportRecord>[];
-    HazardReportRecord currentHazard = widget.hazard;
-    for (final HazardReportRecord item in allHazards) {
-      if (item.id == widget.hazard.id) {
-        currentHazard = item;
-        break;
-      }
-    }
-
-    final List<HazardCommentRecord> comments = currentHazard.comments;
+    final List<ReportCommentRecord> comments = _currentComments();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Scrollbar(
-              thumbVisibility: true,
-              child: ListView.separated(
-                itemCount: comments.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (BuildContext context, int index) {
-                  return _CommentTile(
-                    isDarkMode: widget.isDarkMode,
-                    comment: comments[index],
-                  );
-                },
-              ),
+          child: PanelScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (comments.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppPalette.cardBackground(widget.isDarkMode),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      'Todavía no hay comentarios para este reporte.',
+                      style: TextStyle(
+                        color: AppPalette.textPrimary(widget.isDarkMode),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                if (comments.isNotEmpty)
+                  ...comments.map(
+                    (ReportCommentRecord comment) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _CommentTile(
+                        isDarkMode: widget.isDarkMode,
+                        comment: comment,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         ),
+        if (_showsQuickHazardActions) ...[
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _isSending
+                      ? null
+                      : () => _sendComment(_confirmHazardText),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppPalette.primaryBlue,
+                    side: const BorderSide(color: AppPalette.primaryBlue),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Confirmar peligro',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _isSending
+                      ? null
+                      : () => _sendComment(_denyHazardText),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppPalette.dangerRed,
+                    side: const BorderSide(color: AppPalette.dangerRed),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Desmentir peligro',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: 10),
         Focus(
           onKeyEvent: (FocusNode node, KeyEvent event) {
@@ -183,20 +339,20 @@ class _HazardCommentsPanelContentState
               ),
               filled: true,
               fillColor: AppPalette.fieldBackground(widget.isDarkMode),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
               ),
-              enabledBorder: OutlineInputBorder(
+              border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide:
-                    const BorderSide(color: AppPalette.primaryBlue, width: 1),
+                borderSide: const BorderSide(
+                  color: AppPalette.primaryBlue,
+                  width: 1,
+                ),
               ),
             ),
           ),
@@ -236,10 +392,7 @@ class _HazardCommentsPanelContentState
                   )
                 : const Text(
                     'Enviar comentario',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                   ),
           ),
         ),
@@ -250,12 +403,9 @@ class _HazardCommentsPanelContentState
 
 class _CommentTile extends StatelessWidget {
   final bool isDarkMode;
-  final HazardCommentRecord comment;
+  final ReportCommentRecord comment;
 
-  const _CommentTile({
-    required this.isDarkMode,
-    required this.comment,
-  });
+  const _CommentTile({required this.isDarkMode, required this.comment});
 
   @override
   Widget build(BuildContext context) {
@@ -282,7 +432,7 @@ class _CommentTile extends StatelessWidget {
                 source: comment.authorAvatarUrl,
                 fit: BoxFit.cover,
                 fallback: _defaultAvatar(),
-                errorBuilder: (_, __, ___) => _defaultAvatar(),
+                errorBuilder: (_, _, _) => _defaultAvatar(),
               ),
             ),
           ),
@@ -334,47 +484,38 @@ class _CommentTile extends StatelessWidget {
   Widget _defaultAvatar() {
     return Container(
       color: AppPalette.placeholderGray,
-      child: const Icon(
-        Icons.person,
-        size: 18,
-        color: AppPalette.iconGray,
-      ),
+      child: const Icon(Icons.person, size: 18, color: AppPalette.iconGray),
     );
   }
 
   String _formatRelativeTime(DateTime createdAt) {
     final Duration diff = DateTime.now().difference(createdAt);
-
     if (diff.inSeconds < 60) {
       return 'Hace un momento';
     }
-
     if (diff.inMinutes < 60) {
-      final int m = diff.inMinutes;
-      return 'Hace $m min';
+      return 'Hace ${diff.inMinutes} min';
     }
-
     if (diff.inHours < 24) {
-      final int h = diff.inHours;
-      return 'Hace $h h';
+      return 'Hace ${diff.inHours} h';
     }
-
     if (diff.inDays < 7) {
-      final int d = diff.inDays;
-      return 'Hace $d día${d == 1 ? '' : 's'}';
+      final int days = diff.inDays;
+      return 'Hace $days dia${days == 1 ? '' : 's'}';
     }
-
     final int weeks = (diff.inDays / 7).floor();
     if (weeks < 5) {
       return 'Hace $weeks sem';
     }
-
     final int months = (diff.inDays / 30).floor();
     if (months < 12) {
       return 'Hace $months mes${months == 1 ? '' : 'es'}';
     }
-
     final int years = (diff.inDays / 365).floor();
-    return 'Hace $years año${years == 1 ? '' : 's'}';
+    return 'Hace $years ano${years == 1 ? '' : 's'}';
   }
+}
+
+extension<T> on Iterable<T> {
+  T? get firstOrNull => isEmpty ? null : first;
 }

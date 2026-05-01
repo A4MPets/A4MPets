@@ -1,8 +1,106 @@
-// ignore_for_file: invalid_use_of_protected_member
-
 part of 'map_page.dart';
 
 extension _MapPageTripState on _MapPageState {
+  Future<void> _syncBackgroundAudioContext() async {
+    final audioService = ref.read(audioFeedbackServiceProvider);
+    if (!_isAudioFeedbackEnabled) {
+      await audioService.disableBackgroundAudio();
+      return;
+    }
+
+    final bool shouldEnableBackgroundAudio =
+        _isTripActive || _hasProximityAudioTargets;
+    if (shouldEnableBackgroundAudio) {
+      await audioService.enableBackgroundAudio(
+        notificationText: _isTripActive
+            ? 'Indicaciones y alertas activas'
+            : 'Alertas de proximidad activas',
+      );
+      return;
+    }
+
+    await audioService.disableBackgroundAudio();
+  }
+
+  void _stopNavigationSpeech() {
+    unawaited(ref.read(audioFeedbackServiceProvider).stopSpeech());
+  }
+
+  void _resetTripAudioNavigationState({bool stopSpeech = true}) {
+    _activeNavigationInstructions = const <RouteNavigationInstruction>[];
+    _spokenFarApproachInstructionIds.clear();
+    _spokenApproachInstructionIds.clear();
+    _spokenImmediateInstructionIds.clear();
+    if (stopSpeech) {
+      _stopNavigationSpeech();
+    }
+  }
+
+  Future<void> _maybeAnnounceNavigationInstruction(LatLng location) async {
+    if (!_isTripActive ||
+        !_isAudioFeedbackEnabled ||
+        _draftRoutePolyline.length < 2 ||
+        _activeNavigationInstructions.isEmpty) {
+      return;
+    }
+
+    final NavigationAudioCue? cue = NavigationAudioProgress.nextCue(
+      currentLocation: location,
+      polyline: _draftRoutePolyline,
+      instructions: _activeNavigationInstructions,
+      spokenFarApproachKeys: _spokenFarApproachInstructionIds,
+      spokenApproachKeys: _spokenApproachInstructionIds,
+      spokenImmediateKeys: _spokenImmediateInstructionIds,
+      distanceCalculator: _distanceCalculator,
+    );
+    if (cue == null) {
+      return;
+    }
+
+    final String message = switch (cue.type) {
+      NavigationAudioCueType.farApproach =>
+        NavigationAudioMessageBuilder.buildFarApproachMessage(cue.instruction),
+      NavigationAudioCueType.approach =>
+        NavigationAudioMessageBuilder.buildApproachMessage(cue.instruction),
+      NavigationAudioCueType.immediate =>
+        NavigationAudioMessageBuilder.buildImmediateMessage(cue.instruction),
+    };
+    if (message.trim().isEmpty) {
+      return;
+    }
+
+    if (cue.type == NavigationAudioCueType.farApproach) {
+      _spokenFarApproachInstructionIds.add(cue.maneuverKey);
+    } else if (cue.type == NavigationAudioCueType.approach) {
+      _spokenFarApproachInstructionIds.add(cue.maneuverKey);
+      _spokenApproachInstructionIds.add(cue.maneuverKey);
+    } else {
+      _spokenFarApproachInstructionIds.add(cue.maneuverKey);
+      _spokenApproachInstructionIds.add(cue.maneuverKey);
+      _spokenImmediateInstructionIds.add(cue.maneuverKey);
+    }
+
+    await ref.read(audioFeedbackServiceProvider).speakNavigation(message);
+  }
+
+  Future<void> _playArrivalAudioCue() async {
+    if (!_isAudioFeedbackEnabled) {
+      return;
+    }
+
+    await ref.read(audioFeedbackServiceProvider).playArrivalCue(
+      NavigationAudioMessageBuilder.buildArrivalMessage(),
+    );
+  }
+
+  Future<void> _playWaypointAudioCue() async {
+    if (!_isAudioFeedbackEnabled) {
+      return;
+    }
+
+    await ref.read(audioFeedbackServiceProvider).playWaypointCue();
+  }
+
   void _refreshTripRoutePreviewForPreferences() {
     final RouteRecord? selectedRoute = _selectedTripRoute;
     if (selectedRoute == null) {
@@ -29,24 +127,26 @@ extension _MapPageTripState on _MapPageState {
     if (_hasOpenPanels) {
       return;
     }
-    setState(() {
+    _updatePageState(() {
       _isTripStartPanelMinimized = false;
     });
     _pushPanel(_buildStartTripRoute(isDarkMode));
   }
 
   void _openTripPetSelectorPanel(bool isDarkMode) {
+    ref.read(petsControllerProvider.notifier).reload();
     _syncAndReloadData();
     _pushPanel(_buildTripPetSelectorRoute(isDarkMode));
   }
 
   void _openTripRouteSelectorPanel(bool isDarkMode) {
+    ref.read(routesControllerProvider.notifier).reload();
     _syncAndReloadData();
     _pushPanel(_buildTripRouteSelectorRoute(isDarkMode));
   }
 
   void _openAddRoutePanelFromTrip(bool isDarkMode) {
-    setState(() {
+    _updatePageState(() {
       _clearDraftRouteVisuals();
     });
     _pushPanel(
@@ -59,7 +159,7 @@ extension _MapPageTripState on _MapPageState {
         .map((RoutePoint p) => p.toLatLng())
         .toList(growable: false);
 
-    setState(() {
+    _updatePageState(() {
       _selectedTripRoute = route;
       _selectedRouteId = route.id;
       _tripRemainingWaypoints = List<LatLng>.from(selectedRoutePoints);
@@ -94,19 +194,23 @@ extension _MapPageTripState on _MapPageState {
   }
 
   void _startTrip(bool isDarkMode) {
-    if (_selectedTripRoute == null || _selectedTripRoute!.points.length < 2) {
-      setState(() {
+    final RouteRecord? selectedRoute = _selectedTripRoute;
+    if (selectedRoute == null || selectedRoute.points.length < 2) {
+      _updatePageState(() {
         _tripStartErrorText =
             'Selecciona una ruta válida para iniciar el viaje.';
       });
       return;
     }
 
-    final List<LatLng> routePoints = _selectedTripRoute!.points
+    final List<LatLng> routePoints = selectedRoute.points
         .map((RoutePoint p) => p.toLatLng())
         .toList(growable: false);
 
-    setState(() {
+    _stopNavigationSpeech();
+    _updatePageState(() {
+      _tripRerouteController.reset();
+      _resetTripAudioNavigationState(stopSpeech: false);
       _tripStartErrorText = null;
       _isTripActive = true;
       _tripArrivalHandled = false;
@@ -120,6 +224,7 @@ extension _MapPageTripState on _MapPageState {
         _tripUserFocusRevision += 1;
       }
     });
+    unawaited(_syncBackgroundAudioContext());
 
     final LatLng? origin = _latestUserLocation;
     if (origin != null && routePoints.isNotEmpty) {
@@ -180,15 +285,19 @@ extension _MapPageTripState on _MapPageState {
       return;
     }
 
-    setState(() {
+    _stopNavigationSpeech();
+    _updatePageState(() {
+      _tripRerouteController.reset();
+      _resetTripAudioNavigationState(stopSpeech: false);
       _isTripActive = false;
       _tripArrivalHandled = false;
       _selectedTripRoute = null;
       _tripRemainingWaypoints = <LatLng>[];
       _isTripStartPanelMinimized = false;
       _selectedTripPetIds.clear();
-      _selectedTripTransport = _TripTransportMethod.walking;
-      _shouldAvoidHazardsInRouting = true;
+      _selectedTripHazardRiskFilters = <String>{
+        ...HazardRiskFiltering.allRoutingFilters,
+      };
       _clearDraftRouteVisuals();
       _panelStack.removeWhere(
         (_PanelRoute route) =>
@@ -198,6 +307,7 @@ extension _MapPageTripState on _MapPageState {
             route.isTripRouteSelectionPanel,
       );
     });
+    unawaited(_syncBackgroundAudioContext());
   }
 
   void _finishTripOnArrival() {
@@ -206,15 +316,19 @@ extension _MapPageTripState on _MapPageState {
     }
 
     final bool isDarkMode = ref.read(themeModeProvider);
-    setState(() {
+    unawaited(_playArrivalAudioCue());
+    _updatePageState(() {
+      _tripRerouteController.reset();
+      _resetTripAudioNavigationState(stopSpeech: false);
       _tripArrivalHandled = true;
       _isTripActive = false;
       _selectedTripRoute = null;
       _tripRemainingWaypoints = <LatLng>[];
       _isTripStartPanelMinimized = false;
       _selectedTripPetIds.clear();
-      _selectedTripTransport = _TripTransportMethod.walking;
-      _shouldAvoidHazardsInRouting = true;
+      _selectedTripHazardRiskFilters = <String>{
+        ...HazardRiskFiltering.allRoutingFilters,
+      };
       _clearDraftRouteVisuals();
       _panelStack.clear();
     });
@@ -227,17 +341,22 @@ extension _MapPageTripState on _MapPageState {
   }
 
   void _acknowledgeTripArrival() {
-    setState(() {
+    _stopNavigationSpeech();
+    _updatePageState(() {
+      _tripRerouteController.reset();
+      _resetTripAudioNavigationState(stopSpeech: false);
       _tripArrivalHandled = false;
       _selectedTripRoute = null;
       _tripRemainingWaypoints = <LatLng>[];
       _isTripStartPanelMinimized = false;
       _selectedTripPetIds.clear();
-      _selectedTripTransport = _TripTransportMethod.walking;
-      _shouldAvoidHazardsInRouting = true;
+      _selectedTripHazardRiskFilters = <String>{
+        ...HazardRiskFiltering.allRoutingFilters,
+      };
       _clearDraftRouteVisuals();
       _panelStack.clear();
     });
+    unawaited(_syncBackgroundAudioContext());
   }
 
   Future<void> _showTripArrivalDialog(bool isDarkMode) async {
@@ -266,18 +385,28 @@ extension _MapPageTripState on _MapPageState {
   }
 
   void _clearTripSetupState() {
+    _tripArrivalHandled = false;
+    _tripStartErrorText = null;
+    _isTripActive = false;
+    _selectedRouteId = null;
     _selectedTripRoute = null;
     _tripRemainingWaypoints = <LatLng>[];
     _isTripStartPanelMinimized = false;
     _tripRerouteController.reset();
+    _resetTripAudioNavigationState(stopSpeech: false);
+    _stopNavigationSpeech();
     _selectedTripPetIds.clear();
-    _selectedTripTransport = _TripTransportMethod.walking;
-    _shouldAvoidHazardsInRouting = true;
+    _selectedTripHazardRiskFilters = <String>{
+      ...HazardRiskFiltering.allRoutingFilters,
+    };
     _clearDraftRouteVisuals();
+    unawaited(_syncBackgroundAudioContext());
   }
 
-  Future<void> _restoreTripRouteSelectionAfterEditorClose() async {
-    final int? selectedTripRouteId = _selectedTripRoute?.id;
+  Future<void> _restoreTripRouteSelectionAfterEditorClose({
+    int? routeId,
+  }) async {
+    final int? selectedTripRouteId = routeId ?? _selectedTripRoute?.id;
     if (selectedTripRouteId == null) {
       return;
     }
@@ -308,7 +437,7 @@ extension _MapPageTripState on _MapPageState {
       return;
     }
 
-    setState(() {
+    _updatePageState(() {
       _selectedTripRoute = resolvedRoute;
       _selectedRouteId = resolvedRoute!.id;
       _tripRemainingWaypoints = List<LatLng>.from(points);
@@ -328,7 +457,7 @@ extension _MapPageTripState on _MapPageState {
   }
 
   void _returnToTripStartPanel(bool isDarkMode) {
-    setState(() {
+    _updatePageState(() {
       _isTripStartPanelMinimized = false;
       _panelStack.removeWhere(
         (_PanelRoute route) =>
@@ -340,7 +469,7 @@ extension _MapPageTripState on _MapPageState {
     });
   }
 
-  Future<void> _closeAddRoutePanelAfterSave() async {
+  Future<void> _closeAddRoutePanelAfterSave(int savedRouteId) async {
     if (!_hasOpenPanels) {
       return;
     }
@@ -351,34 +480,52 @@ extension _MapPageTripState on _MapPageState {
       return;
     }
 
-    final bool returningToTripRouteSelection =
+    final bool returningToTripStartOrSelection =
         _panelStack.length > 1 &&
-        _panelStack[_panelStack.length - 2].isTripRouteSelectionPanel;
+        (_panelStack[_panelStack.length - 2].isTripRouteSelectionPanel ||
+         _panelStack[_panelStack.length - 2].isTripStartPanel);
 
-    setState(() {
+    _updatePageState(() {
       _clearDraftRouteVisuals();
       _panelStack.removeLast();
     });
 
-    if (returningToTripRouteSelection) {
-      await _restoreTripRouteSelectionAfterEditorClose();
+    if (returningToTripStartOrSelection) {
+      await ref.read(routesControllerProvider.notifier).reload();
+      if (!mounted) {
+        return;
+      }
+
+      final List<RouteRecord> routes =
+          ref.read(routesControllerProvider).asData?.value ??
+          const <RouteRecord>[];
+      for (final RouteRecord route in routes) {
+        if (route.id != savedRouteId) {
+          continue;
+        }
+        final bool isDarkMode = ref.read(themeModeProvider);
+        _selectTripRoute(isDarkMode, route);
+        return;
+      }
+
+      await _restoreTripRouteSelectionAfterEditorClose(routeId: savedRouteId);
     }
   }
 
   void _toggleTripStartPanelMinimized() {
-    setState(() {
+    _updatePageState(() {
       _isTripStartPanelMinimized = !_isTripStartPanelMinimized;
     });
   }
 
   void _handleUserLocationChanged(LatLng location) {
     if (_isTripActive) {
-      setState(() {
+      _updatePageState(() {
         _latestUserLocation = location;
         _tripUserFocusRevision += 1;
       });
     } else if (_latestUserLocation == null) {
-      setState(() {
+      _updatePageState(() {
         _latestUserLocation = location;
       });
     } else {
@@ -388,6 +535,10 @@ extension _MapPageTripState on _MapPageState {
     if (_isUserLocationLoading || _userLocationErrorText != null) {
       _handleUserLocationStatusChanged(false, null);
     }
+
+    _evaluateProximityAlerts(location);
+    unawaited(_syncBackgroundAudioContext());
+    unawaited(_maybeAnnounceNavigationInstruction(location));
 
     if (_tripArrivalHandled || _selectedTripRoute == null) {
       return;
@@ -422,11 +573,17 @@ extension _MapPageTripState on _MapPageState {
         );
     final List<LatLng> nextRemaining = waypointProgress.remainingWaypoints;
     final bool changed = waypointProgress.hasChanges;
+    final bool reachedIntermediateWaypoint =
+        changed && nextRemaining.isNotEmpty;
 
     if (changed) {
-      setState(() {
+      _updatePageState(() {
         _tripRemainingWaypoints = nextRemaining;
       });
+    }
+
+    if (reachedIntermediateWaypoint) {
+      unawaited(_playWaypointAudioCue());
     }
 
     if (nextRemaining.isEmpty) {
@@ -459,7 +616,7 @@ extension _MapPageTripState on _MapPageState {
       return;
     }
 
-    setState(() {
+    _updatePageState(() {
       final List<LatLng> updated = List<LatLng>.from(_draftRoutePolyline);
       updated[0] = location;
       _draftRoutePolyline = updated;
@@ -533,7 +690,7 @@ extension _MapPageTripState on _MapPageState {
         return _TripStartPanelContent(
           isDarkMode: isDarkMode,
           selectedTransport: _selectedTripTransport,
-          avoidHazards: _shouldAvoidHazardsInRouting,
+          selectedHazardRiskFilters: _selectedTripHazardRiskFilters,
           selectedPetsCount: _selectedTripPetIds.length,
           selectedRouteName: _selectedTripRoute?.name,
           errorText: _tripStartErrorText,
@@ -544,14 +701,26 @@ extension _MapPageTripState on _MapPageState {
               ? null
               : () => _openEditSelectedTripRoutePanel(isDarkMode),
           onTransportChanged: (_TripTransportMethod method) {
-            setState(() {
+            _updatePageState(() {
               _selectedTripTransport = method;
             });
+            ref
+                .read(tripTransportPreferenceProvider.notifier)
+                .setTransportName(method.name);
             _refreshTripRoutePreviewForPreferences();
           },
-          onAvoidHazardsChanged: (bool value) {
-            setState(() {
-              _shouldAvoidHazardsInRouting = value;
+          onToggleHazardRiskFilter: (String riskLevelCode, bool value) {
+            final Set<String> nextFilters = Set<String>.from(
+              _selectedTripHazardRiskFilters,
+            );
+            if (value) {
+              nextFilters.add(riskLevelCode);
+            } else {
+              nextFilters.remove(riskLevelCode);
+            }
+
+            _updatePageState(() {
+              _selectedTripHazardRiskFilters = nextFilters;
             });
             _refreshTripRoutePreviewForPreferences();
           },
@@ -587,7 +756,7 @@ extension _MapPageTripState on _MapPageState {
               selectedPetIds: _selectedTripPetIds,
               onAddPetPressed: () => _openAddPetPanelFromTrip(isDarkMode),
               onTogglePet: (int petId) {
-                setState(() {
+                _updatePageState(() {
                   if (_selectedTripPetIds.contains(petId)) {
                     _selectedTripPetIds.remove(petId);
                   } else {
@@ -642,8 +811,8 @@ extension _MapPageTripState on _MapPageState {
       title: 'Viaje',
       anchor: PanelAnchor.bottomRight,
       width: 360,
-      height: 130,
-      maxHeight: 130,
+      height: 220,
+      maxHeight: 220,
       adaptHeightToContent: false,
       expandHorizontal: false,
       expandVertical: false,
@@ -653,6 +822,16 @@ extension _MapPageTripState on _MapPageState {
       contentBuilder: (BuildContext context) {
         return _TripActivePanelContent(
           isDarkMode: isDarkMode,
+          selectedTransport: _selectedTripTransport,
+          onTransportChanged: (_TripTransportMethod method) {
+            _updatePageState(() {
+              _selectedTripTransport = method;
+            });
+            ref
+                .read(tripTransportPreferenceProvider.notifier)
+                .setTransportName(method.name);
+            _refreshTripRoutePreviewForPreferences();
+          },
           onFinishTrip: () {
             _finishTripManually();
           },

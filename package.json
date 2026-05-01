@@ -1,13 +1,24 @@
 {
   "private": true,
   "scripts": {
-    "frontend": "cd frontend && flutter run -d chrome --web-hostname localhost --web-port 7357 --dart-define-from-file=env/local.json",
-    "frontend:android": "cd frontend && flutter run --dart-define-from-file=env/local.json",
-    "backend": "cd backend && php artisan serve --host=0.0.0.0 --port=8000",
+    "frontend": "node scripts/run-frontend.js",
+    "frontend:android": "node scripts/run-frontend.js --android",
+    "frontend:url": "node scripts/run-frontend.js --url",
+    "frontend:runtime": "node scripts/run-frontend.js --url-file .runtime/cloudflare-url.txt",
+    "frontend:android:url": "node scripts/run-frontend.js --android --url",
+    "frontend:android:runtime": "node scripts/run-frontend.js --android --url-file .runtime/cloudflare-url.txt",
+    "backend": "node scripts/run-backend.js",
+    "backend:cloudflare": "node scripts/run-backend.js --cloudflare",
     "graphhopper": "docker compose up -d graphhopper",
-    "dev": "docker compose up -d --build"
+    "cloudflare": "npm run backend:cloudflare",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\" \"npm run graphhopper\"",
+    "dev:android": "concurrently \"npm run backend\" \"npm run frontend:android\" \"npm run graphhopper\"",
+    "dev:cloudflare": "concurrently \"npm run backend:cloudflare\" \"npm run frontend:runtime\" \"npm run graphhopper\"",
+    "dev:cloudflare:android": "concurrently \"npm run backend:cloudflare\" \"npm run frontend:android:runtime\" \"npm run graphhopper\"",
+    "dev:docker": "docker compose up -d --build"
   },
   "devDependencies": {
-    "concurrently": "^9.0.1"
+    "concurrently": "^9.0.1",
+    "puppeteer": "^24.42.0"
   }
 }

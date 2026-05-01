@@ -6,10 +6,10 @@ import 'package:flutter/material.dart';
 class ColoredRouteSegment {
   /// Puntos que componen este segmento de ruta
   final List<LatLng> points;
-  
+
   /// Color a usar para renderizar este segmento
   final Color color;
-  
+
   /// Si este segmento intersecta con un hazard
   final bool hasHazard;
 

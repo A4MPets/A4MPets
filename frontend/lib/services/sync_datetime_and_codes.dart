@@ -46,13 +46,16 @@ class SyncDateTimeAndCodes {
       case 'contagious_disease':
       case 'stagnant_water':
       case 'waste_accumulation':
-      case 'aggressive_animals':
-      case 'undefined':
+      case 'pest_presence':
+      case 'possible_rabies_vectors':
         return normalized;
+      case 'aggressive_animals':
+        return 'possible_rabies_vectors';
+      case 'undefined':
       case 'unknown':
       case 'unspecified':
       default:
-        return 'undefined';
+        return 'pest_presence';
     }
   }
 

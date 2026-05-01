@@ -7,7 +7,7 @@ $payload = [
     ],
     'avoid_hazards' => true,
     'travel_mode' => 'vehicle',
-    'trip_config' => new stdClass(),
+    'trip_config' => new stdClass,
 ];
 
 $options = [
@@ -25,9 +25,9 @@ $response = @file_get_contents('http://127.0.0.1:8000/api/routes/plan', false, $
 if ($response === false) {
     fwrite(STDERR, "REQUEST_FAILED\n");
     if (isset($http_response_header)) {
-        fwrite(STDERR, implode("\n", $http_response_header) . "\n");
+        fwrite(STDERR, implode("\n", $http_response_header)."\n");
     }
     exit(1);
 }
 
-echo $response . PHP_EOL;
+echo $response.PHP_EOL;

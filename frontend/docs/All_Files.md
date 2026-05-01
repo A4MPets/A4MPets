@@ -1,173 +1,218 @@
-# Inventario del frontend
+# Frontend Inventory
 
-Este archivo resume la funcion de cada archivo `.dart` del frontend, agrupado por carpetas.
+This document summarizes the purpose of each frontend `.dart` file, grouped by folder.
 
 ## lib/
 
 ### main.dart
-- Arranca la app Flutter, configura la barra del sistema y monta MapPage dentro de ProviderScope.
+- Boots the Flutter app, configures the system UI overlays, and mounts `MyApp` inside `ProviderScope`.
 
 ### theme/
 
 #### theme/app_palette.dart
-- Centraliza la paleta visual de la app y expone helpers de color para modo claro y oscuro.
+- Centralizes the visual palette and exposes color helpers for light and dark surfaces.
 
 ### providers/
 
 #### providers/theme_provider.dart
-- Define el estado global simple que controla si la interfaz usa modo oscuro.
+- Defines the global theme controller used to read, set, and toggle dark mode.
+
+#### providers/async_list_controller.dart
+- Provides the shared AsyncNotifier base used by list-oriented controllers with reload and optional background refresh behavior.
 
 #### providers/local_data_providers.dart
-- Declara los providers de Riverpod para base local, almacenamiento de media, sincronizacion, perfil, mascotas, rutas y peligros.
+- Declares Riverpod providers for local persistence, media storage, sync coordination, profile loading, pets, routes, hazards, and report collections.
 
 ### repositories/
 
 #### repositories/user_local_repository.dart
-- Encapsula el acceso de alto nivel al backend y a la base local para login, registro, cierre de sesion, perfil, mascotas, rutas y reportes de peligro.
+- Encapsulates high-level access to the backend and local database for auth, profile, pets, routes, hazards, and report workflows.
 
 ### models/
 
 #### models/local_user_profile.dart
-- Modela el usuario local, su estado autenticado o invitado y su serializacion hacia y desde la base local.
+- Models the local user profile, authenticated or guest state, and local serialization helpers.
 
 #### models/pet_record.dart
-- Representa una mascota local con metadatos de sincronizacion y mapeo a persistencia.
+- Represents a locally stored pet with sync metadata and persistence mapping.
 
 #### models/route_record.dart
-- Representa una ruta guardada y define RoutePoint para convertir puntos entre JSON, base local y LatLng.
+- Represents a saved route and defines `RoutePoint` conversion helpers for JSON, local storage, and `LatLng`.
 
 #### models/hazard_report_record.dart
-- Modela un reporte de peligro, sus comentarios locales y los helpers para etiquetas de categoria, duracion y riesgo.
+- Models a hazard report, its local comments, and label helpers for category, duration, and risk.
+
+#### models/lost_pet_report_record.dart
+- Represents a lost-pet report stored locally and mapped to backend sync payloads.
+
+#### models/found_pet_report_record.dart
+- Represents a found-pet report stored locally and mapped to backend sync payloads.
+
+#### models/generic_report_record.dart
+- Represents a generic report with location, risk level, media, and sync metadata.
 
 #### models/colored_route_segment.dart
-- Define el valor que usa el mapa para pintar segmentos de ruta con color y estado de peligro.
+- Defines the map value object used to render route segments with hazard-aware colors.
 
 ### services/
 
 #### services/backend_api_client.dart
-- Envuelve las llamadas HTTP al backend con URLs de respaldo, headers JSON y seguimiento de la base activa.
+- Wraps backend HTTP calls with fallback base URLs, JSON headers, and active endpoint tracking.
 
 #### services/local_database_manager.dart
-- Implementa la persistencia local con SQLite en escritorio y movil, incluyendo tablas, consultas y migraciones.
+- Declares the cross-platform local persistence contract exposed to repositories and providers.
 
 #### services/local_database_manager_io.dart
-- Adaptador para IO que expone el mismo gestor local usando SQLite y sqflite/sqflite_ffi.
+- Implements local persistence with SQLite on mobile and desktop platforms.
 
 #### services/local_database_manager_web.dart
-- Adaptador web del gestor local, respaldado por SharedPreferences y JSON en lugar de SQLite.
+- Implements the web local database adapter with `SharedPreferences` and JSON blobs.
 
 #### services/local_database_schema.dart
-- Define la creacion de tablas y las migraciones de la base local para usuarios, mascotas, rutas, peligros y cache de rutas.
+- Defines local database table creation and migrations for users, pets, routes, hazards, and route caches.
 
 #### services/local_media_storage_service.dart
-- Archivo de exportacion condicional para el servicio de media local segun la plataforma.
+- Provides the conditional export for platform-specific local media storage.
 
 #### services/local_media_storage_service_io.dart
-- Permite elegir imagenes en IO y copiar las fotos en un bucket local de la app para mascotas, peligros y perfil.
+- Picks images on IO platforms and copies them into the app-local media buckets.
 
 #### services/local_media_storage_service_web.dart
-- Permite elegir imagenes en web y devolverlas como data URI para uso inmediato sin filesystem local.
+- Picks images on web and returns data URIs for immediate preview and sync.
 
 #### services/media_source_encoder.dart
-- Exportacion condicional para convertir fuentes de imagen segun la plataforma.
+- Provides the conditional export for platform-specific media source encoding.
 
 #### services/media_source_encoder_io.dart
-- Convierte rutas locales de imagen en data URI para poder sincronizarlas o previsualizarlas.
+- Converts local image paths into data URIs for preview and sync on IO platforms.
 
 #### services/media_source_encoder_web.dart
-- Version web minima del codificador de imagen, pensada para fuentes ya representadas como data URI.
+- Provides the lightweight web encoder for sources that already behave like data URIs.
 
 #### services/sync_api_gateway.dart
-- Capa delgada sobre BackendApiClient para peticiones de sincronizacion con timeout corto.
+- Wraps backend sync calls with shorter timeout behavior.
 
 #### services/sync_datetime_and_codes.dart
-- Normaliza fechas y codigos de riesgo, categoria y duracion antes de enviar datos al backend.
+- Normalizes sync timestamps and code values before sending them to the backend.
 
 #### services/sync_media_resolver.dart
-- Resuelve imagenes locales a data URI o URL remota para sincronizar avatares y evidencias al backend.
+- Resolves local media sources into sync-ready data URIs or remote URLs.
 
 #### services/trip_navigation_support.dart
-- Agrupa la logica de progreso de waypoints y control de reruteo para viajes en curso.
+- Groups waypoint progress and reroute decision helpers for active trips.
 
 #### services/user_data_sync_coordinator.dart
-- Coordina la sincronizacion push/pull de perfil, mascotas, rutas y peligros, con auto-sync y cola de reintentos.
+- Coordinates push and pull sync cycles for profile, pets, routes, hazards, and report domains.
 
 #### services/osm_routing_service.dart
-- Calcula rutas consultando el backend y usa fallback local de endpoints cuando es necesario.
+- Requests route planning from the backend and falls back across configured endpoints when needed.
 
 #### services/route_hazard_visualizer_service.dart
-- Analiza una polilinea de ruta y la divide en segmentos coloreados segun si intersecta o no con peligros.
+- Splits route polylines into colored segments based on hazard overlap.
 
 ### widgets/
 
 #### widgets/auth_panels.dart
-- Contiene los paneles de inicio de sesion y registro con validacion, autofill y cambio entre formularios.
+- Contains the login and registration panels with validation, autofill, and panel switching callbacks.
 
 #### widgets/hazard_comments_panel.dart
-- Muestra y permite publicar comentarios de un peligro usando el estado local y el provider de peligros.
+- Displays hazard comments and lets the user submit new comments through the hazards controller.
 
 #### widgets/hazard_details_panel.dart
-- Presenta el detalle de un peligro, su foto y acceso al panel de comentarios.
+- Renders hazard details, the evidence photo preview, and the entry point to the comments panel.
 
 #### widgets/hazard_layers_panel.dart
-- Controla el modo oscuro y la visibilidad de los circulos de peligros por nivel de riesgo.
+- Controls dark mode and visibility toggles for hazard circles and report layers.
 
 #### widgets/hazard_reporting_panel.dart
-- Expone el formulario para reportar un peligro con ubicacion, categoria, duracion, riesgo y foto opcional.
+- Exposes the hazard reporting form with location, category, duration, risk, and optional evidence media.
+
+#### widgets/lost_pet_reporting_panel.dart
+- Exposes the lost-pet reporting form and draft location preview state.
+
+#### widgets/lost_pet_details_panel.dart
+- Renders the details view for a lost-pet report.
+
+#### widgets/found_pet_reporting_panel.dart
+- Exposes the found-pet reporting form and draft location preview state.
+
+#### widgets/found_pet_details_panel.dart
+- Renders the details view for a found-pet report.
+
+#### widgets/generic_report_panel.dart
+- Exposes the generic report form with category-neutral details and risk selection.
+
+#### widgets/generic_report_details_panel.dart
+- Renders the details view for a generic report.
+
+#### widgets/location_picker_widget.dart
+- Reusable location picker widget for report forms that need current or map-selected coordinates.
+
+#### widgets/report_type_selector_panel.dart
+- Lets the user choose which report flow to open from the map overlay.
+
+#### widgets/reporting_form_widgets.dart
+- Shares smaller form widgets used across the reporting panels.
 
 #### widgets/map_widget.dart
-- Envuelve flutter_map y renderiza ubicacion actual, rutas, puntos editables, circulos de peligro y controles del mapa.
+- Wraps `flutter_map` and renders user location, routes, editable points, hazards, report markers, and map controls.
 
 #### widgets/panel_modal.dart
-- Define el contenedor modal reutilizable para paneles flotantes con anclaje, animacion, scroll y boton de cierre o regreso.
+- Defines the reusable floating modal panel shell with anchoring, animation, scroll behavior, and close or back controls.
 
 #### widgets/pet_management_panels.dart
-- Contiene el panel de gestion de mascotas y el formulario para crear o editar una mascota.
+- Contains the pet management panel and the add or edit pet form.
 
 #### widgets/profile_menu_panel.dart
-- Muestra el menu de perfil con login, registro, cierre de sesion, edicion de avatar y accesos a gestion de mascotas y rutas.
+- Renders the profile menu with auth actions, avatar editing, and navigation to pet and route management.
 
 #### widgets/route_management_panels.dart
-- Contiene la vista de gestion de rutas, las tarjetas de ruta y el formulario para agregar o editar rutas.
+- Contains the route management view, route cards, and the add or edit route form.
 
 ### widgets/shared/
 
 #### widgets/shared/user_identity_header.dart
-- Renderiza el avatar y el nombre del usuario, con acceso opcional para editar la imagen de perfil.
+- Renders the user avatar and name, with optional profile image editing entry points.
 
 #### widgets/shared/local_image_widget.dart
-- Exportacion condicional del widget compartido para mostrar imagenes locales, remotas o embebidas.
+- Provides the conditional export for platform-specific local image rendering.
 
 #### widgets/shared/local_image_widget_io.dart
-- Implementacion IO del widget de imagen local, con soporte para archivos, data URI y URLs remotas.
+- Renders local, embedded, and remote images on IO platforms.
 
 #### widgets/shared/local_image_widget_web.dart
-- Implementacion web del widget de imagen local, centrada en data URI y URLs remotas.
+- Renders embedded and remote images on web platforms.
 
 ### pages/
 
 #### pages/map_page.dart
-- Es la pantalla principal de la app: coordina el mapa, la pila de paneles, el estado de rutas, peligros, viajes y autenticacion.
+- Hosts the main app screen and coordinates map state, panel navigation, trip setup, auth, and reporting workflows.
 
 #### pages/map_page_auth.dart
-- Separa la logica de autenticacion y perfil dentro de MapPage, incluyendo login, registro, logout y paneles de mascotas.
+- Encapsulates auth and profile-related panel flows inside `MapPage`.
 
 #### pages/map_page_components.dart
-- Agrupa componentes y estructuras compartidas por los paneles de MapPage, como rutas de panel y widgets de viaje.
+- Defines shared `MapPage` components, panel route models, and trip-related UI building blocks.
 
 #### pages/map_page_hazards.dart
-- Encapsula la apertura de paneles de peligros, su filtrado y el analisis visual de ruta contra hazards.
+- Handles hazard panel opening, filtering state, hazard focus behavior, and hazard layer settings.
 
 #### pages/map_page_panels.dart
-- Maneja la pila de paneles, el overlay animado, el boton de volver/cerrar y el estado de carga por panel.
+- Manages the panel stack, overlay transitions, close behavior, and loading state resolution.
+
+#### pages/map_page_reports.dart
+- Handles report selector flows, report-specific map selection state, and report detail panel transitions.
 
 #### pages/map_page_routes.dart
-- Encapsula la gestion de rutas: abrir, editar, borrar, mostrar en mapa y actualizar el borrador de ruta.
+- Encapsulates route management, route editing, draft route visuals, and persistence callbacks.
 
 #### pages/map_page_trip.dart
-- Contiene el flujo de viaje: seleccion de ruta y mascotas, inicio, seguimiento, reruteo y finalizacion del trayecto.
+- Encapsulates trip selection, trip start, progress tracking, rerouting, and trip completion flows.
 
 ## test/
 
 ### test/widget_test.dart
-- Es el test de smoke por defecto de Flutter; actualmente sigue el ejemplo base del contador y sirve como punto de partida para pruebas de UI.
+- Verifies that `MyApp` boots correctly inside `ProviderScope` and that the theme controller updates state as expected.
+
+### test/trip_navigation_support_test.dart
+- Covers waypoint consumption and reroute queue behavior for the trip navigation support helpers.

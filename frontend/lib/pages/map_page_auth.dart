@@ -1,5 +1,3 @@
-// ignore_for_file: invalid_use_of_protected_member
-
 part of 'map_page.dart';
 
 void _invalidateUserScopedData(WidgetRef ref) {
@@ -7,6 +5,9 @@ void _invalidateUserScopedData(WidgetRef ref) {
   ref.invalidate(petsControllerProvider);
   ref.invalidate(routesControllerProvider);
   ref.invalidate(hazardReportsControllerProvider);
+  ref.invalidate(lostPetReportsControllerProvider);
+  ref.invalidate(foundPetReportsControllerProvider);
+  ref.invalidate(genericReportsControllerProvider);
 }
 
 extension _MapPageAuthAndProfileState on _MapPageState {
@@ -36,7 +37,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
 
   Future<void> _handleLogin(String login, String password) async {
     if (mounted) {
-      setState(() {
+      _updatePageState(() {
         _isAuthRequestLoading = true;
       });
     }
@@ -53,12 +54,12 @@ extension _MapPageAuthAndProfileState on _MapPageState {
         return;
       }
 
-      setState(() {
+      _updatePageState(() {
         _panelStack.clear();
       });
     } finally {
       if (mounted) {
-        setState(() {
+        _updatePageState(() {
           _isAuthRequestLoading = false;
         });
       }
@@ -72,7 +73,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
     String passwordConfirmation,
   ) async {
     if (mounted) {
-      setState(() {
+      _updatePageState(() {
         _isAuthRequestLoading = true;
       });
     }
@@ -93,12 +94,12 @@ extension _MapPageAuthAndProfileState on _MapPageState {
         return;
       }
 
-      setState(() {
+      _updatePageState(() {
         _panelStack.clear();
       });
     } finally {
       if (mounted) {
-        setState(() {
+        _updatePageState(() {
           _isAuthRequestLoading = false;
         });
       }
@@ -107,7 +108,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
 
   Future<String?> _handleLogout() async {
     if (mounted) {
-      setState(() {
+      _updatePageState(() {
         _isAuthRequestLoading = true;
       });
     }
@@ -122,7 +123,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
         return null;
       }
 
-      setState(() {
+      _updatePageState(() {
         _panelStack.clear();
         _clearDraftRouteVisuals();
         _clearTripSetupState();
@@ -133,7 +134,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       return 'No se pudo cerrar sesión: $error';
     } finally {
       if (mounted) {
-        setState(() {
+        _updatePageState(() {
           _isAuthRequestLoading = false;
         });
       }
@@ -157,17 +158,47 @@ extension _MapPageAuthAndProfileState on _MapPageState {
     _pushPanel(_buildEditPetRoute(isDarkMode, pet));
   }
 
+  Future<void> _closeAddPetPanelAfterSave(int petId) async {
+    if (!_hasOpenPanels) {
+      return;
+    }
+
+    final bool returningToTripPetSelection =
+        _panelStack.length > 1 &&
+        _panelStack[_panelStack.length - 2].isTripPetSelectionPanel;
+
+    _updatePageState(() {
+      _panelStack.removeLast();
+    });
+
+    if (!returningToTripPetSelection) {
+      return;
+    }
+
+    await ref.read(petsControllerProvider.notifier).reload();
+    if (!mounted) {
+      return;
+    }
+
+    final bool isDarkMode = ref.read(themeModeProvider);
+    _updatePageState(() {
+      _selectedTripPetIds.add(petId);
+    });
+    _returnToTripStartPanel(isDarkMode);
+  }
+
   _PanelRoute _buildProfileRoute(bool isDarkMode) {
     return _PanelRoute(
       transitionKey: ++_panelTransitionSeed,
       title: null,
       anchor: PanelAnchor.topLeft,
       width: 360,
-      height: 510,
-      maxHeight: 510,
-      adaptHeightToContent: true,
+      height: 370,
+      maxHeight: 400,
+      adaptHeightToContent: false,
       expandHorizontal: false,
       expandVertical: false,
+      scrollContent: false,
       isProfilePanel: true,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
@@ -273,7 +304,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       contentBuilder: (BuildContext context) {
         return AddPetPanelContent(
           isDarkMode: isDarkMode,
-          onSaved: _closeCurrentPanel,
+          onSaved: _closeAddPetPanelAfterSave,
         );
       },
     );

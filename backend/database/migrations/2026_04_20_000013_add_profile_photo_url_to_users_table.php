@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasColumn('users', 'profile_photo_url')) {
+        if (! Schema::hasColumn('users', 'profile_photo_url')) {
             Schema::table('users', function (Blueprint $table) {
                 $table->string('profile_photo_url')->nullable()->after('password');
             });

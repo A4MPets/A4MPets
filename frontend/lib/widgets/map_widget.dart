@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
@@ -6,10 +8,15 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import '../models/found_pet_report_record.dart';
+import '../models/generic_report_record.dart';
 import '../models/hazard_report_record.dart';
+import '../models/lost_pet_report_record.dart';
 import '../models/colored_route_segment.dart';
 import '../theme/app_palette.dart';
 
+/// Interactive map shell that renders user location, routes, hazards, and
+/// report overlays while delegating workflow decisions to parent callbacks.
 class MapWidget extends StatefulWidget {
   final bool isDarkMode;
   final LatLng center;
@@ -37,14 +44,28 @@ class MapWidget extends StatefulWidget {
   final void Function(LatLng)? onMapTap;
   final List<HazardReportRecord> hazardReports;
   final List<HazardReportRecord> visibleHazardCircles;
+  final List<LostPetReportRecord> lostPetReports;
+  final List<FoundPetReportRecord> foundPetReports;
+  final List<GenericReportRecord> genericReports;
   final HazardReportRecord? highlightedHazard;
   final LatLng? hazardDraftLocation;
   final int? hazardDraftImpactRadiusMeters;
   final String? hazardDraftRiskLevelCode;
   final bool isSelectingHazardLocation;
+  final LatLng? lostPetDraftLocation;
+  final LatLng? foundPetDraftLocation;
+  final LatLng? genericReportDraftLocation;
+  final int? genericReportDraftImpactRadiusMeters;
+  final String? genericReportDraftRiskLevelCode;
+  final bool isSelectingReportLocation;
   final bool routeSelectionHintAtTop;
-  final bool hazardSelectionHintAtTop;
+  final bool reportSelectionHintAtTop;
+  final String reportSelectionHintText;
+  final Color reportSelectionHintColor;
   final void Function(HazardReportRecord report)? onHazardTap;
+  final void Function(LostPetReportRecord report)? onLostPetTap;
+  final void Function(FoundPetReportRecord report)? onFoundPetTap;
+  final void Function(GenericReportRecord report)? onGenericReportTap;
   final LatLng? cameraFocusTarget;
   final double? cameraFocusZoom;
   final int cameraFocusRevision;
@@ -83,14 +104,28 @@ class MapWidget extends StatefulWidget {
     this.onMapTap,
     this.hazardReports = const <HazardReportRecord>[],
     this.visibleHazardCircles = const <HazardReportRecord>[],
+    this.lostPetReports = const <LostPetReportRecord>[],
+    this.foundPetReports = const <FoundPetReportRecord>[],
+    this.genericReports = const <GenericReportRecord>[],
     this.highlightedHazard,
     this.hazardDraftLocation,
     this.hazardDraftImpactRadiusMeters,
     this.hazardDraftRiskLevelCode,
     this.isSelectingHazardLocation = false,
+    this.lostPetDraftLocation,
+    this.foundPetDraftLocation,
+    this.genericReportDraftLocation,
+    this.genericReportDraftImpactRadiusMeters,
+    this.genericReportDraftRiskLevelCode,
+    this.isSelectingReportLocation = false,
     this.routeSelectionHintAtTop = false,
-    this.hazardSelectionHintAtTop = false,
+    this.reportSelectionHintAtTop = false,
+    this.reportSelectionHintText = 'Toca el mapa para ubicar el reporte',
+    this.reportSelectionHintColor = AppPalette.primaryBlue,
     this.onHazardTap,
+    this.onLostPetTap,
+    this.onFoundPetTap,
+    this.onGenericReportTap,
     this.cameraFocusTarget,
     this.cameraFocusZoom,
     this.cameraFocusRevision = 0,
@@ -105,7 +140,8 @@ class MapWidget extends StatefulWidget {
   State<MapWidget> createState() => _MapWidgetState();
 }
 
-class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
+class _MapWidgetState extends State<MapWidget>
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late MapController mapController;
   AnimationController? _cameraAnimationController;
   bool _isMapReady = false;
@@ -120,6 +156,7 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
   bool _isCustomPositionMode = false;
   LatLng? _customUserLocation;
   StreamSubscription<Position>? _positionStreamSub;
+  StreamSubscription<CompassEvent>? _compassStreamSub;
   bool _isResolvingLocation = false;
   String? _userLocationErrorText;
 
@@ -143,10 +180,21 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
     return _isCustomPositionMode ? _customUserLocation : _userLocation;
   }
 
+  bool get _supportsCompass {
+    if (kIsWeb) {
+      return false;
+    }
+
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
+  }
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     mapController = MapController();
+    _startCompassTracking();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _requestLocationPermission();
     });
@@ -168,7 +216,7 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
         }
         _emitUserLocationStatus(
           isLoading: false,
-          errorText: 'Activa la ubicacion del dispositivo para continuar.',
+          errorText: 'Activa la ubicación del dispositivo para continuar.',
         );
         return;
       }
@@ -181,7 +229,7 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
         }
         _emitUserLocationStatus(
           isLoading: false,
-          errorText: 'Debes habilitar los permisos de ubicacion.',
+          errorText: 'Debes habilitar los permisos de ubicación.',
         );
       } else if (permission == LocationPermission.deniedForever) {
         if (mounted) {
@@ -190,7 +238,7 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
         _emitUserLocationStatus(
           isLoading: false,
           errorText:
-              'Los permisos de ubicacion estan bloqueados. Debes habilitarlos manualmente.',
+              'Los permisos de ubicación están bloqueados. Debes habilitarlos manualmente.',
         );
       } else {
         if (mounted) {
@@ -203,7 +251,7 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
       debugPrint('Error requesting location permission: $e');
       _emitUserLocationStatus(
         isLoading: false,
-        errorText: 'No se pudo solicitar la ubicacion actual.',
+        errorText: 'No se pudo solicitar la ubicación actual.',
       );
     } finally {
       _isResolvingLocation = false;
@@ -233,7 +281,7 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
       debugPrint('Error getting current location: $e');
       _emitUserLocationStatus(
         isLoading: false,
-        errorText: 'No se pudo obtener tu ubicacion actual.',
+        errorText: 'No se pudo obtener tu ubicación actual.',
       );
     }
   }
@@ -267,7 +315,61 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
               _emitUserLocationStatus(isLoading: false, errorText: null);
             }
           },
+          onError: (Object error, StackTrace stackTrace) {
+            debugPrint('Location stream error: $error');
+            _emitUserLocationStatus(
+              isLoading: false,
+              errorText:
+                  'Se perdió la actualización de ubicación. Reintentando.',
+            );
+
+            if (!mounted) {
+              return;
+            }
+
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) {
+                return;
+              }
+              _requestLocationPermission();
+            });
+          },
+          onDone: () {
+            if (!mounted) {
+              return;
+            }
+
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) {
+                return;
+              }
+              _requestLocationPermission();
+            });
+          },
         );
+  }
+
+  void _startCompassTracking() {
+    if (!_supportsCompass) {
+      return;
+    }
+
+    _compassStreamSub?.cancel();
+    _compassStreamSub = FlutterCompass.events?.listen(
+      (CompassEvent event) {
+        final double? heading = event.heading;
+        if (heading == null || heading.isNaN || !mounted) {
+          return;
+        }
+
+        setState(() {
+          _userHeading = heading;
+        });
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('Compass stream error: $error');
+      },
+    );
   }
 
   Future<void> _toggleCustomPositionMode() async {
@@ -333,10 +435,27 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _disposeCameraAnimation();
     _positionStreamSub?.cancel();
+    _compassStreamSub?.cancel();
     mapController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _startCompassTracking();
+      _requestLocationPermission();
+    });
   }
 
   @override
@@ -534,18 +653,14 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
     }
   }
 
-  // Report Danger - Ready to add functionality
   void _onReportarPeligro() {
     widget.onReportDangerTap?.call();
   }
 
-  // Start Trip - Ready to add functionality
   void _onIniciarViaje() {
-    // TODO: Implement logic to start trip
     widget.onStartTrip?.call();
   }
 
-  // Profile - Ready to add functionality
   void _onProfileTap() {
     widget.onProfileTap?.call();
   }
@@ -591,6 +706,14 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
 
   Color _hazardFillColor(HazardReportRecord report) {
     return _hazardFillColorForRiskLevel(report.riskLevelCode);
+  }
+
+  Color _genericReportBorderColor(GenericReportRecord report) {
+    return AppPalette.borderLight;
+  }
+
+  Color _genericReportFillColor(GenericReportRecord report) {
+    return AppPalette.borderLight.withValues(alpha: 0.45);
   }
 
   LatLng _applyPixelDeltaToLatLng({
@@ -647,7 +770,7 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
     final bool isMobileTripOverlayActive =
         !controlsVisible && widget.keepReportDangerVisible;
     final double mobileBottomActionsOffset = isMobileTripOverlayActive
-        ? 156
+        ? 244
         : 16;
 
     return Stack(
@@ -841,6 +964,162 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
                   ],
                 ),
               ),
+            if (widget.lostPetReports.isNotEmpty)
+              RepaintBoundary(
+                child: MarkerLayer(
+                  markers: widget.lostPetReports
+                      .map((LostPetReportRecord report) {
+                        return Marker(
+                          point: LatLng(
+                            report.lastSeenLatitude,
+                            report.lastSeenLongitude,
+                          ),
+                          width: 24,
+                          height: 24,
+                          child: GestureDetector(
+                            onTap: () => widget.onLostPetTap?.call(report),
+                            child: const _HazardMarkerWidget(
+                              color: AppPalette.reportYellow,
+                              label: '?',
+                            ),
+                          ),
+                        );
+                      })
+                      .toList(growable: false),
+                ),
+              ),
+            if (widget.foundPetReports.isNotEmpty)
+              RepaintBoundary(
+                child: MarkerLayer(
+                  markers: widget.foundPetReports
+                      .map((FoundPetReportRecord report) {
+                        return Marker(
+                          point: LatLng(report.latitude, report.longitude),
+                          width: 24,
+                          height: 24,
+                          child: GestureDetector(
+                            onTap: () => widget.onFoundPetTap?.call(report),
+                            child: const _HazardMarkerWidget(
+                              color: AppPalette.reportGreen,
+                              label: '!',
+                            ),
+                          ),
+                        );
+                      })
+                      .toList(growable: false),
+                ),
+              ),
+            if (widget.genericReports.any(
+              (GenericReportRecord report) => report.impactRadiusMeters > 0,
+            ))
+              RepaintBoundary(
+                child: CircleLayer(
+                  circles: widget.genericReports
+                      .where(
+                        (GenericReportRecord report) =>
+                            report.impactRadiusMeters > 0,
+                      )
+                      .map((GenericReportRecord report) {
+                        return CircleMarker(
+                          point: LatLng(report.latitude, report.longitude),
+                          color: _genericReportFillColor(report),
+                          borderColor: _genericReportBorderColor(report),
+                          borderStrokeWidth: 1.2,
+                          useRadiusInMeter: true,
+                          radius: report.impactRadiusMeters.toDouble(),
+                        );
+                      })
+                      .toList(growable: false),
+                ),
+              ),
+            if (widget.genericReports.isNotEmpty)
+              RepaintBoundary(
+                child: MarkerLayer(
+                  markers: widget.genericReports
+                      .map((GenericReportRecord report) {
+                        return Marker(
+                          point: LatLng(report.latitude, report.longitude),
+                          width: 24,
+                          height: 24,
+                          child: GestureDetector(
+                            onTap: () =>
+                                widget.onGenericReportTap?.call(report),
+                            child: const _HazardMarkerWidget(
+                              color: AppPalette.charcoal,
+                              label: 'i',
+                            ),
+                          ),
+                        );
+                      })
+                      .toList(growable: false),
+                ),
+              ),
+            if (widget.lostPetDraftLocation != null)
+              RepaintBoundary(
+                child: MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: widget.lostPetDraftLocation!,
+                      width: 24,
+                      height: 24,
+                      child: const _HazardMarkerWidget(
+                        color: AppPalette.reportYellow,
+                        label: '?',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (widget.foundPetDraftLocation != null)
+              RepaintBoundary(
+                child: MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: widget.foundPetDraftLocation!,
+                      width: 24,
+                      height: 24,
+                      child: const _HazardMarkerWidget(
+                        color: AppPalette.reportGreen,
+                        label: '!',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (widget.genericReportDraftLocation != null &&
+                widget.genericReportDraftImpactRadiusMeters != null &&
+                widget.genericReportDraftImpactRadiusMeters! > 0)
+              RepaintBoundary(
+                child: CircleLayer(
+                  circles: [
+                    CircleMarker(
+                      point: widget.genericReportDraftLocation!,
+                      color: AppPalette.borderLight.withValues(alpha: 0.45),
+                      borderColor: AppPalette.borderLight,
+                      borderStrokeWidth: 1.5,
+                      useRadiusInMeter: true,
+                      radius: widget.genericReportDraftImpactRadiusMeters!
+                          .toDouble(),
+                    ),
+                  ],
+                ),
+              ),
+            if (widget.genericReportDraftLocation != null)
+              RepaintBoundary(
+                child: MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: widget.genericReportDraftLocation!,
+                      width: 24,
+                      height: 24,
+                      child: const _HazardMarkerWidget(
+                        color: AppPalette.charcoal,
+                        label: 'i',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             if (widget.routePolylinePoints.length >= 2)
               RepaintBoundary(
                 child: PolylineLayer(polylines: _buildRoutePolylines()),
@@ -942,7 +1221,7 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
                             ),
                           ),
                           child: const Text(
-                            'Reportar Peligro',
+                            'Reportar',
                             textAlign: TextAlign.center,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -1106,29 +1385,35 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
             child: _buildAnimatedControl(
               visible: reportDangerVisible,
               hiddenOffset: const Offset(-0.06, 0.06),
-              child: SizedBox(
-                width: 220,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _onReportarPeligro,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: secondary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 220,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: _onReportarPeligro,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: secondary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        'Reportar',
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
-                  child: const Text(
-                    'Reportar Peligro',
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
+                ],
               ),
             ),
           ),
@@ -1311,15 +1596,21 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
         _buildSelectionHintPositioned(
           isWeb: isWeb,
           topSystemInset: topSystemInset,
-          anchorTop: widget.hazardSelectionHintAtTop,
+          anchorTop: widget.reportSelectionHintAtTop,
           bottomOffset: isWeb ? 72 : 68,
-          visible: widget.isSelectingHazardLocation,
+          visible:
+              widget.isSelectingHazardLocation ||
+              widget.isSelectingReportLocation,
           child: _buildSelectionHint(
-            color: _hazardBorderColorForRiskLevel(
-              widget.hazardDraftRiskLevelCode,
-            ),
+            color: widget.isSelectingHazardLocation
+                ? _hazardBorderColorForRiskLevel(
+                    widget.hazardDraftRiskLevelCode,
+                  )
+                : widget.reportSelectionHintColor,
             icon: Icons.place_rounded,
-            text: 'Toca el mapa para ubicar el peligro',
+            text: widget.isSelectingHazardLocation
+                ? 'Toca el mapa para ubicar el peligro'
+                : widget.reportSelectionHintText,
           ),
         ),
         if (widget.panelOverlay != null)
@@ -1474,8 +1765,9 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
 
 class _HazardMarkerWidget extends StatelessWidget {
   final Color color;
+  final String label;
 
-  const _HazardMarkerWidget({required this.color});
+  const _HazardMarkerWidget({required this.color, this.label = '!'});
 
   @override
   Widget build(BuildContext context) {
@@ -1496,8 +1788,8 @@ class _HazardMarkerWidget extends StatelessWidget {
           ],
         ),
         alignment: Alignment.center,
-        child: const Text(
-          '!',
+        child: Text(
+          label,
           style: TextStyle(
             color: Colors.white,
             fontSize: 12,

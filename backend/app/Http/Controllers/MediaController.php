@@ -11,7 +11,7 @@ class MediaController extends Controller
     public function upload(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'bucket' => ['required', 'string', 'in:pets,hazards,profiles'],
+            'bucket' => ['required', 'string', 'in:pets,hazards,profiles,lost_pets,found_pets,generic_reports'],
             'image_data' => ['required', 'string'],
             'file_name' => ['nullable', 'string', 'max:140'],
         ]);
@@ -30,17 +30,17 @@ class MediaController extends Controller
             $validated['file_name'] ?? null,
         );
         $hash = sha1($binary);
-        $fileName = $hash . '.' . $extension;
-        $relativePath = 'media/' . $bucket . '/' . $fileName;
+        $fileName = $hash.'.'.$extension;
+        $relativePath = 'media/'.$bucket.'/'.$fileName;
 
-        if (!Storage::disk('local')->exists($relativePath)) {
+        if (! Storage::disk('local')->exists($relativePath)) {
             Storage::disk('local')->put($relativePath, $binary);
         }
 
         return response()->json([
             'success' => true,
             'data' => [
-                'url' => url('/api/media/' . $bucket . '/' . $fileName),
+                'url' => url('/api/media/'.$bucket.'/'.$fileName),
                 'bucket' => $bucket,
                 'file_name' => $fileName,
             ],
@@ -49,16 +49,16 @@ class MediaController extends Controller
 
     public function show(string $bucket, string $fileName)
     {
-        if (!in_array($bucket, ['pets', 'hazards', 'profiles'], true)) {
+        if (! in_array($bucket, ['pets', 'hazards', 'profiles', 'lost_pets', 'found_pets', 'generic_reports'], true)) {
             abort(404);
         }
 
-        if (!preg_match('/^[a-zA-Z0-9._-]+$/', $fileName)) {
+        if (! preg_match('/^[a-zA-Z0-9._-]+$/', $fileName)) {
             abort(404);
         }
 
-        $relativePath = 'media/' . $bucket . '/' . $fileName;
-        if (!Storage::disk('local')->exists($relativePath)) {
+        $relativePath = 'media/'.$bucket.'/'.$fileName;
+        if (! Storage::disk('local')->exists($relativePath)) {
             abort(404);
         }
 

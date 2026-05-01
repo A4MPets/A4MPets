@@ -4,8 +4,12 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/local_user_profile.dart';
+import '../models/lost_pet_report_record.dart';
+import '../models/found_pet_report_record.dart';
+import '../models/generic_report_record.dart';
 import '../models/hazard_report_record.dart';
 import '../models/pet_record.dart';
+import '../models/report_comment_record.dart';
 import '../models/route_record.dart';
 import '../services/backend_api_client.dart';
 import '../services/local_database_manager.dart';
@@ -163,10 +167,14 @@ class UserLocalRepository {
     return databaseManager.getPetsCount();
   }
 
-  Future<void> addPet({required String name, String? photoPath}) async {
-    await databaseManager.addPet(name: name, photoPath: photoPath);
+  Future<int> addPet({required String name, String? photoPath}) async {
+    final int petId = await databaseManager.addPet(
+      name: name,
+      photoPath: photoPath,
+    );
     await databaseManager.markUserDataForFutureSync();
     unawaited(syncCoordinator.scheduleSync());
+    return petId;
   }
 
   Future<void> updatePet({
@@ -197,13 +205,17 @@ class UserLocalRepository {
     return databaseManager.getRoutesCount();
   }
 
-  Future<void> addRoute({
+  Future<int> addRoute({
     required String name,
     required List<RoutePoint> points,
   }) async {
-    await databaseManager.addRoute(name: name, points: points);
+    final int routeId = await databaseManager.addRoute(
+      name: name,
+      points: points,
+    );
     await databaseManager.markUserDataForFutureSync();
     unawaited(syncCoordinator.scheduleSync());
+    return routeId;
   }
 
   Future<void> deleteRoute({required int routeId}) async {
@@ -254,7 +266,12 @@ class UserLocalRepository {
       evidencePhotoUrl: evidencePhotoUrl,
       reportedByUsername: reportedByUsername,
     );
-    await databaseManager.markUserDataForFutureSync();
+    try {
+      await databaseManager.markUserDataForFutureSync();
+    } catch (_) {
+      // The hazard row already persists with needsSync=true, so a later
+      // background sync can still pick it up even if this extra marker fails.
+    }
     unawaited(syncCoordinator.scheduleSync());
   }
 
@@ -270,7 +287,198 @@ class UserLocalRepository {
     unawaited(syncCoordinator.scheduleSync());
   }
 
+  Future<void> deleteHazardReport({
+    required int hazardId,
+    String? remoteId,
+  }) async {
+    await _deleteRemoteIfPossible(
+      path: remoteId == null || remoteId.trim().isEmpty
+          ? null
+          : '/hazards/$remoteId',
+      requiredSuccess: remoteId != null && remoteId.trim().isNotEmpty,
+    );
+    await databaseManager.deleteHazardReport(hazardId: hazardId);
+  }
+
+  Future<void> addCommentToLostPetReport({
+    required int reportId,
+    required ReportCommentRecord comment,
+  }) async {
+    await databaseManager.addCommentToLostPetReport(
+      reportId: reportId,
+      comment: comment,
+    );
+    await databaseManager.markUserDataForFutureSync();
+    unawaited(syncCoordinator.scheduleSync());
+  }
+
   Future<void> syncHazardsNow() {
+    return syncCoordinator.syncNow();
+  }
+
+  Future<List<LostPetReportRecord>> getLostPetReports() {
+    return databaseManager.getLostPetReports();
+  }
+
+  Future<void> addLostPetReport({
+    required double lastSeenLatitude,
+    required double lastSeenLongitude,
+    required String name,
+    required String details,
+    required DateTime disappearanceDate,
+    required String photoUrl,
+    required String phone,
+  }) async {
+    await databaseManager.addLostPetReport(
+      lastSeenLatitude: lastSeenLatitude,
+      lastSeenLongitude: lastSeenLongitude,
+      name: name,
+      details: details,
+      disappearanceDate: disappearanceDate,
+      photoUrl: photoUrl,
+      phone: phone,
+    );
+    try {
+      await databaseManager.markUserDataForFutureSync();
+    } catch (_) {
+      // The report row already persists with needsSync=true.
+    }
+    unawaited(syncCoordinator.scheduleSync());
+  }
+
+  Future<void> deleteLostPetReport({
+    required int reportId,
+    String? remoteId,
+  }) async {
+    await _deleteRemoteIfPossible(
+      path: remoteId == null || remoteId.trim().isEmpty
+          ? null
+          : '/lost-pet-reports/$remoteId',
+    );
+    await databaseManager.deleteLostPetReport(reportId: reportId);
+    await databaseManager.markUserDataForFutureSync();
+    unawaited(syncCoordinator.scheduleSync());
+  }
+
+  Future<void> syncLostPetReportsNow() {
+    return syncCoordinator.syncNow();
+  }
+
+  Future<void> addCommentToFoundPetReport({
+    required int reportId,
+    required ReportCommentRecord comment,
+  }) async {
+    await databaseManager.addCommentToFoundPetReport(
+      reportId: reportId,
+      comment: comment,
+    );
+    await databaseManager.markUserDataForFutureSync();
+    unawaited(syncCoordinator.scheduleSync());
+  }
+
+  Future<List<FoundPetReportRecord>> getFoundPetReports() {
+    return databaseManager.getFoundPetReports();
+  }
+
+  Future<void> addFoundPetReport({
+    required double latitude,
+    required double longitude,
+    required String details,
+    required DateTime foundDate,
+    String? photoUrl,
+    String? phone,
+  }) async {
+    await databaseManager.addFoundPetReport(
+      latitude: latitude,
+      longitude: longitude,
+      details: details,
+      foundDate: foundDate,
+      photoUrl: photoUrl,
+      phone: phone,
+    );
+    try {
+      await databaseManager.markUserDataForFutureSync();
+    } catch (_) {
+      // The report row already persists with needsSync=true.
+    }
+    unawaited(syncCoordinator.scheduleSync());
+  }
+
+  Future<void> deleteFoundPetReport({
+    required int reportId,
+    String? remoteId,
+  }) async {
+    await _deleteRemoteIfPossible(
+      path: remoteId == null || remoteId.trim().isEmpty
+          ? null
+          : '/found-pet-reports/$remoteId',
+    );
+    await databaseManager.deleteFoundPetReport(reportId: reportId);
+    await databaseManager.markUserDataForFutureSync();
+    unawaited(syncCoordinator.scheduleSync());
+  }
+
+  Future<void> syncFoundPetReportsNow() {
+    return syncCoordinator.syncNow();
+  }
+
+  Future<List<GenericReportRecord>> getGenericReports() {
+    return databaseManager.getGenericReports();
+  }
+
+  Future<void> addGenericReport({
+    required double latitude,
+    required double longitude,
+    required String description,
+    required DateTime reportedDate,
+    required String riskLevelCode,
+    required int impactRadiusMeters,
+    String? photoUrl,
+  }) async {
+    await databaseManager.addGenericReport(
+      latitude: latitude,
+      longitude: longitude,
+      description: description,
+      reportedDate: reportedDate,
+      riskLevelCode: riskLevelCode,
+      impactRadiusMeters: impactRadiusMeters,
+      photoUrl: photoUrl,
+    );
+    try {
+      await databaseManager.markUserDataForFutureSync();
+    } catch (_) {
+      // The report row already persists with needsSync=true.
+    }
+    unawaited(syncCoordinator.scheduleSync());
+  }
+
+  Future<void> deleteGenericReport({
+    required int reportId,
+    String? remoteId,
+  }) async {
+    await _deleteRemoteIfPossible(
+      path: remoteId == null || remoteId.trim().isEmpty
+          ? null
+          : '/generic-reports/$remoteId',
+    );
+    await databaseManager.deleteGenericReport(reportId: reportId);
+    await databaseManager.markUserDataForFutureSync();
+    unawaited(syncCoordinator.scheduleSync());
+  }
+
+  Future<void> addCommentToGenericReport({
+    required int reportId,
+    required ReportCommentRecord comment,
+  }) async {
+    await databaseManager.addCommentToGenericReport(
+      reportId: reportId,
+      comment: comment,
+    );
+    await databaseManager.markUserDataForFutureSync();
+    unawaited(syncCoordinator.scheduleSync());
+  }
+
+  Future<void> syncGenericReportsNow() {
     return syncCoordinator.syncNow();
   }
 
@@ -394,5 +602,51 @@ class UserLocalRepository {
       return message;
     }
     return fallback;
+  }
+
+  Future<void> _deleteRemoteIfPossible({
+    required String? path,
+    bool requiredSuccess = false,
+  }) async {
+    if (path == null || path.isEmpty) {
+      return;
+    }
+
+    final LocalUserProfile profile = await databaseManager
+        .getLocalUserProfile();
+    final String? token = profile.accessToken;
+    if (token == null || token.isEmpty) {
+      if (requiredSuccess) {
+        throw Exception(
+          'No hay una sesión autenticada para borrar este registro remoto.',
+        );
+      }
+      return;
+    }
+
+    final http.Response? response = await _apiClient.deleteWithFallback(
+      path,
+      bearerToken: token,
+    );
+    if (response == null) {
+      if (requiredSuccess) {
+        throw Exception(
+          'No fue posible conectar con el backend para borrar este registro.',
+        );
+      }
+      return;
+    }
+
+    if (response.statusCode == 404) {
+      return;
+    }
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      if (requiredSuccess) {
+        throw Exception(
+          'El backend no pudo borrar este registro en este momento.',
+        );
+      }
+    }
   }
 }

@@ -2,23 +2,25 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ApiToken;
+use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Models\User;
+use App\Services\Auth\AuthTokenService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    public function register(Request $request): JsonResponse
+    public function __construct(
+        private readonly AuthTokenService $authTokenService
+    ) {}
+
+    public function register(RegisterRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-        ]);
+        $validated = $request->validated();
 
         $user = User::create([
             'name' => $validated['name'],
@@ -26,45 +28,42 @@ class AuthController extends Controller
             'password' => $validated['password'],
         ]);
 
-        $token = $this->issueToken($user, 'mobile-register');
+        $token = $this->authTokenService->issueToken($user, 'mobile-register');
 
         return response()->json([
             'success' => true,
             'message' => 'Usuario registrado exitosamente',
             'data' => [
-                'user' => $this->formatUser($user),
+                'user' => $this->authTokenService->formatUser($user),
                 'access_token' => $token['plain_token'],
                 'token_type' => 'Bearer',
             ],
         ], 201);
     }
 
-    public function login(Request $request): JsonResponse
+    public function login(LoginRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'login' => ['required', 'string', 'max:255'],
-            'password' => ['required', 'string'],
-        ]);
-
+        $validated = $request->validated();
         $login = $validated['login'];
+
         $user = User::query()
             ->where('email', $login)
             ->orWhere('name', $login)
             ->first();
 
-        if (!$user || !Hash::check($validated['password'], $user->password)) {
+        if (! $user || ! Hash::check($validated['password'], $user->password)) {
             throw ValidationException::withMessages([
-                'login' => ['Las credenciales proporcionadas no son válidas.'],
+                'login' => ['Las credenciales proporcionadas no son validas.'],
             ]);
         }
 
-        $token = $this->issueToken($user, 'mobile-login');
+        $token = $this->authTokenService->issueToken($user, 'mobile-login');
 
         return response()->json([
             'success' => true,
-            'message' => 'Sesión iniciada correctamente',
+            'message' => 'Sesion iniciada correctamente',
             'data' => [
-                'user' => $this->formatUser($user),
+                'user' => $this->authTokenService->formatUser($user),
                 'access_token' => $token['plain_token'],
                 'token_type' => 'Bearer',
             ],
@@ -75,7 +74,7 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'No autenticado',
@@ -84,79 +83,45 @@ class AuthController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $this->formatUser($user),
+            'data' => $this->authTokenService->formatUser($user),
         ]);
     }
 
     public function logout(Request $request): JsonResponse
     {
-        $apiToken = $request->attributes->get('api_token_model');
-
-        if ($apiToken instanceof ApiToken) {
-            $apiToken->delete();
-        }
+        $this->authTokenService->revokeCurrentToken($request);
 
         return response()->json([
             'success' => true,
-            'message' => 'Sesión cerrada correctamente',
+            'message' => 'Sesion cerrada correctamente',
         ]);
     }
 
-    public function updateProfile(Request $request): JsonResponse
+    public function updateProfile(UpdateProfileRequest $request): JsonResponse
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'No autenticado',
             ], 401);
         }
 
-        $validated = $request->validate([
-            'name' => ['sometimes', 'string', 'max:255'],
-            'profile_photo_url' => ['nullable', 'string', 'max:500'],
-        ]);
+        $validated = $request->validated();
 
         $user->fill([
             'name' => $validated['name'] ?? $user->name,
             'profile_photo_url' => $validated['profile_photo_url'] ?? null,
         ]);
-
         $user->save();
 
         return response()->json([
             'success' => true,
             'message' => 'Perfil actualizado correctamente',
             'data' => [
-                'user' => $this->formatUser($user),
+                'user' => $this->authTokenService->formatUser($user),
             ],
         ]);
-    }
-
-    private function issueToken(User $user, string $name): array
-    {
-        $plainToken = Str::random(64);
-
-        ApiToken::create([
-            'user_id' => $user->id,
-            'name' => $name,
-            'token_hash' => hash('sha256', $plainToken),
-            'last_used_at' => now(),
-        ]);
-
-        return [
-            'plain_token' => $plainToken,
-        ];
-    }
-
-    private function formatUser(User $user): array
-    {
-        return [
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'profile_photo_url' => $user->profile_photo_url,
-        ];
     }
 }

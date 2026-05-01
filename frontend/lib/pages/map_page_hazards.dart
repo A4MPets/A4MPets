@@ -1,5 +1,3 @@
-// ignore_for_file: invalid_use_of_protected_member
-
 part of 'map_page.dart';
 
 extension _MapPageHazardsState on _MapPageState {
@@ -29,11 +27,13 @@ extension _MapPageHazardsState on _MapPageState {
   void _openReportHazardPanel(bool isDarkMode) {
     if (_hasOpenPanels &&
         !_panelStack.last.isTripPanel &&
-        !_panelStack.last.isTripStartPanel) {
+        !_panelStack.last.isTripStartPanel &&
+        !_panelStack.last.isReportSelectorPanel) {
       return;
     }
-    setState(() {
+    _updatePageState(() {
       _isSelectingHazardLocationOnMap = false;
+      _activeReportSelectionContext = null;
       _manualHazardLocation = null;
       _isReportHazardPanelMinimized = false;
       _hazardDraftPreview = const HazardDraftPreview(
@@ -43,7 +43,7 @@ extension _MapPageHazardsState on _MapPageState {
         isSelectingOnMap: false,
       );
     });
-    _pushPanel(_buildReportHazardRoute(isDarkMode));
+    _replaceOrPushReportPanel(_buildReportHazardRoute(isDarkMode));
   }
 
   void _openHazardLayersSettingsPanel(bool isDarkMode) {
@@ -72,7 +72,7 @@ extension _MapPageHazardsState on _MapPageState {
         return;
       }
 
-      setState(() {
+      _updatePageState(() {
         if (currentPanel.isAddRoutePanel) {
           _clearDraftRouteVisuals();
         }
@@ -89,8 +89,11 @@ extension _MapPageHazardsState on _MapPageState {
       });
     }
 
-    setState(() {
+    _updatePageState(() {
       _selectedHazard = hazard;
+      _selectedLostPetReport = null;
+      _selectedFoundPetReport = null;
+      _selectedGenericReport = null;
       _hazardFocusRevision += 1;
     });
 
@@ -112,21 +115,23 @@ extension _MapPageHazardsState on _MapPageState {
   }
 
   void _startHazardMapSelection() {
-    setState(() {
+    _updatePageState(() {
       _isSelectingHazardLocationOnMap = true;
+      _activeReportSelectionContext = _ReportMapSelectionContext.hazard;
       _isReportHazardPanelMinimized = true;
     });
   }
 
   void _toggleReportHazardPanelMinimized() {
-    setState(() {
+    _updatePageState(() {
       _isReportHazardPanelMinimized = !_isReportHazardPanelMinimized;
     });
   }
 
   void _useCurrentHazardLocation() {
-    setState(() {
+    _updatePageState(() {
       _isSelectingHazardLocationOnMap = false;
+      _activeReportSelectionContext = null;
       _manualHazardLocation = null;
       _isReportHazardPanelMinimized = false;
       if (_latestUserLocation == null || _userLocationErrorText != null) {
@@ -143,7 +148,7 @@ extension _MapPageHazardsState on _MapPageState {
       return;
     }
 
-    setState(() {
+    _updatePageState(() {
       _isUserLocationLoading = isLoading;
       _userLocationErrorText = errorText;
     });
@@ -157,7 +162,7 @@ extension _MapPageHazardsState on _MapPageState {
       return;
     }
 
-    setState(() {
+    _updatePageState(() {
       _hazardDraftPreview = HazardDraftPreview(
         location: currentPreview?.location,
         impactRadiusMeters: preview.impactRadiusMeters,
@@ -173,8 +178,8 @@ extension _MapPageHazardsState on _MapPageState {
       title: 'Reportar Peligro',
       anchor: PanelAnchor.bottomLeft,
       width: 340,
-      mobileMaxHeightFactor: 0.5,
-      desktopMaxHeightFactor: 0.5,
+      mobileMaxHeightFactor: 0.72,
+      desktopMaxHeightFactor: 0.48,
       adaptHeightToContent: false,
       expandHorizontal: false,
       expandVertical: false,
@@ -196,9 +201,7 @@ extension _MapPageHazardsState on _MapPageState {
           onStartMapSelection: _startHazardMapSelection,
           onUseCurrentLocation: _useCurrentHazardLocation,
           onPreviewChanged: _updateHazardDraftPreview,
-          onReported: () {
-            _closeCurrentPanel();
-          },
+          onReported: _closeReportingFlowAfterSubmit,
         );
       },
     );
@@ -210,8 +213,8 @@ extension _MapPageHazardsState on _MapPageState {
       title: 'Configuración de mapa',
       anchor: PanelAnchor.topRight,
       width: 360,
-      height: 260,
-      maxHeight: 320,
+      height: 420,
+      maxHeight: 500,
       adaptHeightToContent: false,
       expandHorizontal: false,
       expandVertical: true,
@@ -222,6 +225,9 @@ extension _MapPageHazardsState on _MapPageState {
         return Consumer(
           builder: (BuildContext context, WidgetRef ref, Widget? child) {
             final bool currentDarkMode = ref.watch(themeModeProvider);
+            final bool audioFeedbackEnabled = ref.watch(
+              audioFeedbackEnabledProvider,
+            );
 
             return HazardLayersPanelContent(
               isDarkMode: currentDarkMode,
@@ -229,22 +235,46 @@ extension _MapPageHazardsState on _MapPageState {
               showLowRiskCircles: _showLowRiskHazardCircles,
               showMediumRiskCircles: _showMediumRiskHazardCircles,
               showHighRiskCircles: _showHighRiskHazardCircles,
+              showLostPetReports: _showLostPetReports,
+              showFoundPetReports: _showFoundPetReports,
+              showGenericReports: _showGenericReports,
+              audioFeedbackEnabled: audioFeedbackEnabled,
               onToggleDarkMode: (bool value) {
-                ref.read(themeModeProvider.notifier).state = value;
+                ref.read(themeModeProvider.notifier).setThemeMode(value);
+              },
+              onToggleAudioFeedback: (bool value) {
+                ref
+                    .read(audioFeedbackEnabledProvider.notifier)
+                    .setEnabled(value);
               },
               onToggleLowRisk: (bool value) {
-                setState(() {
+                _updatePageState(() {
                   _showLowRiskHazardCircles = value;
                 });
               },
               onToggleMediumRisk: (bool value) {
-                setState(() {
+                _updatePageState(() {
                   _showMediumRiskHazardCircles = value;
                 });
               },
               onToggleHighRisk: (bool value) {
-                setState(() {
+                _updatePageState(() {
                   _showHighRiskHazardCircles = value;
+                });
+              },
+              onToggleLostPetReports: (bool value) {
+                _updatePageState(() {
+                  _showLostPetReports = value;
+                });
+              },
+              onToggleFoundPetReports: (bool value) {
+                _updatePageState(() {
+                  _showFoundPetReports = value;
+                });
+              },
+              onToggleGenericReports: (bool value) {
+                _updatePageState(() {
+                  _showGenericReports = value;
                 });
               },
             );
@@ -276,6 +306,10 @@ extension _MapPageHazardsState on _MapPageState {
           isDarkMode: isDarkMode,
           hazard: hazard,
           onViewComments: () => _openHazardCommentsPanel(isDarkMode, hazard),
+          debugDeleteLabel: kIsWeb && kDebugMode ? 'Borrar peligro' : null,
+          onDebugDelete: kIsWeb && kDebugMode
+              ? _confirmAndDeleteSelectedDebugItem
+              : null,
         );
       },
     );
@@ -317,7 +351,13 @@ extension _MapPageHazardsState on _MapPageState {
     final List<ColoredRouteSegment> segments =
         RouteHazardVisualizerService.analyzeRouteHazards(
           routePolyline: _draftRoutePolyline,
+          routeWaypoints: _routePolylineWaypoints,
+          segmentColors: AppPalette.routeSegmentBlueVariants,
           hazards: visibleHazards,
+          genericReports: _visibleGenericReports,
+          hazardRiskFilters: _selectedTripHazardRiskFilters.toList(
+            growable: false,
+          ),
         );
 
     _hazardColoredRouteSegments = segments;

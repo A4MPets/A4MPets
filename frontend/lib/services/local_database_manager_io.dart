@@ -8,8 +8,12 @@ import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../models/local_user_profile.dart';
+import '../models/lost_pet_report_record.dart';
+import '../models/found_pet_report_record.dart';
+import '../models/generic_report_record.dart';
 import '../models/hazard_report_record.dart';
 import '../models/pet_record.dart';
+import '../models/report_comment_record.dart';
 import '../models/route_record.dart';
 import 'local_database_schema.dart';
 
@@ -21,6 +25,9 @@ class LocalDatabaseManager {
   static const String _petsTable = 'pets';
   static const String _routesTable = 'routes';
   static const String _hazardsTable = 'hazard_reports';
+  static const String _lostPetReportsTable = 'lost_pet_reports';
+  static const String _foundPetReportsTable = 'found_pet_reports';
+  static const String _genericReportsTable = 'generic_reports';
 
   Database? _database;
   Future<Database>? _databaseFuture;
@@ -58,7 +65,7 @@ class LocalDatabaseManager {
 
     return openDatabase(
       databasePath,
-      version: 7,
+      version: 10,
       onCreate: (Database db, int version) async {
         await LocalDatabaseSchema.createTables(
           db: db,
@@ -66,6 +73,9 @@ class LocalDatabaseManager {
           petsTable: _petsTable,
           routesTable: _routesTable,
           hazardsTable: _hazardsTable,
+          lostPetReportsTable: _lostPetReportsTable,
+          foundPetReportsTable: _foundPetReportsTable,
+          genericReportsTable: _genericReportsTable,
         );
       },
       onUpgrade: (Database db, int oldVersion, int newVersion) async {
@@ -76,6 +86,9 @@ class LocalDatabaseManager {
           petsTable: _petsTable,
           routesTable: _routesTable,
           hazardsTable: _hazardsTable,
+          lostPetReportsTable: _lostPetReportsTable,
+          foundPetReportsTable: _foundPetReportsTable,
+          genericReportsTable: _genericReportsTable,
         );
       },
     );
@@ -316,7 +329,7 @@ class LocalDatabaseManager {
       points: points,
       syncStatus: current.syncStatus == 'synced' ? 'synced' : 'created',
       lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
-      createdAt: DateTime.fromMillisecondsSinceEpoch(now),
+      createdAt: current.createdAt,
       updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
       needsSync: true,
     );
@@ -340,6 +353,8 @@ class LocalDatabaseManager {
     final Database db = await database;
     final List<Map<String, Object?>> rows = await db.query(
       _hazardsTable,
+      where: 'sync_status NOT IN (?, ?)',
+      whereArgs: <Object?>['deleted', 'archived'],
       orderBy: 'reported_at DESC',
     );
     return rows.map(HazardReportRecord.fromMap).toList(growable: false);
@@ -425,6 +440,75 @@ class LocalDatabaseManager {
     );
   }
 
+  Future<void> deleteHazardReport({required int hazardId}) async {
+    final Database db = await database;
+    await db.delete(
+      _hazardsTable,
+      where: 'id = ?',
+      whereArgs: <Object?>[hazardId],
+    );
+  }
+
+  Future<void> removeHazardReportBySyncIdentity({
+    required String localUuid,
+    String? remoteId,
+  }) async {
+    final Database db = await database;
+    if (remoteId != null && remoteId.isNotEmpty) {
+      await db.delete(
+        _hazardsTable,
+        where: 'local_uuid = ? OR remote_id = ?',
+        whereArgs: <Object?>[localUuid, remoteId],
+      );
+      return;
+    }
+
+    await db.delete(
+      _hazardsTable,
+      where: 'local_uuid = ?',
+      whereArgs: <Object?>[localUuid],
+    );
+  }
+
+  Future<void> addCommentToLostPetReport({
+    required int reportId,
+    required ReportCommentRecord comment,
+  }) async {
+    await _appendCommentToReportTable(
+      tableName: _lostPetReportsTable,
+      reportId: reportId,
+      currentComments: (Map<String, Object?> row) =>
+          LostPetReportRecord.fromMap(row).comments,
+      comment: comment,
+    );
+  }
+
+  Future<void> addCommentToFoundPetReport({
+    required int reportId,
+    required ReportCommentRecord comment,
+  }) async {
+    await _appendCommentToReportTable(
+      tableName: _foundPetReportsTable,
+      reportId: reportId,
+      currentComments: (Map<String, Object?> row) =>
+          FoundPetReportRecord.fromMap(row).comments,
+      comment: comment,
+    );
+  }
+
+  Future<void> addCommentToGenericReport({
+    required int reportId,
+    required ReportCommentRecord comment,
+  }) async {
+    await _appendCommentToReportTable(
+      tableName: _genericReportsTable,
+      reportId: reportId,
+      currentComments: (Map<String, Object?> row) =>
+          GenericReportRecord.fromMap(row).comments,
+      comment: comment,
+    );
+  }
+
   Future<List<HazardReportRecord>> getHazardReportsNeedingSync() async {
     final Database db = await database;
     final List<Map<String, Object?>> rows = await db.query(
@@ -459,93 +543,568 @@ class LocalDatabaseManager {
     );
   }
 
-  Future<void> upsertHazardFromRemote({
-    required String localUuid,
-    required String? remoteId,
-    required String syncStatus,
-    required DateTime remoteLastModifiedAt,
-    required double incidentLatitude,
-    required double incidentLongitude,
-    required int impactRadiusMeters,
-    required String categoryCode,
-    required String riskLevelCode,
-    required String narrativeDescription,
-    required String estimatedDurationCode,
-    required DateTime reportedAt,
-    required String? evidencePhotoUrl,
-    required String reportedByUsername,
-    String? commentsJson,
-  }) async {
+  Future<void> upsertHazardsFromRemoteBatch(List<HazardReportRecord> batch) async {
+    if (batch.isEmpty) return;
+    final Database db = await database;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+
+    await db.transaction((Transaction txn) async {
+      for (final HazardReportRecord incoming in batch) {
+        final List<Map<String, Object?>> rows = await txn.query(
+          _hazardsTable,
+          where: 'local_uuid = ? OR remote_id = ?',
+          whereArgs: <Object?>[incoming.localUuid, incoming.remoteId],
+          limit: 1,
+        );
+
+        final int remoteMs = incoming.lastModifiedAt.millisecondsSinceEpoch;
+
+        if (rows.isEmpty) {
+          await txn.insert(_hazardsTable, <String, Object?>{
+            'local_uuid': incoming.localUuid,
+            'remote_id': incoming.remoteId,
+            'sync_status': incoming.syncStatus,
+            'last_modified_at': remoteMs,
+            'incident_latitude': incoming.incidentLatitude,
+            'incident_longitude': incoming.incidentLongitude,
+            'impact_radius_meters': incoming.impactRadiusMeters,
+            'category_code': incoming.categoryCode,
+            'narrative_description': incoming.narrativeDescription,
+            'reported_at': incoming.reportedAt.millisecondsSinceEpoch,
+            'estimated_duration_code': incoming.estimatedDurationCode,
+            'risk_level_code': incoming.riskLevelCode,
+            'evidence_photo_url': incoming.evidencePhotoUrl,
+            'reported_by_username': incoming.reportedByUsername,
+            'comments_json': jsonEncode(incoming.comments.map((c) => c.toMap()).toList()),
+            'created_at': remoteMs,
+            'updated_at': remoteMs,
+            'needs_sync': 0,
+          });
+          continue;
+        }
+
+        final HazardReportRecord local = HazardReportRecord.fromMap(rows.first);
+
+        if (local.needsSync && local.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
+          continue;
+        }
+
+        final String? resolvedEvidencePhoto = _preferOfflineImageSource(
+          currentSource: local.evidencePhotoUrl,
+          remoteSource: incoming.evidencePhotoUrl,
+        );
+
+        await txn.update(
+          _hazardsTable,
+          <String, Object?>{
+            'local_uuid': incoming.localUuid,
+            'remote_id': incoming.remoteId,
+            'sync_status': incoming.syncStatus,
+            'last_modified_at': remoteMs,
+            'incident_latitude': incoming.incidentLatitude,
+            'incident_longitude': incoming.incidentLongitude,
+            'impact_radius_meters': incoming.impactRadiusMeters,
+            'category_code': incoming.categoryCode,
+            'narrative_description': incoming.narrativeDescription,
+            'reported_at': incoming.reportedAt.millisecondsSinceEpoch,
+            'estimated_duration_code': incoming.estimatedDurationCode,
+            'risk_level_code': incoming.riskLevelCode,
+            'evidence_photo_url': resolvedEvidencePhoto,
+            'reported_by_username': incoming.reportedByUsername,
+            'comments_json': jsonEncode(incoming.comments.map((c) => c.toMap()).toList()),
+            'updated_at': now,
+            'needs_sync': 0,
+          },
+          where: 'id = ?',
+          whereArgs: <Object?>[local.id],
+        );
+      }
+    });
+  }
+
+  Future<List<LostPetReportRecord>> getLostPetReports() async {
     final Database db = await database;
     final List<Map<String, Object?>> rows = await db.query(
-      _hazardsTable,
-      where: 'local_uuid = ? OR remote_id = ?',
-      whereArgs: <Object?>[localUuid, remoteId],
-      limit: 1,
+      _lostPetReportsTable,
+      where: 'sync_status != ?',
+      whereArgs: <Object?>['deleted'],
+      orderBy: 'disappearance_date DESC',
     );
+    return rows.map(LostPetReportRecord.fromMap).toList(growable: false);
+  }
 
+  Future<int> addLostPetReport({
+    required double lastSeenLatitude,
+    required double lastSeenLongitude,
+    required String name,
+    required String details,
+    required DateTime disappearanceDate,
+    required String photoUrl,
+    required String phone,
+  }) async {
+    final Database db = await database;
     final int now = DateTime.now().millisecondsSinceEpoch;
-    final int remoteMs = remoteLastModifiedAt.millisecondsSinceEpoch;
-
-    if (rows.isEmpty) {
-      await db.insert(_hazardsTable, <String, Object?>{
-        'local_uuid': localUuid,
-        'remote_id': remoteId,
-        'sync_status': syncStatus,
-        'last_modified_at': remoteMs,
-        'incident_latitude': incidentLatitude,
-        'incident_longitude': incidentLongitude,
-        'impact_radius_meters': impactRadiusMeters,
-        'category_code': categoryCode,
-        'narrative_description': narrativeDescription,
-        'reported_at': reportedAt.millisecondsSinceEpoch,
-        'estimated_duration_code': estimatedDurationCode,
-        'risk_level_code': riskLevelCode,
-        'evidence_photo_url': evidencePhotoUrl,
-        'reported_by_username': reportedByUsername,
-        'comments_json': commentsJson ?? '[]',
-        'created_at': remoteMs,
-        'updated_at': remoteMs,
-        'needs_sync': 0,
-      });
-      return;
-    }
-
-    final HazardReportRecord local = HazardReportRecord.fromMap(rows.first);
-
-    if (local.needsSync && local.lastModifiedAt.isAfter(remoteLastModifiedAt)) {
-      return;
-    }
-
-    final String? resolvedEvidencePhoto = _preferOfflineImageSource(
-      currentSource: local.evidencePhotoUrl,
-      remoteSource: evidencePhotoUrl,
+    final LostPetReportRecord draft = LostPetReportRecord(
+      id: 0,
+      localUuid: _generateLocalUuid('lost'),
+      remoteId: null,
+      syncStatus: 'created',
+      lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
+      lastSeenLatitude: lastSeenLatitude,
+      lastSeenLongitude: lastSeenLongitude,
+      name: name,
+      details: details,
+      disappearanceDate: disappearanceDate,
+      photoUrl: photoUrl,
+      phone: phone,
+      comments: const <ReportCommentRecord>[],
+      createdAt: DateTime.fromMillisecondsSinceEpoch(now),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+      needsSync: true,
     );
+    final Map<String, Object?> map = draft.toMap()..remove('id');
+    return db.insert(_lostPetReportsTable, map);
+  }
 
+  Future<List<LostPetReportRecord>> getLostPetReportsNeedingSync() async {
+    final Database db = await database;
+    final List<Map<String, Object?>> rows = await db.query(
+      _lostPetReportsTable,
+      where: 'needs_sync = ?',
+      whereArgs: <Object?>[1],
+      orderBy: 'last_modified_at ASC',
+    );
+    return rows.map(LostPetReportRecord.fromMap).toList(growable: false);
+  }
+
+  Future<void> deleteLostPetReport({required int reportId}) async {
+    final Database db = await database;
+    final int now = DateTime.now().millisecondsSinceEpoch;
     await db.update(
-      _hazardsTable,
+      _lostPetReportsTable,
       <String, Object?>{
-        'local_uuid': localUuid,
-        'remote_id': remoteId,
-        'sync_status': syncStatus,
-        'last_modified_at': remoteMs,
-        'incident_latitude': incidentLatitude,
-        'incident_longitude': incidentLongitude,
-        'impact_radius_meters': impactRadiusMeters,
-        'category_code': categoryCode,
-        'narrative_description': narrativeDescription,
-        'reported_at': reportedAt.millisecondsSinceEpoch,
-        'estimated_duration_code': estimatedDurationCode,
-        'risk_level_code': riskLevelCode,
-        'evidence_photo_url': resolvedEvidencePhoto,
-        'reported_by_username': reportedByUsername,
-        'comments_json': commentsJson ?? local.toMap()['comments_json'],
+        'sync_status': 'deleted',
+        'last_modified_at': now,
         'updated_at': now,
-        'needs_sync': 0,
+        'needs_sync': 1,
       },
       where: 'id = ?',
-      whereArgs: <Object?>[local.id],
+      whereArgs: <Object?>[reportId],
     );
+  }
+
+  Future<void> markLostPetReportAsSynced({
+    required String localUuid,
+    String? remoteId,
+    String syncStatus = 'synced',
+    DateTime? lastModifiedAt,
+  }) async {
+    final Database db = await database;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    await db.update(
+      _lostPetReportsTable,
+      <String, Object?>{
+        'needs_sync': 0,
+        'remote_id': remoteId,
+        'sync_status': syncStatus,
+        'last_modified_at':
+            (lastModifiedAt ?? DateTime.now()).millisecondsSinceEpoch,
+        'updated_at': now,
+      },
+      where: 'local_uuid = ?',
+      whereArgs: <Object?>[localUuid],
+    );
+  }
+
+  Future<void> upsertLostPetReportsFromRemoteBatch(List<LostPetReportRecord> batch) async {
+    if (batch.isEmpty) return;
+    final Database db = await database;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+
+    await db.transaction((Transaction txn) async {
+      for (final LostPetReportRecord incoming in batch) {
+        final List<Map<String, Object?>> rows = await txn.query(
+          _lostPetReportsTable,
+          where: 'local_uuid = ? OR remote_id = ?',
+          whereArgs: <Object?>[incoming.localUuid, incoming.remoteId],
+          limit: 1,
+        );
+        final int remoteMs = incoming.lastModifiedAt.millisecondsSinceEpoch;
+
+        if (rows.isEmpty) {
+          await txn.insert(_lostPetReportsTable, <String, Object?>{
+            'local_uuid': incoming.localUuid,
+            'remote_id': incoming.remoteId,
+            'sync_status': incoming.syncStatus,
+            'last_modified_at': remoteMs,
+            'last_seen_latitude': incoming.lastSeenLatitude,
+            'last_seen_longitude': incoming.lastSeenLongitude,
+            'name': incoming.name,
+            'details': incoming.details,
+            'disappearance_date': incoming.disappearanceDate.millisecondsSinceEpoch,
+            'photo_url': incoming.photoUrl,
+            'phone': incoming.phone,
+            'comments_json': jsonEncode(incoming.comments.map((c) => c.toMap()).toList()),
+            'created_at': remoteMs,
+            'updated_at': remoteMs,
+            'needs_sync': 0,
+          });
+          continue;
+        }
+
+        final LostPetReportRecord local = LostPetReportRecord.fromMap(rows.first);
+        if (local.needsSync && local.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
+          continue;
+        }
+
+        await txn.update(
+          _lostPetReportsTable,
+          <String, Object?>{
+            'local_uuid': incoming.localUuid,
+            'remote_id': incoming.remoteId,
+            'sync_status': incoming.syncStatus,
+            'last_modified_at': remoteMs,
+            'last_seen_latitude': incoming.lastSeenLatitude,
+            'last_seen_longitude': incoming.lastSeenLongitude,
+            'name': incoming.name,
+            'details': incoming.details,
+            'disappearance_date': incoming.disappearanceDate.millisecondsSinceEpoch,
+            'photo_url': _preferOfflineImageSource(
+              currentSource: local.photoUrl,
+              remoteSource: incoming.photoUrl,
+            ),
+            'phone': incoming.phone,
+            'comments_json': jsonEncode(incoming.comments.map((c) => c.toMap()).toList()),
+            'updated_at': now,
+            'needs_sync': 0,
+          },
+          where: 'id = ?',
+          whereArgs: <Object?>[local.id],
+        );
+      }
+    });
+  }
+
+  Future<List<FoundPetReportRecord>> getFoundPetReports() async {
+    final Database db = await database;
+    final List<Map<String, Object?>> rows = await db.query(
+      _foundPetReportsTable,
+      where: 'sync_status != ?',
+      whereArgs: <Object?>['deleted'],
+      orderBy: 'found_date DESC',
+    );
+    return rows.map(FoundPetReportRecord.fromMap).toList(growable: false);
+  }
+
+  Future<int> addFoundPetReport({
+    required double latitude,
+    required double longitude,
+    required String details,
+    required DateTime foundDate,
+    String? photoUrl,
+    String? phone,
+  }) async {
+    final Database db = await database;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    final FoundPetReportRecord draft = FoundPetReportRecord(
+      id: 0,
+      localUuid: _generateLocalUuid('found'),
+      remoteId: null,
+      syncStatus: 'created',
+      lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
+      latitude: latitude,
+      longitude: longitude,
+      details: details,
+      foundDate: foundDate,
+      photoUrl: photoUrl,
+      phone: phone,
+      comments: const <ReportCommentRecord>[],
+      createdAt: DateTime.fromMillisecondsSinceEpoch(now),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+      needsSync: true,
+    );
+    final Map<String, Object?> map = draft.toMap()..remove('id');
+    return db.insert(_foundPetReportsTable, map);
+  }
+
+  Future<List<FoundPetReportRecord>> getFoundPetReportsNeedingSync() async {
+    final Database db = await database;
+    final List<Map<String, Object?>> rows = await db.query(
+      _foundPetReportsTable,
+      where: 'needs_sync = ?',
+      whereArgs: <Object?>[1],
+      orderBy: 'last_modified_at ASC',
+    );
+    return rows.map(FoundPetReportRecord.fromMap).toList(growable: false);
+  }
+
+  Future<void> deleteFoundPetReport({required int reportId}) async {
+    final Database db = await database;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    await db.update(
+      _foundPetReportsTable,
+      <String, Object?>{
+        'sync_status': 'deleted',
+        'last_modified_at': now,
+        'updated_at': now,
+        'needs_sync': 1,
+      },
+      where: 'id = ?',
+      whereArgs: <Object?>[reportId],
+    );
+  }
+
+  Future<void> markFoundPetReportAsSynced({
+    required String localUuid,
+    String? remoteId,
+    String syncStatus = 'synced',
+    DateTime? lastModifiedAt,
+  }) async {
+    final Database db = await database;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    await db.update(
+      _foundPetReportsTable,
+      <String, Object?>{
+        'needs_sync': 0,
+        'remote_id': remoteId,
+        'sync_status': syncStatus,
+        'last_modified_at':
+            (lastModifiedAt ?? DateTime.now()).millisecondsSinceEpoch,
+        'updated_at': now,
+      },
+      where: 'local_uuid = ?',
+      whereArgs: <Object?>[localUuid],
+    );
+  }
+
+  Future<void> upsertFoundPetReportsFromRemoteBatch(List<FoundPetReportRecord> batch) async {
+    if (batch.isEmpty) return;
+    final Database db = await database;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+
+    await db.transaction((Transaction txn) async {
+      for (final FoundPetReportRecord incoming in batch) {
+        final List<Map<String, Object?>> rows = await txn.query(
+          _foundPetReportsTable,
+          where: 'local_uuid = ? OR remote_id = ?',
+          whereArgs: <Object?>[incoming.localUuid, incoming.remoteId],
+          limit: 1,
+        );
+        final int remoteMs = incoming.lastModifiedAt.millisecondsSinceEpoch;
+
+        if (rows.isEmpty) {
+          await txn.insert(_foundPetReportsTable, <String, Object?>{
+            'local_uuid': incoming.localUuid,
+            'remote_id': incoming.remoteId,
+            'sync_status': incoming.syncStatus,
+            'last_modified_at': remoteMs,
+            'latitude': incoming.latitude,
+            'longitude': incoming.longitude,
+            'details': incoming.details,
+            'found_date': incoming.foundDate.millisecondsSinceEpoch,
+            'photo_url': incoming.photoUrl,
+            'phone': incoming.phone,
+            'comments_json': jsonEncode(incoming.comments.map((c) => c.toMap()).toList()),
+            'created_at': remoteMs,
+            'updated_at': remoteMs,
+            'needs_sync': 0,
+          });
+          continue;
+        }
+
+        final FoundPetReportRecord local = FoundPetReportRecord.fromMap(rows.first);
+        if (local.needsSync && local.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
+          continue;
+        }
+
+        await txn.update(
+          _foundPetReportsTable,
+          <String, Object?>{
+            'local_uuid': incoming.localUuid,
+            'remote_id': incoming.remoteId,
+            'sync_status': incoming.syncStatus,
+            'last_modified_at': remoteMs,
+            'latitude': incoming.latitude,
+            'longitude': incoming.longitude,
+            'details': incoming.details,
+            'found_date': incoming.foundDate.millisecondsSinceEpoch,
+            'photo_url': _preferOfflineImageSource(
+              currentSource: local.photoUrl,
+              remoteSource: incoming.photoUrl,
+            ),
+            'phone': incoming.phone,
+            'comments_json': jsonEncode(incoming.comments.map((c) => c.toMap()).toList()),
+            'updated_at': now,
+            'needs_sync': 0,
+          },
+          where: 'id = ?',
+          whereArgs: <Object?>[local.id],
+        );
+      }
+    });
+  }
+
+  Future<List<GenericReportRecord>> getGenericReports() async {
+    final Database db = await database;
+    final List<Map<String, Object?>> rows = await db.query(
+      _genericReportsTable,
+      where: 'sync_status != ?',
+      whereArgs: <Object?>['deleted'],
+      orderBy: 'reported_date DESC',
+    );
+    return rows.map(GenericReportRecord.fromMap).toList(growable: false);
+  }
+
+  Future<int> addGenericReport({
+    required double latitude,
+    required double longitude,
+    required String description,
+    required DateTime reportedDate,
+    required String riskLevelCode,
+    required int impactRadiusMeters,
+    String? photoUrl,
+  }) async {
+    final Database db = await database;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    final GenericReportRecord draft = GenericReportRecord(
+      id: 0,
+      localUuid: _generateLocalUuid('generic'),
+      remoteId: null,
+      syncStatus: 'created',
+      lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
+      latitude: latitude,
+      longitude: longitude,
+      description: description,
+      reportedDate: reportedDate,
+      riskLevelCode: riskLevelCode,
+      impactRadiusMeters: impactRadiusMeters,
+      photoUrl: photoUrl,
+      comments: const <ReportCommentRecord>[],
+      createdAt: DateTime.fromMillisecondsSinceEpoch(now),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(now),
+      needsSync: true,
+    );
+    final Map<String, Object?> map = draft.toMap()..remove('id');
+    return db.insert(_genericReportsTable, map);
+  }
+
+  Future<List<GenericReportRecord>> getGenericReportsNeedingSync() async {
+    final Database db = await database;
+    final List<Map<String, Object?>> rows = await db.query(
+      _genericReportsTable,
+      where: 'needs_sync = ?',
+      whereArgs: <Object?>[1],
+      orderBy: 'last_modified_at ASC',
+    );
+    return rows.map(GenericReportRecord.fromMap).toList(growable: false);
+  }
+
+  Future<void> deleteGenericReport({required int reportId}) async {
+    final Database db = await database;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    await db.update(
+      _genericReportsTable,
+      <String, Object?>{
+        'sync_status': 'deleted',
+        'last_modified_at': now,
+        'updated_at': now,
+        'needs_sync': 1,
+      },
+      where: 'id = ?',
+      whereArgs: <Object?>[reportId],
+    );
+  }
+
+  Future<void> markGenericReportAsSynced({
+    required String localUuid,
+    String? remoteId,
+    String syncStatus = 'synced',
+    DateTime? lastModifiedAt,
+  }) async {
+    final Database db = await database;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    await db.update(
+      _genericReportsTable,
+      <String, Object?>{
+        'needs_sync': 0,
+        'remote_id': remoteId,
+        'sync_status': syncStatus,
+        'last_modified_at':
+            (lastModifiedAt ?? DateTime.now()).millisecondsSinceEpoch,
+        'updated_at': now,
+      },
+      where: 'local_uuid = ?',
+      whereArgs: <Object?>[localUuid],
+    );
+  }
+
+  Future<void> upsertGenericReportsFromRemoteBatch(List<GenericReportRecord> batch) async {
+    if (batch.isEmpty) return;
+    final Database db = await database;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+
+    await db.transaction((Transaction txn) async {
+      for (final GenericReportRecord incoming in batch) {
+        final List<Map<String, Object?>> rows = await txn.query(
+          _genericReportsTable,
+          where: 'local_uuid = ? OR remote_id = ?',
+          whereArgs: <Object?>[incoming.localUuid, incoming.remoteId],
+          limit: 1,
+        );
+        final int remoteMs = incoming.lastModifiedAt.millisecondsSinceEpoch;
+
+        if (rows.isEmpty) {
+          await txn.insert(_genericReportsTable, <String, Object?>{
+            'local_uuid': incoming.localUuid,
+            'remote_id': incoming.remoteId,
+            'sync_status': incoming.syncStatus,
+            'last_modified_at': remoteMs,
+            'latitude': incoming.latitude,
+            'longitude': incoming.longitude,
+            'description': incoming.description,
+            'reported_date': incoming.reportedDate.millisecondsSinceEpoch,
+            'risk_level_code': incoming.riskLevelCode,
+            'impact_radius_meters': incoming.impactRadiusMeters,
+            'photo_url': incoming.photoUrl,
+            'comments_json': jsonEncode(incoming.comments.map((c) => c.toMap()).toList()),
+            'created_at': remoteMs,
+            'updated_at': remoteMs,
+            'needs_sync': 0,
+          });
+          continue;
+        }
+
+        final GenericReportRecord local = GenericReportRecord.fromMap(rows.first);
+        if (local.needsSync && local.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
+          continue;
+        }
+
+        await txn.update(
+          _genericReportsTable,
+          <String, Object?>{
+            'local_uuid': incoming.localUuid,
+            'remote_id': incoming.remoteId,
+            'sync_status': incoming.syncStatus,
+            'last_modified_at': remoteMs,
+            'latitude': incoming.latitude,
+            'longitude': incoming.longitude,
+            'description': incoming.description,
+            'reported_date': incoming.reportedDate.millisecondsSinceEpoch,
+            'risk_level_code': incoming.riskLevelCode,
+            'impact_radius_meters': incoming.impactRadiusMeters,
+            'photo_url': _preferOfflineImageSource(
+              currentSource: local.photoUrl,
+              remoteSource: incoming.photoUrl,
+            ),
+            'comments_json': jsonEncode(incoming.comments.map((c) => c.toMap()).toList()),
+            'updated_at': now,
+            'needs_sync': 0,
+          },
+          where: 'id = ?',
+          whereArgs: <Object?>[local.id],
+        );
+      }
+    });
   }
 
   Future<List<PetRecord>> getPetsNeedingSync() async {
@@ -582,81 +1141,73 @@ class LocalDatabaseManager {
     );
   }
 
-  Future<void> upsertPetFromRemote({
-    required String localIdString,
-    required String? remoteId,
-    required String syncStatus,
-    required DateTime remoteLastModifiedAt,
-    required String name,
-    required String? photoPath,
-  }) async {
+  Future<void> upsertPetsFromRemoteBatch(List<PetRecord> batch) async {
+    if (batch.isEmpty) return;
     final Database db = await database;
-    List<Map<String, Object?>> rows = await db.query(
-      _petsTable,
-      where: 'remote_id = ?',
-      whereArgs: <Object?>[remoteId],
-      limit: 1,
-    );
+    final int now = DateTime.now().millisecondsSinceEpoch;
 
-    if (rows.isEmpty && localIdString.startsWith('pt_')) {
-      final List<String> parts = localIdString.split('_');
-      if (parts.length >= 3) {
-        final int? parsedId = int.tryParse(parts[1]);
-        final int? parsedCreatedAt = int.tryParse(parts[2]);
-        if (parsedId != null && parsedCreatedAt != null) {
-          rows = await db.query(
+    await db.transaction((Transaction txn) async {
+      for (final PetRecord incoming in batch) {
+        List<Map<String, Object?>> rows = await txn.query(
+          _petsTable,
+          where: 'remote_id = ?',
+          whereArgs: <Object?>[incoming.remoteId],
+          limit: 1,
+        );
+
+        if (rows.isEmpty && incoming.id > 0) {
+          rows = await txn.query(
             _petsTable,
             where: 'id = ? AND created_at = ?',
-            whereArgs: <Object?>[parsedId, parsedCreatedAt],
+            whereArgs: <Object?>[incoming.id, incoming.createdAt.millisecondsSinceEpoch],
             limit: 1,
           );
         }
+
+        final int remoteMs = incoming.lastModifiedAt.millisecondsSinceEpoch;
+
+        if (rows.isEmpty) {
+          await txn.insert(_petsTable, <String, Object?>{
+            'remote_id': incoming.remoteId,
+            'name': incoming.name,
+            'photo_path': incoming.photoPath,
+            'sync_status': incoming.syncStatus,
+            'last_modified_at': remoteMs,
+            'synced_at': remoteMs,
+            'created_at': remoteMs,
+            'updated_at': remoteMs,
+            'needs_sync': 0,
+          });
+          continue;
+        }
+
+        final PetRecord local = PetRecord.fromMap(rows.first);
+        if (local.needsSync && local.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
+          continue;
+        }
+
+        final String? resolvedPhotoPath = _preferOfflineImageSource(
+          currentSource: local.photoPath,
+          remoteSource: incoming.photoPath,
+        );
+
+        await txn.update(
+          _petsTable,
+          <String, Object?>{
+            'remote_id': incoming.remoteId,
+            'name': incoming.name,
+            'photo_path': resolvedPhotoPath,
+            'sync_status': incoming.syncStatus,
+            'last_modified_at': remoteMs,
+            'synced_at': now,
+            'updated_at': now,
+            'needs_sync': 0,
+          },
+          where: 'id = ?',
+          whereArgs: <Object?>[local.id],
+        );
       }
-    }
-
-    final int now = DateTime.now().millisecondsSinceEpoch;
-    final int remoteMs = remoteLastModifiedAt.millisecondsSinceEpoch;
-
-    if (rows.isEmpty) {
-      await db.insert(_petsTable, <String, Object?>{
-        'remote_id': remoteId,
-        'name': name,
-        'photo_path': photoPath,
-        'sync_status': syncStatus,
-        'last_modified_at': remoteMs,
-        'synced_at': remoteMs,
-        'created_at': remoteMs,
-        'updated_at': remoteMs,
-        'needs_sync': 0,
-      });
-      return;
-    }
-
-    final PetRecord local = PetRecord.fromMap(rows.first);
-    if (local.needsSync && local.lastModifiedAt.isAfter(remoteLastModifiedAt)) {
-      return;
-    }
-
-    final String? resolvedPhotoPath = _preferOfflineImageSource(
-      currentSource: local.photoPath,
-      remoteSource: photoPath,
-    );
-
-    await db.update(
-      _petsTable,
-      <String, Object?>{
-        'remote_id': remoteId,
-        'name': name,
-        'photo_path': resolvedPhotoPath,
-        'sync_status': syncStatus,
-        'last_modified_at': remoteMs,
-        'synced_at': now,
-        'updated_at': now,
-        'needs_sync': 0,
-      },
-      where: 'id = ?',
-      whereArgs: <Object?>[local.id],
-    );
+    });
   }
 
   Future<List<RouteRecord>> getRoutesNeedingSync() async {
@@ -693,85 +1244,74 @@ class LocalDatabaseManager {
     );
   }
 
-  Future<void> upsertRouteFromRemote({
-    required String localIdString,
-    required String? remoteId,
-    required String syncStatus,
-    required DateTime remoteLastModifiedAt,
-    required String name,
-    required List<RoutePoint> points,
-  }) async {
+  Future<void> upsertRoutesFromRemoteBatch(List<RouteRecord> batch) async {
+    if (batch.isEmpty) return;
     final Database db = await database;
-    List<Map<String, Object?>> rows = await db.query(
-      _routesTable,
-      where: 'remote_id = ?',
-      whereArgs: <Object?>[remoteId],
-      limit: 1,
-    );
+    final int now = DateTime.now().millisecondsSinceEpoch;
 
-    if (rows.isEmpty && localIdString.startsWith('rt_')) {
-      final List<String> parts = localIdString.split('_');
-      if (parts.length >= 3) {
-        final int? parsedId = int.tryParse(parts[1]);
-        final int? parsedCreatedAt = int.tryParse(parts[2]);
-        if (parsedId != null && parsedCreatedAt != null) {
-          rows = await db.query(
+    await db.transaction((Transaction txn) async {
+      for (final RouteRecord incoming in batch) {
+        List<Map<String, Object?>> rows = await txn.query(
+          _routesTable,
+          where: 'remote_id = ?',
+          whereArgs: <Object?>[incoming.remoteId],
+          limit: 1,
+        );
+
+        if (rows.isEmpty && incoming.id > 0) {
+          rows = await txn.query(
             _routesTable,
             where: 'id = ? AND created_at = ?',
-            whereArgs: <Object?>[parsedId, parsedCreatedAt],
+            whereArgs: <Object?>[incoming.id, incoming.createdAt.millisecondsSinceEpoch],
             limit: 1,
           );
         }
+
+        final int remoteMs = incoming.lastModifiedAt.millisecondsSinceEpoch;
+
+        if (rows.isEmpty) {
+          await txn.insert(_routesTable, <String, Object?>{
+            'remote_id': incoming.remoteId,
+            'name': incoming.name,
+            'points_json': jsonEncode(incoming.points.map((p) => p.toMap()).toList()),
+            'sync_status': incoming.syncStatus,
+            'last_modified_at': remoteMs,
+            'synced_at': remoteMs,
+            'created_at': remoteMs,
+            'updated_at': remoteMs,
+            'needs_sync': 0,
+          });
+          continue;
+        }
+
+        final RouteRecord local = RouteRecord.fromMap(rows.first);
+        if (local.needsSync && local.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
+          continue;
+        }
+
+        await txn.update(
+          _routesTable,
+          <String, Object?>{
+            'remote_id': incoming.remoteId,
+            'name': incoming.name,
+            'points_json': jsonEncode(incoming.points.map((p) => p.toMap()).toList()),
+            'sync_status': incoming.syncStatus,
+            'last_modified_at': remoteMs,
+            'synced_at': now,
+            'updated_at': now,
+            'needs_sync': 0,
+          },
+          where: 'id = ?',
+          whereArgs: <Object?>[local.id],
+        );
       }
-    }
-
-    final int now = DateTime.now().millisecondsSinceEpoch;
-    final int remoteMs = remoteLastModifiedAt.millisecondsSinceEpoch;
-    final String pointsJson = jsonEncode(
-      points.map((RoutePoint p) => p.toMap()).toList(),
-    );
-
-    if (rows.isEmpty) {
-      await db.insert(_routesTable, <String, Object?>{
-        'remote_id': remoteId,
-        'name': name,
-        'points_json': pointsJson,
-        'sync_status': syncStatus,
-        'last_modified_at': remoteMs,
-        'synced_at': remoteMs,
-        'created_at': remoteMs,
-        'updated_at': remoteMs,
-        'needs_sync': 0,
-      });
-      return;
-    }
-
-    final RouteRecord local = RouteRecord.fromMap(rows.first);
-    if (local.needsSync && local.lastModifiedAt.isAfter(remoteLastModifiedAt)) {
-      return;
-    }
-
-    await db.update(
-      _routesTable,
-      <String, Object?>{
-        'remote_id': remoteId,
-        'name': name,
-        'points_json': pointsJson,
-        'sync_status': syncStatus,
-        'last_modified_at': remoteMs,
-        'synced_at': now,
-        'updated_at': now,
-        'needs_sync': 0,
-      },
-      where: 'id = ?',
-      whereArgs: <Object?>[local.id],
-    );
+    });
   }
 
-  String _generateLocalUuid() {
+  String _generateLocalUuid([String prefix = 'hz']) {
     final int now = DateTime.now().microsecondsSinceEpoch;
     final int randomPart = (Random().nextDouble() * 0xFFFFFFFF).floor();
-    return 'hz-$now-${randomPart.toRadixString(16)}';
+    return '$prefix-$now-${randomPart.toRadixString(16)}';
   }
 
   Future<void> markUserDataForFutureSync() async {
@@ -809,5 +1349,45 @@ class LocalDatabaseManager {
 
   bool _isRemoteUrl(String value) {
     return value.startsWith('http://') || value.startsWith('https://');
+  }
+
+  Future<void> _appendCommentToReportTable({
+    required String tableName,
+    required int reportId,
+    required List<ReportCommentRecord> Function(Map<String, Object?> row)
+    currentComments,
+    required ReportCommentRecord comment,
+  }) async {
+    final Database db = await database;
+    final List<Map<String, Object?>> rows = await db.query(
+      tableName,
+      where: 'id = ?',
+      whereArgs: <Object?>[reportId],
+      limit: 1,
+    );
+
+    if (rows.isEmpty) {
+      return;
+    }
+
+    final List<ReportCommentRecord> updatedComments = <ReportCommentRecord>[
+      ...currentComments(rows.first),
+      comment,
+    ];
+    final int now = DateTime.now().millisecondsSinceEpoch;
+
+    await db.update(
+      tableName,
+      <String, Object?>{
+        'comments_json': jsonEncode(
+          updatedComments.map((ReportCommentRecord c) => c.toMap()).toList(),
+        ),
+        'updated_at': now,
+        'last_modified_at': now,
+        'needs_sync': 1,
+      },
+      where: 'id = ?',
+      whereArgs: <Object?>[reportId],
+    );
   }
 }

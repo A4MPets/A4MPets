@@ -1,5 +1,3 @@
-// ignore_for_file: invalid_use_of_protected_member
-
 part of 'map_page.dart';
 
 extension _MapPageRoutesState on _MapPageState {
@@ -9,7 +7,7 @@ extension _MapPageRoutesState on _MapPageState {
   }
 
   void _openAddRoutePanel(bool isDarkMode) {
-    setState(() {
+    _updatePageState(() {
       _clearDraftRouteVisuals();
     });
     _pushPanel(_buildAddRouteRoute(isDarkMode));
@@ -23,7 +21,7 @@ extension _MapPageRoutesState on _MapPageState {
     final List<LatLng> points = route.points
         .map((RoutePoint p) => p.toLatLng())
         .toList();
-    setState(() {
+    _updatePageState(() {
       _draftRoutePoints = points;
       _draftRoutePolyline = List<LatLng>.from(points);
       _activeRouteTool = _RouteMapTool.addPoint;
@@ -40,7 +38,7 @@ extension _MapPageRoutesState on _MapPageState {
     final List<LatLng> points = route.points
         .map((RoutePoint p) => p.toLatLng())
         .toList();
-    setState(() {
+    _updatePageState(() {
       _draftRoutePoints = points;
       _draftRoutePolyline = List<LatLng>.from(points);
       _selectedRouteId = route.id;
@@ -115,7 +113,7 @@ extension _MapPageRoutesState on _MapPageState {
     }
 
     if (_selectedRouteId == route.id) {
-      setState(() {
+      _updatePageState(() {
         _clearDraftRouteVisuals();
       });
     }
@@ -176,19 +174,19 @@ extension _MapPageRoutesState on _MapPageState {
           isAddToolSelected: _activeRouteTool == _RouteMapTool.addPoint,
           isEditToolSelected: _activeRouteTool == _RouteMapTool.editPoint,
           onSelectAddTool: () {
-            setState(() {
+            _updatePageState(() {
               _activeRouteTool = _RouteMapTool.addPoint;
               _selectedPointIndexForEdit = null;
             });
           },
           onSelectEditTool: () {
-            setState(() {
+            _updatePageState(() {
               _activeRouteTool = _RouteMapTool.editPoint;
             });
           },
           selectedPointIndex: _selectedPointIndexForEdit,
           onSelectPointForMapEdit: (int index) {
-            setState(() {
+            _updatePageState(() {
               _selectedPointIndexForEdit = index;
               _activeRouteTool = _RouteMapTool.editPoint;
             });
@@ -200,12 +198,12 @@ extension _MapPageRoutesState on _MapPageState {
           routeId: _editingRouteId,
           initialRouteName: _editingRouteName,
           onSaveRoute: _persistDraftRoute,
-          onSavedComplete: () {
+          onSavedComplete: (int savedRouteId) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!mounted) {
                 return;
               }
-              _closeAddRoutePanelAfterSave();
+              _closeAddRoutePanelAfterSave(savedRouteId);
             });
           },
         );
@@ -217,7 +215,12 @@ extension _MapPageRoutesState on _MapPageState {
     _routePolylineRequestVersion++;
     _draftRoutePoints = <LatLng>[];
     _draftRoutePolyline = <LatLng>[];
+    _routePolylineWaypoints = <LatLng>[];
     _hazardColoredRouteSegments = <dynamic>[];
+    _activeNavigationInstructions = const <RouteNavigationInstruction>[];
+    _spokenFarApproachInstructionIds.clear();
+    _spokenApproachInstructionIds.clear();
+    _spokenImmediateInstructionIds.clear();
     _activeRouteTool = _RouteMapTool.addPoint;
     _selectedPointIndexForEdit = null;
     _selectedRouteId = null;
@@ -229,7 +232,7 @@ extension _MapPageRoutesState on _MapPageState {
     if (_activeRouteTool != _RouteMapTool.editPoint) {
       return;
     }
-    setState(() {
+    _updatePageState(() {
       _selectedPointIndexForEdit = index;
     });
   }
@@ -241,7 +244,7 @@ extension _MapPageRoutesState on _MapPageState {
       return;
     }
 
-    setState(() {
+    _updatePageState(() {
       final List<LatLng> updated = List<LatLng>.from(_draftRoutePoints);
       updated[index] = point;
       _draftRoutePoints = updated;
@@ -259,7 +262,7 @@ extension _MapPageRoutesState on _MapPageState {
     }
 
     List<LatLng> updated = <LatLng>[];
-    setState(() {
+    _updatePageState(() {
       updated = List<LatLng>.from(_draftRoutePoints);
       updated[index] = point;
       _draftRoutePoints = updated;
@@ -326,7 +329,7 @@ extension _MapPageRoutesState on _MapPageState {
     }
 
     List<LatLng> updated = <LatLng>[];
-    setState(() {
+    _updatePageState(() {
       updated = List<LatLng>.from(_draftRoutePoints);
       final LatLng moved = updated.removeAt(oldIndex);
       updated.insert(newIndex, moved);
@@ -340,7 +343,7 @@ extension _MapPageRoutesState on _MapPageState {
 
   void _removeDraftPoint(int index) {
     List<LatLng> updated = <LatLng>[];
-    setState(() {
+    _updatePageState(() {
       updated = List<LatLng>.from(_draftRoutePoints);
       updated.removeAt(index);
       _draftRoutePoints = updated;
@@ -356,12 +359,37 @@ extension _MapPageRoutesState on _MapPageState {
   }
 
   void _onMapTap(LatLng point) {
+    if (_activeReportSelectionContext == _ReportMapSelectionContext.lostPet) {
+      _updatePageState(() {
+        _manualLostPetLocation = point;
+        _activeReportSelectionContext = null;
+      });
+      return;
+    }
+
+    if (_activeReportSelectionContext == _ReportMapSelectionContext.foundPet) {
+      _updatePageState(() {
+        _manualFoundPetLocation = point;
+        _activeReportSelectionContext = null;
+      });
+      return;
+    }
+
+    if (_activeReportSelectionContext == _ReportMapSelectionContext.generic) {
+      _updatePageState(() {
+        _manualGenericReportLocation = point;
+        _activeReportSelectionContext = null;
+      });
+      return;
+    }
+
     if (_hasOpenPanels &&
         _panelStack.last.isReportHazardPanel &&
         _isSelectingHazardLocationOnMap) {
-      setState(() {
+      _updatePageState(() {
         _manualHazardLocation = point;
         _isSelectingHazardLocationOnMap = false;
+        _activeReportSelectionContext = null;
         _isReportHazardPanelMinimized = false;
       });
       return;
@@ -373,7 +401,7 @@ extension _MapPageRoutesState on _MapPageState {
 
     if (_activeRouteTool == _RouteMapTool.addPoint) {
       late final List<LatLng> updated;
-      setState(() {
+      _updatePageState(() {
         updated = <LatLng>[..._draftRoutePoints, point];
         _draftRoutePoints = updated;
       });
@@ -389,7 +417,7 @@ extension _MapPageRoutesState on _MapPageState {
 
     late final List<LatLng> updated;
     final int index = _selectedPointIndexForEdit!;
-    setState(() {
+    _updatePageState(() {
       updated = List<LatLng>.from(_draftRoutePoints);
       updated[index] = point;
       _draftRoutePoints = updated;
@@ -397,7 +425,7 @@ extension _MapPageRoutesState on _MapPageState {
     _refreshDraftRoutePolyline(updated);
   }
 
-  Future<void> _persistDraftRoute(String name) async {
+  Future<int> _persistDraftRoute(String name) async {
     final String resolvedName = name.trim().isEmpty ? 'Ruta' : name.trim();
     final List<RoutePoint> points = _draftRoutePoints
         .map(
@@ -419,16 +447,16 @@ extension _MapPageRoutesState on _MapPageState {
             points: points,
           );
       if (!mounted) {
-        return;
+        return _editingRouteId!;
       }
-      setState(() {
+      _updatePageState(() {
         _editingRouteName = resolvedName;
         _selectedRouteId = _editingRouteId;
       });
-      return;
+      return _editingRouteId!;
     }
 
-    await ref
+    return ref
         .read(routesControllerProvider.notifier)
         .addRoute(name: resolvedName, points: points);
   }
@@ -440,20 +468,33 @@ extension _MapPageRoutesState on _MapPageState {
     final int requestVersion = ++_routePolylineRequestVersion;
 
     if (!keepCurrentPolylineWhileLoading && mounted) {
-      setState(() {
+      _updatePageState(() {
+        _routePolylineWaypoints = List<LatLng>.from(waypoints);
         _draftRoutePolyline = List<LatLng>.from(waypoints);
         _analyzeRouteForHazards();
       });
+    } else {
+      _routePolylineWaypoints = List<LatLng>.from(waypoints);
     }
 
     if (waypoints.length < 2) {
+      if (_isTripNavigationContext) {
+        _updatePageState(() {
+          _activeNavigationInstructions = const <RouteNavigationInstruction>[];
+          _spokenFarApproachInstructionIds.clear();
+          _spokenApproachInstructionIds.clear();
+          _spokenImmediateInstructionIds.clear();
+        });
+      }
       return;
     }
 
     try {
-      final List<LatLng> polyline = await _routingService.buildRoadRoute(
+      final PlannedRouteResult routeResult = await _routingService.buildRoadRoute(
         waypoints: waypoints,
-        avoidHazards: _shouldAvoidHazardsInRouting,
+        hazardRiskFilters: _selectedTripHazardRiskFilters.toList(
+          growable: false,
+        ),
         travelMode: _selectedTripTransport == _TripTransportMethod.vehicle
             ? 'vehicle'
             : 'walking',
@@ -461,20 +502,38 @@ extension _MapPageRoutesState on _MapPageState {
           'selected_pet_ids': _selectedTripPetIds.toList(growable: false),
           'selected_route_id': _selectedTripRoute?.id,
           'transport_method': _selectedTripTransport.name,
+          'hazard_risk_filters': _selectedTripHazardRiskFilters.toList(
+            growable: false,
+          ),
         },
       );
       if (!mounted || requestVersion != _routePolylineRequestVersion) {
         return;
       }
-      setState(() {
-        _draftRoutePolyline = polyline;
+      _updatePageState(() {
+        _draftRoutePolyline = routeResult.polyline;
+        if (_isTripNavigationContext) {
+          _activeNavigationInstructions = routeResult.navigationInstructions;
+        }
         _analyzeRouteForHazards();
       });
+      if (_isTripNavigationContext) {
+        //I don't get why we stop the speech here, but it was in the original code. Maybe to prevent overlapping instructions during route refreshes?
+        //ref.read(audioFeedbackServiceProvider).stopSpeech();
+      }
     } catch (_) {
       if (!mounted || requestVersion != _routePolylineRequestVersion) {
         return;
       }
-      setState(_analyzeRouteForHazards);
+      _updatePageState(() {
+        if (_isTripNavigationContext) {
+          _activeNavigationInstructions = const <RouteNavigationInstruction>[];
+          _spokenFarApproachInstructionIds.clear();
+          _spokenApproachInstructionIds.clear();
+          _spokenImmediateInstructionIds.clear();
+        }
+        _analyzeRouteForHazards();
+      });
     }
   }
 
@@ -493,7 +552,7 @@ extension _MapPageRoutesState on _MapPageState {
         return;
       }
       late final List<LatLng> updated;
-      setState(() {
+      _updatePageState(() {
         updated = <LatLng>[
           ..._draftRoutePoints,
           LatLng(pos.latitude, pos.longitude),

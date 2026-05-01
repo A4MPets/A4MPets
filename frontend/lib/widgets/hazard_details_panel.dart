@@ -2,18 +2,23 @@ import 'package:flutter/material.dart';
 
 import '../models/hazard_report_record.dart';
 import '../theme/app_palette.dart';
+import 'shared/panel_scroll_view.dart';
 import 'shared/local_image_widget.dart';
 
 class HazardDetailsPanelContent extends StatelessWidget {
   final bool isDarkMode;
   final HazardReportRecord hazard;
   final VoidCallback onViewComments;
+  final String? debugDeleteLabel;
+  final VoidCallback? onDebugDelete;
 
   const HazardDetailsPanelContent({
     super.key,
     required this.isDarkMode,
     required this.hazard,
     required this.onViewComments,
+    this.debugDeleteLabel,
+    this.onDebugDelete,
   });
 
   @override
@@ -28,7 +33,7 @@ class HazardDetailsPanelContent extends StatelessWidget {
               color: Colors.transparent,
               borderRadius: BorderRadius.circular(14),
             ),
-            child: SingleChildScrollView(
+            child: PanelScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -108,13 +113,33 @@ class HazardDetailsPanelContent extends StatelessWidget {
             ),
             child: const Text(
               'Ver comentarios',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
             ),
           ),
         ),
+        if (onDebugDelete != null && debugDeleteLabel != null) ...[
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 44,
+            child: OutlinedButton(
+              onPressed: onDebugDelete,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppPalette.dangerRed,
+                side: const BorderSide(color: AppPalette.dangerRed),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                debugDeleteLabel!,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 8),
         Text(
           'Reportado por: ${hazard.reportedByUsername}',
@@ -214,7 +239,8 @@ class _HazardPhotoPreview extends StatelessWidget {
                 source: photoSource,
                 fit: BoxFit.cover,
                 fallback: const _NoPhotoPlaceholder(),
-                errorBuilder: (_, __, ___) => const _NoPhotoPlaceholder(),
+                errorBuilder: (context, error, stackTrace) =>
+                    const _NoPhotoPlaceholder(),
               )
             : const _NoPhotoPlaceholder(),
       ),

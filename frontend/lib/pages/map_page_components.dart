@@ -15,8 +15,15 @@ class _PanelRoute {
   final bool expandVertical;
   final bool scrollContent;
   final bool isAddRoutePanel;
+  final bool isReportSelectorPanel;
   final bool isReportHazardPanel;
+  final bool isLostPetReportPanel;
+  final bool isFoundPetReportPanel;
+  final bool isGenericReportPanel;
   final bool isHazardDetailsPanel;
+  final bool isLostPetDetailsPanel;
+  final bool isFoundPetDetailsPanel;
+  final bool isGenericReportDetailsPanel;
   final bool isHazardSettingsPanel;
   final bool isHazardCommentsPanel;
   final bool isManagePetsPanel;
@@ -52,8 +59,15 @@ class _PanelRoute {
     this.expandVertical = false,
     this.scrollContent = true,
     this.isAddRoutePanel = false,
+    this.isReportSelectorPanel = false,
     this.isReportHazardPanel = false,
+    this.isLostPetReportPanel = false,
+    this.isFoundPetReportPanel = false,
+    this.isGenericReportPanel = false,
     this.isHazardDetailsPanel = false,
+    this.isLostPetDetailsPanel = false,
+    this.isFoundPetDetailsPanel = false,
+    this.isGenericReportDetailsPanel = false,
     this.isHazardSettingsPanel = false,
     this.isHazardCommentsPanel = false,
     this.isManagePetsPanel = false,
@@ -74,10 +88,131 @@ class _PanelRoute {
   });
 }
 
+class _ProximityAlertTarget {
+  final String zoneKey;
+  final ReportCommentSubjectType subjectType;
+  final int reportId;
+  final double distanceMeters;
+
+  const _ProximityAlertTarget({
+    required this.zoneKey,
+    required this.subjectType,
+    required this.reportId,
+    required this.distanceMeters,
+  });
+}
+
+class _ProximityAlertCard extends StatelessWidget {
+  final bool isDarkMode;
+  final VoidCallback onAcknowledge;
+  final VoidCallback onOpenComments;
+
+  const _ProximityAlertCard({
+    required this.isDarkMode,
+    required this.onAcknowledge,
+    required this.onOpenComments,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color textColor = AppPalette.textPrimary(isDarkMode);
+    final Color surface = AppPalette.cardBackground(isDarkMode);
+
+    return Center(
+      child: IgnorePointer(
+        ignoring: false,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 340),
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: surface,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: AppPalette.border(isDarkMode)),
+                boxShadow: const <BoxShadow>[
+                  BoxShadow(
+                    color: Color(0x33000000),
+                    blurRadius: 24,
+                    offset: Offset(0, 14),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    '¡Cuidado!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Estás dentro del radio de afectación de un peligro.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    height: 46,
+                    child: ElevatedButton(
+                      onPressed: onAcknowledge,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppPalette.primaryBlue,
+                        foregroundColor: AppPalette.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'De acuerdo',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 46,
+                    child: OutlinedButton(
+                      onPressed: onOpenComments,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppPalette.primaryBlue,
+                        side: const BorderSide(color: AppPalette.primaryBlue),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Desmentir o Confirmar',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _TripStartPanelContent extends StatelessWidget {
   final bool isDarkMode;
   final _TripTransportMethod selectedTransport;
-  final bool avoidHazards;
+  final Set<String> selectedHazardRiskFilters;
   final int selectedPetsCount;
   final String? selectedRouteName;
   final String? errorText;
@@ -85,14 +220,15 @@ class _TripStartPanelContent extends StatelessWidget {
   final VoidCallback onSelectRoute;
   final VoidCallback? onEditSelectedRoute;
   final ValueChanged<_TripTransportMethod> onTransportChanged;
-  final ValueChanged<bool> onAvoidHazardsChanged;
+  final void Function(String riskLevelCode, bool value)
+  onToggleHazardRiskFilter;
   final double contentTopPadding;
   final VoidCallback onStartTrip;
 
   const _TripStartPanelContent({
     required this.isDarkMode,
     required this.selectedTransport,
-    required this.avoidHazards,
+    required this.selectedHazardRiskFilters,
     required this.selectedPetsCount,
     required this.selectedRouteName,
     required this.errorText,
@@ -100,7 +236,7 @@ class _TripStartPanelContent extends StatelessWidget {
     required this.onSelectRoute,
     this.onEditSelectedRoute,
     required this.onTransportChanged,
-    required this.onAvoidHazardsChanged,
+    required this.onToggleHazardRiskFilter,
     this.contentTopPadding = 8,
     required this.onStartTrip,
   });
@@ -139,69 +275,67 @@ class _TripStartPanelContent extends StatelessWidget {
                   color: titleColor,
                 ),
                 const SizedBox(height: 6),
-                SizedBox(
-                  height: 46,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: grayButton,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<_TripTransportMethod>(
-                        value: selectedTransport,
-                        dropdownColor: grayButton,
-                        isExpanded: true,
-                        style: TextStyle(
-                          color: textColor,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+                Row(
+                  children: [
+                    Expanded(
+                      child: _TripTransportButton(
+                        label: 'A pie',
+                        isDarkMode: isDarkMode,
+                        isSelected:
+                            selectedTransport == _TripTransportMethod.walking,
+                        onPressed: () => onTransportChanged(
+                          _TripTransportMethod.walking,
                         ),
-                        items: const <DropdownMenuItem<_TripTransportMethod>>[
-                          DropdownMenuItem<_TripTransportMethod>(
-                            value: _TripTransportMethod.walking,
-                            child: Text('A Pie'),
-                          ),
-                          DropdownMenuItem<_TripTransportMethod>(
-                            value: _TripTransportMethod.vehicle,
-                            child: Text('En Vehículo'),
-                          ),
-                        ],
-                        onChanged: (_TripTransportMethod? value) {
-                          if (value != null) {
-                            onTransportChanged(value);
-                          }
-                        },
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _TripTransportButton(
+                        label: 'En vehículo',
+                        isDarkMode: isDarkMode,
+                        isSelected:
+                            selectedTransport == _TripTransportMethod.vehicle,
+                        onPressed: () => onTransportChanged(
+                          _TripTransportMethod.vehicle,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 10),
-                _TripFieldTitle(label: 'Estrategia de ruta', color: titleColor),
+                _TripFieldTitle(label: 'Evitar peligros', color: titleColor),
                 const SizedBox(height: 6),
                 Container(
-                  height: 46,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: grayButton,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Row(
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: Text(
-                          'Evitar peligros',
-                          style: TextStyle(
-                            color: textColor,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                      _TripRiskFilterCheckbox(
+                        label: 'Bajo',
+                        value: selectedHazardRiskFilters.contains('low'),
+                        textColor: textColor,
+                        onChanged: (bool value) =>
+                            onToggleHazardRiskFilter('low', value),
                       ),
-                      Switch(
-                        value: avoidHazards,
-                        onChanged: onAvoidHazardsChanged,
-                        activeThumbColor: AppPalette.primaryBlue,
+                      _TripRiskFilterCheckbox(
+                        label: 'Medio',
+                        value: selectedHazardRiskFilters.contains('medium'),
+                        textColor: textColor,
+                        onChanged: (bool value) =>
+                            onToggleHazardRiskFilter('medium', value),
+                      ),
+                      _TripRiskFilterCheckbox(
+                        label: 'Alto',
+                        value: selectedHazardRiskFilters.contains('high'),
+                        textColor: textColor,
+                        onChanged: (bool value) =>
+                            onToggleHazardRiskFilter('high', value),
                       ),
                     ],
                   ),
@@ -473,18 +607,53 @@ class _TripPetSelectionPanelContent extends StatelessWidget {
 
 class _TripActivePanelContent extends StatelessWidget {
   final bool isDarkMode;
+  final _TripTransportMethod selectedTransport;
+  final ValueChanged<_TripTransportMethod> onTransportChanged;
   final VoidCallback onFinishTrip;
 
   const _TripActivePanelContent({
     required this.isDarkMode,
+    required this.selectedTransport,
+    required this.onTransportChanged,
     required this.onFinishTrip,
   });
 
   @override
   Widget build(BuildContext context) {
+    final Color titleColor = isDarkMode
+        ? AppPalette.textMutedDark
+        : AppPalette.iconGray;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _TripFieldTitle(label: 'Método de transporte', color: titleColor),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: _TripTransportButton(
+                label: 'A pie',
+                isDarkMode: isDarkMode,
+                isSelected:
+                    selectedTransport == _TripTransportMethod.walking,
+                onPressed: () =>
+                    onTransportChanged(_TripTransportMethod.walking),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _TripTransportButton(
+                label: 'En vehículo',
+                isDarkMode: isDarkMode,
+                isSelected:
+                    selectedTransport == _TripTransportMethod.vehicle,
+                onPressed: () =>
+                    onTransportChanged(_TripTransportMethod.vehicle),
+              ),
+            ),
+          ],
+        ),
         const Spacer(),
         SizedBox(
           height: 48,
@@ -601,6 +770,92 @@ class _TripGrayActionButton extends StatelessWidget {
           ),
         ),
         child: Text(
+          label,
+          style: TextStyle(
+            color: textColor,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TripTransportButton extends StatelessWidget {
+  final String label;
+  final bool isDarkMode;
+  final bool isSelected;
+  final VoidCallback onPressed;
+
+  const _TripTransportButton({
+    required this.label,
+    required this.isDarkMode,
+    required this.isSelected,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 46,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isSelected
+              ? AppPalette.primaryBlue
+              : AppPalette.cardBackground(isDarkMode),
+          foregroundColor: isSelected
+              ? AppPalette.white
+              : AppPalette.primaryBlue,
+          elevation: 0,
+          side: BorderSide(
+            color: isSelected
+                ? AppPalette.primaryBlue
+                : AppPalette.primaryBlue.withValues(alpha: 0.45),
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        ),
+      ),
+    );
+  }
+}
+
+class _TripRiskFilterCheckbox extends StatelessWidget {
+  final String label;
+  final bool value;
+  final Color textColor;
+  final ValueChanged<bool> onChanged;
+
+  const _TripRiskFilterCheckbox({
+    required this.label,
+    required this.value,
+    required this.textColor,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 32,
+      child: CheckboxListTile(
+        value: value,
+        onChanged: (bool? nextValue) => onChanged(nextValue ?? false),
+        contentPadding: EdgeInsets.zero,
+        dense: true,
+        controlAffinity: ListTileControlAffinity.leading,
+        activeColor: AppPalette.primaryBlue,
+        checkboxShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6),
+        ),
+        title: Text(
           label,
           style: TextStyle(
             color: textColor,

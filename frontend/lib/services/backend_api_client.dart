@@ -18,13 +18,21 @@ class BackendApiClient {
 
   List<String> get baseUrls {
     final List<String> urls = <String>[
-      configuredApiBaseUrl,
+      ..._splitConfiguredBaseUrls(configuredApiBaseUrl),
       'http://127.0.0.1:8000/api',
       if (!kIsWeb) 'http://10.0.2.2:8000/api',
     ];
 
     final Set<String> seen = <String>{};
     return urls.where((String url) => seen.add(url)).toList(growable: false);
+  }
+
+  List<String> _splitConfiguredBaseUrls(String rawValue) {
+    return rawValue
+        .split(RegExp(r'[\s,;]+'))
+        .map((String value) => value.trim())
+        .where((String value) => value.isNotEmpty)
+        .toList(growable: false);
   }
 
   Map<String, String> jsonHeaders({String? bearerToken}) {
