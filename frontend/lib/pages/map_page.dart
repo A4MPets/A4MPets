@@ -34,13 +34,16 @@ import '../widgets/hazard_details_panel.dart';
 import '../widgets/hazard_layers_panel.dart';
 import '../widgets/hazard_reporting_panel.dart';
 import '../widgets/found_pet_details_panel.dart';
+import '../widgets/found_pet_reports_list_panel.dart';
 import '../widgets/found_pet_reporting_panel.dart';
 import '../widgets/generic_report_details_panel.dart';
 import '../widgets/generic_report_panel.dart';
 import '../widgets/lost_pet_details_panel.dart';
+import '../widgets/lost_pet_reports_list_panel.dart';
 import '../widgets/lost_pet_reporting_panel.dart';
 import '../widgets/map_widget.dart';
 import '../widgets/panel_modal.dart';
+import '../widgets/pet_details_panel.dart';
 import '../widgets/pet_management_panels.dart';
 import '../widgets/profile_menu_panel.dart';
 import '../widgets/report_type_selector_panel.dart';
@@ -107,6 +110,10 @@ class _MapPageState extends ConsumerState<MapPage> {
   bool _showLostPetReports = true;
   bool _showFoundPetReports = true;
   bool _showGenericReports = true;
+  PetRecord? _selectedLostPetForReport;
+  LostPetReportRecord? _selectedLostReportForFoundReport;
+  LatLng? _reportFocusTarget;
+  int _reportFocusRevision = 0;
   _ProximityAlertTarget? _activeProximityAlert;
   Set<String> _currentProximityZoneKeys = <String>{};
   final Set<String> _acknowledgedProximityZoneKeys = <String>{};
@@ -156,7 +163,9 @@ class _MapPageState extends ConsumerState<MapPage> {
     _tripTransportPreferenceSubscription = ref.listenManual<String>(
       tripTransportPreferenceProvider,
       (String? previous, String next) {
-        final _TripTransportMethod resolved = _tripTransportMethodFromName(next);
+        final _TripTransportMethod resolved = _tripTransportMethodFromName(
+          next,
+        );
         if (_selectedTripTransport == resolved || !mounted) {
           return;
         }
@@ -444,15 +453,18 @@ class _MapPageState extends ConsumerState<MapPage> {
                       _ReportMapSelectionContext.foundPet
                   ? AppPalette.reportGreen
                   : AppPalette.charcoal),
-        cameraFocusTarget: tripFocusTarget ?? hazardFocusTarget,
+        cameraFocusTarget:
+            tripFocusTarget ?? hazardFocusTarget ?? _reportFocusTarget,
         cameraFocusZoom: tripFocusTarget != null
             ? null
-            : (_selectedHazard == null
+            : (hazardFocusTarget == null
                   ? null
                   : _hazardFocusZoomFor(_selectedHazard!)),
         cameraFocusRevision: tripFocusTarget != null
             ? _tripUserFocusRevision
-            : _hazardFocusRevision,
+            : (hazardFocusTarget != null
+                  ? _hazardFocusRevision
+                  : _reportFocusRevision),
         onUserLocationChanged: _handleUserLocationChanged,
         onUserLocationStatusChanged: _handleUserLocationStatusChanged,
         locationRefreshRevision: _userLocationRefreshRevision,

@@ -158,6 +158,10 @@ extension _MapPageAuthAndProfileState on _MapPageState {
     _pushPanel(_buildEditPetRoute(isDarkMode, pet));
   }
 
+  void _openPetDetailsPanel(bool isDarkMode, PetRecord pet) {
+    _pushPanel(_buildPetDetailsRoute(isDarkMode, pet));
+  }
+
   Future<void> _closeAddPetPanelAfterSave(int petId) async {
     if (!_hasOpenPanels) {
       return;
@@ -166,12 +170,15 @@ extension _MapPageAuthAndProfileState on _MapPageState {
     final bool returningToTripPetSelection =
         _panelStack.length > 1 &&
         _panelStack[_panelStack.length - 2].isTripPetSelectionPanel;
+    final bool returningToLostPetSelection =
+        _panelStack.length > 1 &&
+        _panelStack[_panelStack.length - 2].isLostPetPetSelectionPanel;
 
     _updatePageState(() {
       _panelStack.removeLast();
     });
 
-    if (!returningToTripPetSelection) {
+    if (!returningToTripPetSelection && !returningToLostPetSelection) {
       return;
     }
 
@@ -180,11 +187,30 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       return;
     }
 
-    final bool isDarkMode = ref.read(themeModeProvider);
-    _updatePageState(() {
-      _selectedTripPetIds.add(petId);
-    });
-    _returnToTripStartPanel(isDarkMode);
+    final List<PetRecord> pets =
+        ref.read(petsControllerProvider).asData?.value ?? const <PetRecord>[];
+    PetRecord? savedPet;
+    for (final PetRecord pet in pets) {
+      if (pet.id == petId) {
+        savedPet = pet;
+        break;
+      }
+    }
+
+    if (returningToTripPetSelection) {
+      final bool isDarkMode = ref.read(themeModeProvider);
+      _updatePageState(() {
+        _selectedTripPetIds.add(petId);
+      });
+      _returnToTripStartPanel(isDarkMode);
+      return;
+    }
+
+    if (savedPet == null) {
+      return;
+    }
+
+    _selectLostPetForReport(savedPet);
   }
 
   _PanelRoute _buildProfileRoute(bool isDarkMode) {
@@ -278,6 +304,8 @@ extension _MapPageAuthAndProfileState on _MapPageState {
         return ManagePetsPanelContent(
           isDarkMode: isDarkMode,
           onAddPetPressed: () => _openAddPetPanel(isDarkMode),
+          onViewPetPressed: (PetRecord pet) =>
+              _openPetDetailsPanel(isDarkMode, pet),
           onEditPetPressed: (PetRecord pet) =>
               _openEditPetPanel(isDarkMode, pet),
         );
@@ -328,6 +356,30 @@ extension _MapPageAuthAndProfileState on _MapPageState {
           pet: pet,
           isDarkMode: isDarkMode,
           onSaved: _closeCurrentPanel,
+        );
+      },
+    );
+  }
+
+  _PanelRoute _buildPetDetailsRoute(bool isDarkMode, PetRecord pet) {
+    return _PanelRoute(
+      transitionKey: ++_panelTransitionSeed,
+      title: 'Detalle mascota',
+      anchor: PanelAnchor.topLeft,
+      width: 380,
+      height: 620,
+      maxHeight: 620,
+      adaptHeightToContent: false,
+      expandHorizontal: false,
+      expandVertical: true,
+      scrollContent: false,
+      borderRadius: BorderRadius.circular(22),
+      contentBuilder: (BuildContext context) {
+        return PetDetailsPanelContent(
+          pet: pet,
+          isDarkMode: isDarkMode,
+          onEditPressed: () => _openEditPetPanel(isDarkMode, pet),
+          onMarkedFound: _closeCurrentPanel,
         );
       },
     );

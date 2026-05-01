@@ -88,9 +88,9 @@ extension _MapPageTripState on _MapPageState {
       return;
     }
 
-    await ref.read(audioFeedbackServiceProvider).playArrivalCue(
-      NavigationAudioMessageBuilder.buildArrivalMessage(),
-    );
+    await ref
+        .read(audioFeedbackServiceProvider)
+        .playArrivalCue(NavigationAudioMessageBuilder.buildArrivalMessage());
   }
 
   Future<void> _playWaypointAudioCue() async {
@@ -316,7 +316,15 @@ extension _MapPageTripState on _MapPageState {
     }
 
     final bool isDarkMode = ref.read(themeModeProvider);
+    final Set<int> completedPetIds = Set<int>.from(_selectedTripPetIds);
     unawaited(_playArrivalAudioCue());
+    if (completedPetIds.isNotEmpty) {
+      unawaited(
+        ref
+            .read(petsControllerProvider.notifier)
+            .incrementPetWalks(petIds: completedPetIds),
+      );
+    }
     _updatePageState(() {
       _tripRerouteController.reset();
       _resetTripAudioNavigationState(stopSpeech: false);
@@ -483,7 +491,7 @@ extension _MapPageTripState on _MapPageState {
     final bool returningToTripStartOrSelection =
         _panelStack.length > 1 &&
         (_panelStack[_panelStack.length - 2].isTripRouteSelectionPanel ||
-         _panelStack[_panelStack.length - 2].isTripStartPanel);
+            _panelStack[_panelStack.length - 2].isTripStartPanel);
 
     _updatePageState(() {
       _clearDraftRouteVisuals();

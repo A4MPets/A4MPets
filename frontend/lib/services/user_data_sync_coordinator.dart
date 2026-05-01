@@ -279,7 +279,8 @@ class UserDataSyncCoordinator {
     }
 
     for (final HazardReportRecord hazard in transferableHazards) {
-      if (failedLocalIds.contains(hazard.localUuid) && !successfulMappings.containsKey(hazard.localUuid)) {
+      if (failedLocalIds.contains(hazard.localUuid) &&
+          !successfulMappings.containsKey(hazard.localUuid)) {
         _log('push: hazard en conflicto/error, local_id=${hazard.localUuid}');
         continue;
       }
@@ -348,21 +349,45 @@ class UserDataSyncCoordinator {
             remoteId: remoteId,
             syncStatus: syncStatus,
             lastModifiedAt: _parseBackendDateTime(hazard['last_modified_at']),
-            incidentLatitude: (hazard['incident_latitude'] as num?)?.toDouble() ?? 0,
-            incidentLongitude: (hazard['incident_longitude'] as num?)?.toDouble() ?? 0,
-            impactRadiusMeters: (hazard['impact_radius_meters'] as num?)?.round() ?? 100,
-            categoryCode: _normalizeCategoryCode(hazard['category_code']?.toString()),
-            riskLevelCode: _normalizeRiskLevelCode(hazard['risk_level_code']?.toString()),
-            narrativeDescription: hazard['narrative_description']?.toString() ?? hazard['description']?.toString() ?? '',
-            estimatedDurationCode: _normalizeDurationCode(hazard['estimated_duration_code']?.toString()),
+            incidentLatitude:
+                (hazard['incident_latitude'] as num?)?.toDouble() ?? 0,
+            incidentLongitude:
+                (hazard['incident_longitude'] as num?)?.toDouble() ?? 0,
+            impactRadiusMeters:
+                (hazard['impact_radius_meters'] as num?)?.round() ?? 100,
+            categoryCode: _normalizeCategoryCode(
+              hazard['category_code']?.toString(),
+            ),
+            riskLevelCode: _normalizeRiskLevelCode(
+              hazard['risk_level_code']?.toString(),
+            ),
+            narrativeDescription:
+                hazard['narrative_description']?.toString() ??
+                hazard['description']?.toString() ??
+                '',
+            estimatedDurationCode: _normalizeDurationCode(
+              hazard['estimated_duration_code']?.toString(),
+            ),
             reportedAt: _parseBackendDateTime(hazard['reported_at']),
             evidencePhotoUrl: hazard['evidence_photo_url']?.toString(),
-            reportedByUsername: hazard['reported_by_username']?.toString() ?? 'Anónimo',
-            comments: (jsonDecode(hazard['comments_json']?.toString() ?? jsonEncode(hazard['comments'] ?? <dynamic>[])) as List<dynamic>).map((c) => HazardCommentRecord.fromMap(c as Map<String, dynamic>)).toList(),
+            reportedByUsername:
+                hazard['reported_by_username']?.toString() ?? 'Anónimo',
+            comments:
+                (jsonDecode(
+                          hazard['comments_json']?.toString() ??
+                              jsonEncode(hazard['comments'] ?? <dynamic>[]),
+                        )
+                        as List<dynamic>)
+                    .map(
+                      (c) => HazardCommentRecord.fromMap(
+                        c as Map<String, dynamic>,
+                      ),
+                    )
+                    .toList(),
             createdAt: _parseBackendDateTime(hazard['last_modified_at']),
             updatedAt: _parseBackendDateTime(hazard['last_modified_at']),
             needsSync: false,
-          )
+          ),
         );
       }
 
@@ -397,10 +422,38 @@ class UserDataSyncCoordinator {
     }
 
     final String? token = await _currentAccessToken();
+    final List<PetRecord> pets = await _databaseManager.getPets();
+    final Map<String, PetRecord> petsByUuid = <String, PetRecord>{
+      for (final PetRecord pet in pets) pet.localUuid: pet,
+    };
+    final Map<int, PetRecord> petsById = <int, PetRecord>{
+      for (final PetRecord pet in pets) pet.id: pet,
+    };
     final List<LostPetReportRecord> transferable = <LostPetReportRecord>[];
     final List<Map<String, Object?>> payloadItems = <Map<String, Object?>>[];
 
     for (final LostPetReportRecord report in pending) {
+      final PetRecord? relatedPet =
+          petsByUuid[report.petLocalUuid] ??
+          (report.petId == null ? null : petsById[report.petId!]);
+      if (relatedPet == null) {
+        _log(
+          'push lost pets: reporte diferido por mascota local inexistente local_id=${report.localUuid}',
+        );
+        continue;
+      }
+      if (relatedPet.remoteId == null || relatedPet.remoteId!.trim().isEmpty) {
+        _log(
+          'push lost pets: reporte diferido hasta tener remote_id de mascota local_id=${report.localUuid} pet=${relatedPet.localUuid}',
+        );
+        continue;
+      }
+      if (relatedPet.needsSync) {
+        _log(
+          'push lost pets: continuando con mascota pendiente usando remote_id existente local_id=${report.localUuid} pet=${relatedPet.localUuid}',
+        );
+      }
+
       String? photoUrl = report.photoUrl;
       if (photoUrl != null && photoUrl.isNotEmpty) {
         final String? resolvedUrl = await _resolveImageUrlForSync(
@@ -409,18 +462,23 @@ class UserDataSyncCoordinator {
           bearerToken: token,
         );
         if (resolvedUrl == null) {
-          continue;
+          _log(
+            'push lost pets: sin foto sincronizable para reporte ${report.localUuid}, se usara la foto remota de la mascota.',
+          );
+          photoUrl = null;
+        } else {
+          photoUrl = resolvedUrl;
         }
-        photoUrl = resolvedUrl;
       }
 
       transferable.add(report);
       payloadItems.add(<String, Object?>{
         'local_id': report.localUuid,
         'remote_id': report.remoteId,
+        'pet_local_uuid': report.petLocalUuid,
+        'pet_remote_id': relatedPet.remoteId,
         'last_seen_latitude': report.lastSeenLatitude,
         'last_seen_longitude': report.lastSeenLongitude,
-        'name': report.name,
         'details': report.details,
         'disappearance_date': _toBackendDateTime(report.disappearanceDate),
         'photo_url': photoUrl,
@@ -456,6 +514,14 @@ class UserDataSyncCoordinator {
         <String, dynamic>{};
     final List<dynamic> details =
         (syncResults['details'] as List<dynamic>?) ?? <dynamic>[];
+    for (final dynamic item in details) {
+      final Map<String, dynamic> row = item as Map<String, dynamic>;
+      if (row['status'] == 'error') {
+        _log(
+          'push lost pets: backend rechazo local_id=${row['local_id']} error=${row['error']}',
+        );
+      }
+    }
     final Set<String> failedLocalIds = details
         .map(
           (dynamic item) =>
@@ -475,7 +541,8 @@ class UserDataSyncCoordinator {
     }
 
     for (final LostPetReportRecord report in transferable) {
-      if (failedLocalIds.contains(report.localUuid) && !successfulMappings.containsKey(report.localUuid)) {
+      if (failedLocalIds.contains(report.localUuid) &&
+          !successfulMappings.containsKey(report.localUuid)) {
         continue;
       }
       await _databaseManager.markLostPetReportAsSynced(
@@ -506,11 +573,19 @@ class UserDataSyncCoordinator {
           (payload['data'] as List<dynamic>? ?? <dynamic>[]);
 
       final List<LostPetReportRecord> batch = <LostPetReportRecord>[];
+      final List<PetRecord> petBatch = <PetRecord>[];
       for (final dynamic item in data) {
         final Map<String, dynamic> report = item as Map<String, dynamic>;
-        final String localUuid = report['local_id']?.toString() ?? 'remote-${report['id']}';
-        final String? remoteId = report['remote_id']?.toString() ?? report['id']?.toString();
-        
+        final String localUuid =
+            report['local_id']?.toString() ?? 'remote-${report['id']}';
+        final String? remoteId =
+            report['remote_id']?.toString() ?? report['id']?.toString();
+
+        final dynamic embeddedPet = report['pet'];
+        if (embeddedPet is Map<String, dynamic>) {
+          petBatch.add(_buildPetRecordFromBackendPayload(embeddedPet));
+        }
+
         batch.add(
           LostPetReportRecord(
             id: 0,
@@ -518,21 +593,41 @@ class UserDataSyncCoordinator {
             remoteId: remoteId,
             syncStatus: report['sync_status']?.toString() ?? 'synced',
             lastModifiedAt: _parseBackendDateTime(report['last_modified_at']),
-            lastSeenLatitude: (report['last_seen_latitude'] as num?)?.toDouble() ?? 0,
-            lastSeenLongitude: (report['last_seen_longitude'] as num?)?.toDouble() ?? 0,
-            name: report['name']?.toString() ?? '',
+            petId: (report['pet_id'] as num?)?.toInt(),
+            petLocalUuid: report['pet_local_uuid']?.toString() ?? '',
+            lastSeenLatitude:
+                (report['last_seen_latitude'] as num?)?.toDouble() ?? 0,
+            lastSeenLongitude:
+                (report['last_seen_longitude'] as num?)?.toDouble() ?? 0,
             details: report['details']?.toString() ?? '',
-            disappearanceDate: _parseBackendDateTime(report['disappearance_date']),
+            disappearanceDate: _parseBackendDateTime(
+              report['disappearance_date'],
+            ),
             photoUrl: report['photo_url']?.toString(),
             phone: report['phone']?.toString(),
-            comments: (jsonDecode(report['comments_json']?.toString() ?? jsonEncode(report['comments'] ?? <dynamic>[])) as List<dynamic>).map((c) => ReportCommentRecord.fromMap(c as Map<String, dynamic>)).toList(),
+            comments:
+                (jsonDecode(
+                          report['comments_json']?.toString() ??
+                              jsonEncode(report['comments'] ?? <dynamic>[]),
+                        )
+                        as List<dynamic>)
+                    .map(
+                      (c) => ReportCommentRecord.fromMap(
+                        c as Map<String, dynamic>,
+                      ),
+                    )
+                    .toList(),
             createdAt: _parseBackendDateTime(report['last_modified_at']),
             updatedAt: _parseBackendDateTime(report['last_modified_at']),
             needsSync: false,
-          )
+          ),
         );
       }
-      
+
+      if (petBatch.isNotEmpty) {
+        await _databaseManager.upsertPetsFromRemoteBatch(petBatch);
+      }
+
       if (batch.isNotEmpty) {
         await _databaseManager.upsertLostPetReportsFromRemoteBatch(batch);
       }
@@ -582,6 +677,8 @@ class UserDataSyncCoordinator {
       payloadItems.add(<String, Object?>{
         'local_id': report.localUuid,
         'remote_id': report.remoteId,
+        'pet_local_uuid': report.petLocalUuid,
+        'matched_lost_pet_report_id': report.matchedLostPetReportId,
         'latitude': report.latitude,
         'longitude': report.longitude,
         'details': report.details,
@@ -638,7 +735,8 @@ class UserDataSyncCoordinator {
     }
 
     for (final FoundPetReportRecord report in transferable) {
-      if (failedLocalIds.contains(report.localUuid) && !successfulMappings.containsKey(report.localUuid)) {
+      if (failedLocalIds.contains(report.localUuid) &&
+          !successfulMappings.containsKey(report.localUuid)) {
         continue;
       }
       await _databaseManager.markFoundPetReportAsSynced(
@@ -669,11 +767,19 @@ class UserDataSyncCoordinator {
           (payload['data'] as List<dynamic>? ?? <dynamic>[]);
 
       final List<FoundPetReportRecord> batch = <FoundPetReportRecord>[];
+      final List<PetRecord> petBatch = <PetRecord>[];
       for (final dynamic item in data) {
         final Map<String, dynamic> report = item as Map<String, dynamic>;
-        final String localUuid = report['local_id']?.toString() ?? 'remote-${report['id']}';
-        final String? remoteId = report['remote_id']?.toString() ?? report['id']?.toString();
-        
+        final String localUuid =
+            report['local_id']?.toString() ?? 'remote-${report['id']}';
+        final String? remoteId =
+            report['remote_id']?.toString() ?? report['id']?.toString();
+
+        final dynamic embeddedPet = report['pet'];
+        if (embeddedPet is Map<String, dynamic>) {
+          petBatch.add(_buildPetRecordFromBackendPayload(embeddedPet));
+        }
+
         batch.add(
           FoundPetReportRecord(
             id: 0,
@@ -681,20 +787,39 @@ class UserDataSyncCoordinator {
             remoteId: remoteId,
             syncStatus: report['sync_status']?.toString() ?? 'synced',
             lastModifiedAt: _parseBackendDateTime(report['last_modified_at']),
+            petId: (report['pet_id'] as num?)?.toInt(),
+            petLocalUuid: report['pet_local_uuid']?.toString(),
+            matchedLostPetReportId:
+                (report['matched_lost_pet_report_id'] as num?)?.toInt(),
             latitude: (report['latitude'] as num?)?.toDouble() ?? 0,
             longitude: (report['longitude'] as num?)?.toDouble() ?? 0,
             details: report['details']?.toString() ?? '',
             foundDate: _parseBackendDateTime(report['found_date']),
             photoUrl: report['photo_url']?.toString(),
             phone: report['phone']?.toString(),
-            comments: (jsonDecode(report['comments_json']?.toString() ?? jsonEncode(report['comments'] ?? <dynamic>[])) as List<dynamic>).map((c) => ReportCommentRecord.fromMap(c as Map<String, dynamic>)).toList(),
+            comments:
+                (jsonDecode(
+                          report['comments_json']?.toString() ??
+                              jsonEncode(report['comments'] ?? <dynamic>[]),
+                        )
+                        as List<dynamic>)
+                    .map(
+                      (c) => ReportCommentRecord.fromMap(
+                        c as Map<String, dynamic>,
+                      ),
+                    )
+                    .toList(),
             createdAt: _parseBackendDateTime(report['last_modified_at']),
             updatedAt: _parseBackendDateTime(report['last_modified_at']),
             needsSync: false,
-          )
+          ),
         );
       }
-      
+
+      if (petBatch.isNotEmpty) {
+        await _databaseManager.upsertPetsFromRemoteBatch(petBatch);
+      }
+
       if (batch.isNotEmpty) {
         await _databaseManager.upsertFoundPetReportsFromRemoteBatch(batch);
       }
@@ -711,6 +836,51 @@ class UserDataSyncCoordinator {
       }
       page += 1;
     }
+  }
+
+  PetRecord _buildPetRecordFromBackendPayload(Map<String, dynamic> pet) {
+    final String localIdString = pet['local_id']?.toString() ?? '';
+    final String? remoteId =
+        pet['remote_id']?.toString() ?? pet['id']?.toString();
+
+    int fakeId = 0;
+    int fakeCreatedAtMs = DateTime.now().millisecondsSinceEpoch;
+    if (localIdString.startsWith('pt_')) {
+      final List<String> parts = localIdString.split('_');
+      if (parts.length >= 3) {
+        fakeId = int.tryParse(parts[1]) ?? fakeId;
+        fakeCreatedAtMs = int.tryParse(parts[2]) ?? fakeCreatedAtMs;
+      }
+    }
+
+    return PetRecord(
+      id: fakeId,
+      localUuid: pet['local_uuid']?.toString() ?? localIdString,
+      remoteId: remoteId,
+      name: pet['name']?.toString(),
+      photoPath: pet['photo_path']?.toString(),
+      totalWalks: (pet['total_walks'] as num?)?.toInt() ?? 0,
+      registeredAt: _parseBackendDateTime(
+        pet['registered_at'] ?? pet['created_at'] ?? pet['last_modified_at'],
+      ),
+      adoptionDate: pet['adoption_date'] == null
+          ? null
+          : _parseBackendDateTime(pet['adoption_date']),
+      birthDate: pet['birth_date'] == null
+          ? null
+          : _parseBackendDateTime(pet['birth_date']),
+      status:
+          pet['status']?.toString() == 'perdida' ||
+              pet['status']?.toString() == 'lost'
+          ? 'perdida'
+          : 'normal',
+      isOwnerless: pet['is_ownerless'] == true || pet['is_ownerless'] == 1,
+      syncStatus: pet['sync_status']?.toString() ?? 'synced',
+      lastModifiedAt: _parseBackendDateTime(pet['last_modified_at']),
+      createdAt: DateTime.fromMillisecondsSinceEpoch(fakeCreatedAtMs),
+      updatedAt: _parseBackendDateTime(pet['last_modified_at']),
+      needsSync: false,
+    );
   }
 
   Future<void> _pushLocalGenericReports() async {
@@ -801,7 +971,8 @@ class UserDataSyncCoordinator {
     }
 
     for (final GenericReportRecord report in transferable) {
-      if (failedLocalIds.contains(report.localUuid) && !successfulMappings.containsKey(report.localUuid)) {
+      if (failedLocalIds.contains(report.localUuid) &&
+          !successfulMappings.containsKey(report.localUuid)) {
         continue;
       }
       await _databaseManager.markGenericReportAsSynced(
@@ -834,9 +1005,11 @@ class UserDataSyncCoordinator {
       final List<GenericReportRecord> batch = <GenericReportRecord>[];
       for (final dynamic item in data) {
         final Map<String, dynamic> report = item as Map<String, dynamic>;
-        final String localUuid = report['local_id']?.toString() ?? 'remote-${report['id']}';
-        final String? remoteId = report['remote_id']?.toString() ?? report['id']?.toString();
-        
+        final String localUuid =
+            report['local_id']?.toString() ?? 'remote-${report['id']}';
+        final String? remoteId =
+            report['remote_id']?.toString() ?? report['id']?.toString();
+
         batch.add(
           GenericReportRecord(
             id: 0,
@@ -848,17 +1021,31 @@ class UserDataSyncCoordinator {
             longitude: (report['longitude'] as num?)?.toDouble() ?? 0,
             description: report['description']?.toString() ?? '',
             reportedDate: _parseBackendDateTime(report['reported_date']),
-            riskLevelCode: _normalizeRiskLevelCode(report['risk_level_code']?.toString()),
-            impactRadiusMeters: (report['impact_radius_meters'] as num?)?.round() ?? 0,
+            riskLevelCode: _normalizeRiskLevelCode(
+              report['risk_level_code']?.toString(),
+            ),
+            impactRadiusMeters:
+                (report['impact_radius_meters'] as num?)?.round() ?? 0,
             photoUrl: report['photo_url']?.toString(),
-            comments: (jsonDecode(report['comments_json']?.toString() ?? jsonEncode(report['comments'] ?? <dynamic>[])) as List<dynamic>).map((c) => ReportCommentRecord.fromMap(c as Map<String, dynamic>)).toList(),
+            comments:
+                (jsonDecode(
+                          report['comments_json']?.toString() ??
+                              jsonEncode(report['comments'] ?? <dynamic>[]),
+                        )
+                        as List<dynamic>)
+                    .map(
+                      (c) => ReportCommentRecord.fromMap(
+                        c as Map<String, dynamic>,
+                      ),
+                    )
+                    .toList(),
             createdAt: _parseBackendDateTime(report['last_modified_at']),
             updatedAt: _parseBackendDateTime(report['last_modified_at']),
             needsSync: false,
-          )
+          ),
         );
       }
-      
+
       if (batch.isNotEmpty) {
         await _databaseManager.upsertGenericReportsFromRemoteBatch(batch);
       }
@@ -905,20 +1092,31 @@ class UserDataSyncCoordinator {
 
         if (resolvedUrl == null) {
           _log(
-            'push pets: mascota diferida por foto no sincronizable id=${pet.id}',
+            'push pets: mascota sin foto sincronizable id=${pet.id}; se enviara sin foto para no bloquear reportes.',
           );
-          continue;
+          photoPath = null;
+        } else {
+          photoPath = resolvedUrl;
         }
-
-        photoPath = resolvedUrl;
       }
 
       transferablePets.add(pet);
       petPayload.add(<String, Object?>{
         'local_id': 'pt_${pet.id}_${pet.createdAt.millisecondsSinceEpoch}',
+        'local_uuid': pet.localUuid,
         'remote_id': pet.remoteId,
         'name': pet.name,
         'photo_path': photoPath,
+        'total_walks': pet.totalWalks,
+        'registered_at': _toBackendDateTime(pet.registeredAt),
+        'adoption_date': pet.adoptionDate == null
+            ? null
+            : _toBackendDateTime(pet.adoptionDate!),
+        'birth_date': pet.birthDate == null
+            ? null
+            : _toBackendDateTime(pet.birthDate!),
+        'status': pet.status,
+        'is_ownerless': pet.isOwnerless,
         'sync_status': pet.syncStatus,
         'last_modified_at': _toBackendDateTime(pet.lastModifiedAt),
       });
@@ -972,11 +1170,12 @@ class UserDataSyncCoordinator {
     for (final PetRecord pet in transferablePets) {
       final String pseudoLocalId =
           'pt_${pet.id}_${pet.createdAt.millisecondsSinceEpoch}';
-          
-      if (failedLocalIds.contains(pseudoLocalId) && !successfulMappings.containsKey(pseudoLocalId)) {
+
+      if (failedLocalIds.contains(pseudoLocalId) &&
+          !successfulMappings.containsKey(pseudoLocalId)) {
         continue;
       }
-      
+
       final String? newlyAssignedRemoteId = successfulMappings[pseudoLocalId];
       final String? finalRemoteId = pet.remoteId ?? newlyAssignedRemoteId;
 
@@ -1062,11 +1261,12 @@ class UserDataSyncCoordinator {
     for (final RouteRecord route in pending) {
       final String pseudoLocalId =
           'rt_${route.id}_${route.createdAt.millisecondsSinceEpoch}';
-          
-      if (failedLocalIds.contains(pseudoLocalId) && !successfulMappings.containsKey(pseudoLocalId)) {
+
+      if (failedLocalIds.contains(pseudoLocalId) &&
+          !successfulMappings.containsKey(pseudoLocalId)) {
         continue;
       }
-      
+
       final String? newlyAssignedRemoteId = successfulMappings[pseudoLocalId];
       final String? finalRemoteId = route.remoteId ?? newlyAssignedRemoteId;
 
@@ -1114,33 +1314,54 @@ class UserDataSyncCoordinator {
       for (final dynamic item in data) {
         final Map<String, dynamic> pet = item as Map<String, dynamic>;
         final String localIdString = pet['local_id']?.toString() ?? '';
-        final String? remoteId = pet['remote_id']?.toString() ?? pet['id']?.toString();
-        
+        final String? remoteId =
+            pet['remote_id']?.toString() ?? pet['id']?.toString();
+
         int fakeId = 0;
         int fakeCreatedAtMs = DateTime.now().millisecondsSinceEpoch;
         if (localIdString.startsWith('pt_')) {
-           final parts = localIdString.split('_');
-           if (parts.length >= 3) {
-             fakeId = int.tryParse(parts[1]) ?? fakeId;
-             fakeCreatedAtMs = int.tryParse(parts[2]) ?? fakeCreatedAtMs;
-           }
+          final parts = localIdString.split('_');
+          if (parts.length >= 3) {
+            fakeId = int.tryParse(parts[1]) ?? fakeId;
+            fakeCreatedAtMs = int.tryParse(parts[2]) ?? fakeCreatedAtMs;
+          }
         }
-        
+
         batch.add(
           PetRecord(
             id: fakeId,
+            localUuid: pet['local_uuid']?.toString() ?? localIdString,
             remoteId: remoteId,
             name: pet['name']?.toString() ?? '',
             photoPath: pet['photo_path']?.toString(),
+            totalWalks: (pet['total_walks'] as num?)?.toInt() ?? 0,
+            registeredAt: _parseBackendDateTime(
+              pet['registered_at'] ??
+                  pet['created_at'] ??
+                  pet['last_modified_at'],
+            ),
+            adoptionDate: pet['adoption_date'] == null
+                ? null
+                : _parseBackendDateTime(pet['adoption_date']),
+            birthDate: pet['birth_date'] == null
+                ? null
+                : _parseBackendDateTime(pet['birth_date']),
+            status:
+                pet['status']?.toString() == 'perdida' ||
+                    pet['status']?.toString() == 'lost'
+                ? 'perdida'
+                : 'normal',
+            isOwnerless:
+                pet['is_ownerless'] == true || pet['is_ownerless'] == 1,
             syncStatus: pet['sync_status']?.toString() ?? 'synced',
             lastModifiedAt: _parseBackendDateTime(pet['last_modified_at']),
             createdAt: DateTime.fromMillisecondsSinceEpoch(fakeCreatedAtMs),
             updatedAt: _parseBackendDateTime(pet['last_modified_at']),
             needsSync: false,
-          )
+          ),
         );
       }
-      
+
       if (batch.isNotEmpty) {
         await _databaseManager.upsertPetsFromRemoteBatch(batch);
       }
@@ -1203,18 +1424,19 @@ class UserDataSyncCoordinator {
             .toList(growable: false);
 
         final String localIdString = route['local_id']?.toString() ?? '';
-        final String? remoteId = route['remote_id']?.toString() ?? route['id']?.toString();
-        
+        final String? remoteId =
+            route['remote_id']?.toString() ?? route['id']?.toString();
+
         int fakeId = 0;
         int fakeCreatedAtMs = DateTime.now().millisecondsSinceEpoch;
         if (localIdString.startsWith('rt_')) {
-           final parts = localIdString.split('_');
-           if (parts.length >= 3) {
-             fakeId = int.tryParse(parts[1]) ?? fakeId;
-             fakeCreatedAtMs = int.tryParse(parts[2]) ?? fakeCreatedAtMs;
-           }
+          final parts = localIdString.split('_');
+          if (parts.length >= 3) {
+            fakeId = int.tryParse(parts[1]) ?? fakeId;
+            fakeCreatedAtMs = int.tryParse(parts[2]) ?? fakeCreatedAtMs;
+          }
         } else {
-           fakeId = int.tryParse(localIdString) ?? fakeId;
+          fakeId = int.tryParse(localIdString) ?? fakeId;
         }
 
         batch.add(
@@ -1228,10 +1450,10 @@ class UserDataSyncCoordinator {
             createdAt: DateTime.fromMillisecondsSinceEpoch(fakeCreatedAtMs),
             updatedAt: _parseBackendDateTime(route['last_modified_at']),
             needsSync: false,
-          )
+          ),
         );
       }
-      
+
       if (batch.isNotEmpty) {
         await _databaseManager.upsertRoutesFromRemoteBatch(batch);
       }
@@ -1344,7 +1566,13 @@ class UserDataSyncCoordinator {
     if (response == null ||
         response.statusCode < 200 ||
         response.statusCode >= 300) {
-      _log('pull profile: backend inalcanzable o error.');
+      if (response != null) {
+        _log(
+          'pull profile: backend inalcanzable o error. Status: ${response.statusCode}, Body: ${response.body}',
+        );
+      } else {
+        _log('pull profile: backend inalcanzable o error.');
+      }
       return;
     }
 

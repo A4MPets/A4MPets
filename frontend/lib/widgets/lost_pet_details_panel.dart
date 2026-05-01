@@ -49,7 +49,7 @@ class LostPetDetailsPanelContent extends StatelessWidget {
                 if (report.photoUrl != null && report.photoUrl!.isNotEmpty)
                   const SizedBox(height: 12),
                 Text(
-                  report.name,
+                  'Mascota perdida',
                   style: TextStyle(
                     color: textColor,
                     fontSize: 18,

@@ -48,8 +48,22 @@ class LocalDatabaseManager {
     return db;
   }
 
+  Future<void> close() async {
+    final Database? db = _database;
+    _database = null;
+    _databaseFuture = null;
+    await db?.close();
+  }
+
   Future<Database> _initializeDatabase() async {
     final Database db = await _openDatabase();
+    await LocalDatabaseSchema.ensureCurrentSchema(
+      db: db,
+      petsTable: _petsTable,
+      lostPetReportsTable: _lostPetReportsTable,
+      foundPetReportsTable: _foundPetReportsTable,
+      genericReportsTable: _genericReportsTable,
+    );
     await _ensureDefaultUser(db);
     return db;
   }
@@ -65,7 +79,7 @@ class LocalDatabaseManager {
 
     return openDatabase(
       databasePath,
-      version: 10,
+      version: 11,
       onCreate: (Database db, int version) async {
         await LocalDatabaseSchema.createTables(
           db: db,
@@ -154,22 +168,35 @@ class LocalDatabaseManager {
     final Database db = await database;
     final List<Map<String, Object?>> rows = await db.query(
       _petsTable,
-      where: 'sync_status != ?',
-      whereArgs: <Object?>['deleted'],
+      where: 'sync_status != ? AND is_ownerless != ?',
+      whereArgs: <Object?>['deleted', 1],
       orderBy: 'created_at ASC',
     );
 
     return rows.map(PetRecord.fromMap).toList(growable: false);
   }
 
-  Future<int> addPet({required String name, String? photoPath}) async {
+  Future<int> addPet({
+    String? name,
+    String? photoPath,
+    DateTime? adoptionDate,
+    DateTime? birthDate,
+    bool isOwnerless = false,
+  }) async {
     final Database db = await database;
     final int now = DateTime.now().millisecondsSinceEpoch;
 
     return db.insert(_petsTable, <String, Object?>{
+      'local_uuid': _generateLocalUuid('pt'),
       'remote_id': null,
       'name': name,
       'photo_path': photoPath,
+      'total_walks': 0,
+      'registered_at': now,
+      'adoption_date': adoptionDate?.millisecondsSinceEpoch,
+      'birth_date': birthDate?.millisecondsSinceEpoch,
+      'status': 'normal',
+      'is_ownerless': isOwnerless ? 1 : 0,
       'sync_status': 'created',
       'last_modified_at': now,
       'synced_at': null,
@@ -183,8 +210,8 @@ class LocalDatabaseManager {
     final Database db = await database;
     final int? result = Sqflite.firstIntValue(
       await db.rawQuery(
-        'SELECT COUNT(*) FROM $_petsTable WHERE sync_status != ?',
-        <Object?>['deleted'],
+        'SELECT COUNT(*) FROM $_petsTable WHERE sync_status != ? AND is_ownerless != ?',
+        <Object?>['deleted', 1],
       ),
     );
     return result ?? 0;
@@ -192,8 +219,10 @@ class LocalDatabaseManager {
 
   Future<void> updatePet({
     required int petId,
-    required String name,
+    required String? name,
     String? photoPath,
+    DateTime? adoptionDate,
+    DateTime? birthDate,
   }) async {
     final Database db = await database;
     final int now = DateTime.now().millisecondsSinceEpoch;
@@ -215,6 +244,8 @@ class LocalDatabaseManager {
       <String, Object?>{
         'name': name,
         'photo_path': photoPath,
+        'adoption_date': adoptionDate?.millisecondsSinceEpoch,
+        'birth_date': birthDate?.millisecondsSinceEpoch,
         'sync_status': current.syncStatus == 'synced' ? 'synced' : 'created',
         'last_modified_at': now,
         'remote_id': current.remoteId,
@@ -224,6 +255,59 @@ class LocalDatabaseManager {
       where: 'id = ?',
       whereArgs: <Object?>[petId],
     );
+  }
+
+  Future<void> incrementPetWalks({required Iterable<int> petIds}) async {
+    final List<int> ids = petIds.toSet().toList(growable: false);
+    if (ids.isEmpty) return;
+    final Database db = await database;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    await db.transaction((Transaction txn) async {
+      for (final int petId in ids) {
+        await txn.rawUpdate(
+          'UPDATE $_petsTable SET total_walks = total_walks + 1, last_modified_at = ?, updated_at = ?, needs_sync = 1 WHERE id = ? AND sync_status != ?',
+          <Object?>[now, now, petId, 'deleted'],
+        );
+      }
+    });
+  }
+
+  Future<void> markPetFound({required int petId}) async {
+    final Database db = await database;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    final List<Map<String, Object?>> rows = await db.query(
+      _petsTable,
+      columns: <String>['local_uuid'],
+      where: 'id = ?',
+      whereArgs: <Object?>[petId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return;
+    final String localUuid = rows.first['local_uuid'] as String? ?? '';
+    await db.transaction((Transaction txn) async {
+      await txn.update(
+        _petsTable,
+        <String, Object?>{
+          'status': 'normal',
+          'last_modified_at': now,
+          'updated_at': now,
+          'needs_sync': 1,
+        },
+        where: 'id = ?',
+        whereArgs: <Object?>[petId],
+      );
+      await txn.update(
+        _lostPetReportsTable,
+        <String, Object?>{
+          'sync_status': 'deleted',
+          'last_modified_at': now,
+          'updated_at': now,
+          'needs_sync': 1,
+        },
+        where: 'pet_local_uuid = ? AND sync_status != ?',
+        whereArgs: <Object?>[localUuid, 'deleted'],
+      );
+    });
   }
 
   Future<void> deletePet({required int petId}) async {
@@ -543,7 +627,9 @@ class LocalDatabaseManager {
     );
   }
 
-  Future<void> upsertHazardsFromRemoteBatch(List<HazardReportRecord> batch) async {
+  Future<void> upsertHazardsFromRemoteBatch(
+    List<HazardReportRecord> batch,
+  ) async {
     if (batch.isEmpty) return;
     final Database db = await database;
     final int now = DateTime.now().millisecondsSinceEpoch;
@@ -575,7 +661,9 @@ class LocalDatabaseManager {
             'risk_level_code': incoming.riskLevelCode,
             'evidence_photo_url': incoming.evidencePhotoUrl,
             'reported_by_username': incoming.reportedByUsername,
-            'comments_json': jsonEncode(incoming.comments.map((c) => c.toMap()).toList()),
+            'comments_json': jsonEncode(
+              incoming.comments.map((c) => c.toMap()).toList(),
+            ),
             'created_at': remoteMs,
             'updated_at': remoteMs,
             'needs_sync': 0,
@@ -585,7 +673,8 @@ class LocalDatabaseManager {
 
         final HazardReportRecord local = HazardReportRecord.fromMap(rows.first);
 
-        if (local.needsSync && local.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
+        if (local.needsSync &&
+            local.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
           continue;
         }
 
@@ -611,7 +700,9 @@ class LocalDatabaseManager {
             'risk_level_code': incoming.riskLevelCode,
             'evidence_photo_url': resolvedEvidencePhoto,
             'reported_by_username': incoming.reportedByUsername,
-            'comments_json': jsonEncode(incoming.comments.map((c) => c.toMap()).toList()),
+            'comments_json': jsonEncode(
+              incoming.comments.map((c) => c.toMap()).toList(),
+            ),
             'updated_at': now,
             'needs_sync': 0,
           },
@@ -634,28 +725,61 @@ class LocalDatabaseManager {
   }
 
   Future<int> addLostPetReport({
+    required int petId,
+    required String petLocalUuid,
     required double lastSeenLatitude,
     required double lastSeenLongitude,
-    required String name,
     required String details,
     required DateTime disappearanceDate,
-    required String photoUrl,
+    String? photoUrl,
     required String phone,
   }) async {
     final Database db = await database;
     final int now = DateTime.now().millisecondsSinceEpoch;
+    List<Map<String, Object?>> petRows = await db.query(
+      _petsTable,
+      columns: <String>['id', 'local_uuid'],
+      where: 'id = ? AND local_uuid = ? AND sync_status != ?',
+      whereArgs: <Object?>[petId, petLocalUuid, 'deleted'],
+      limit: 1,
+    );
+    if (petRows.isEmpty) {
+      petRows = await db.query(
+        _petsTable,
+        columns: <String>['id', 'local_uuid'],
+        where: 'local_uuid = ? AND sync_status != ?',
+        whereArgs: <Object?>[petLocalUuid, 'deleted'],
+        limit: 1,
+      );
+    }
+    if (petRows.isEmpty) {
+      throw StateError('La mascota seleccionada no existe localmente.');
+    }
+    final int resolvedPetId = (petRows.first['id'] as num).toInt();
+    final String resolvedPetLocalUuid =
+        petRows.first['local_uuid']?.toString() ?? petLocalUuid;
+    final int? existing = Sqflite.firstIntValue(
+      await db.rawQuery(
+        'SELECT COUNT(*) FROM $_lostPetReportsTable WHERE pet_local_uuid = ? AND sync_status != ?',
+        <Object?>[resolvedPetLocalUuid, 'deleted'],
+      ),
+    );
+    if ((existing ?? 0) > 0) {
+      throw StateError('La mascota ya tiene un reporte activo.');
+    }
     final LostPetReportRecord draft = LostPetReportRecord(
       id: 0,
       localUuid: _generateLocalUuid('lost'),
       remoteId: null,
       syncStatus: 'created',
       lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
+      petId: resolvedPetId,
+      petLocalUuid: resolvedPetLocalUuid,
       lastSeenLatitude: lastSeenLatitude,
       lastSeenLongitude: lastSeenLongitude,
-      name: name,
       details: details,
       disappearanceDate: disappearanceDate,
-      photoUrl: photoUrl,
+      photoUrl: null,
       phone: phone,
       comments: const <ReportCommentRecord>[],
       createdAt: DateTime.fromMillisecondsSinceEpoch(now),
@@ -663,7 +787,23 @@ class LocalDatabaseManager {
       needsSync: true,
     );
     final Map<String, Object?> map = draft.toMap()..remove('id');
-    return db.insert(_lostPetReportsTable, map);
+    final int reportId = await db.insert(_lostPetReportsTable, map);
+    try {
+      await db.update(
+        _petsTable,
+        <String, Object?>{
+          'status': 'perdida',
+          'last_modified_at': now,
+          'updated_at': now,
+          'needs_sync': 1,
+        },
+        where: 'id = ?',
+        whereArgs: <Object?>[resolvedPetId],
+      );
+    } catch (_) {
+      // The lost report is the source of truth and already persists locally.
+    }
+    return reportId;
   }
 
   Future<List<LostPetReportRecord>> getLostPetReportsNeedingSync() async {
@@ -680,17 +820,42 @@ class LocalDatabaseManager {
   Future<void> deleteLostPetReport({required int reportId}) async {
     final Database db = await database;
     final int now = DateTime.now().millisecondsSinceEpoch;
-    await db.update(
+    final List<Map<String, Object?>> rows = await db.query(
       _lostPetReportsTable,
-      <String, Object?>{
-        'sync_status': 'deleted',
-        'last_modified_at': now,
-        'updated_at': now,
-        'needs_sync': 1,
-      },
+      columns: <String>['pet_id'],
       where: 'id = ?',
       whereArgs: <Object?>[reportId],
+      limit: 1,
     );
+    await db.transaction((Transaction txn) async {
+      await txn.update(
+        _lostPetReportsTable,
+        <String, Object?>{
+          'sync_status': 'deleted',
+          'last_modified_at': now,
+          'updated_at': now,
+          'needs_sync': 1,
+        },
+        where: 'id = ?',
+        whereArgs: <Object?>[reportId],
+      );
+      final int? petId = rows.isEmpty
+          ? null
+          : (rows.first['pet_id'] as num?)?.toInt();
+      if (petId != null) {
+        await txn.update(
+          _petsTable,
+          <String, Object?>{
+            'status': 'normal',
+            'last_modified_at': now,
+            'updated_at': now,
+            'needs_sync': 1,
+          },
+          where: 'id = ?',
+          whereArgs: <Object?>[petId],
+        );
+      }
+    });
   }
 
   Future<void> markLostPetReportAsSynced({
@@ -716,7 +881,9 @@ class LocalDatabaseManager {
     );
   }
 
-  Future<void> upsertLostPetReportsFromRemoteBatch(List<LostPetReportRecord> batch) async {
+  Future<void> upsertLostPetReportsFromRemoteBatch(
+    List<LostPetReportRecord> batch,
+  ) async {
     if (batch.isEmpty) return;
     final Database db = await database;
     final int now = DateTime.now().millisecondsSinceEpoch;
@@ -737,14 +904,18 @@ class LocalDatabaseManager {
             'remote_id': incoming.remoteId,
             'sync_status': incoming.syncStatus,
             'last_modified_at': remoteMs,
+            'pet_id': incoming.petId,
+            'pet_local_uuid': incoming.petLocalUuid,
             'last_seen_latitude': incoming.lastSeenLatitude,
             'last_seen_longitude': incoming.lastSeenLongitude,
-            'name': incoming.name,
             'details': incoming.details,
-            'disappearance_date': incoming.disappearanceDate.millisecondsSinceEpoch,
+            'disappearance_date':
+                incoming.disappearanceDate.millisecondsSinceEpoch,
             'photo_url': incoming.photoUrl,
             'phone': incoming.phone,
-            'comments_json': jsonEncode(incoming.comments.map((c) => c.toMap()).toList()),
+            'comments_json': jsonEncode(
+              incoming.comments.map((c) => c.toMap()).toList(),
+            ),
             'created_at': remoteMs,
             'updated_at': remoteMs,
             'needs_sync': 0,
@@ -752,8 +923,11 @@ class LocalDatabaseManager {
           continue;
         }
 
-        final LostPetReportRecord local = LostPetReportRecord.fromMap(rows.first);
-        if (local.needsSync && local.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
+        final LostPetReportRecord local = LostPetReportRecord.fromMap(
+          rows.first,
+        );
+        if (local.needsSync &&
+            local.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
           continue;
         }
 
@@ -764,17 +938,21 @@ class LocalDatabaseManager {
             'remote_id': incoming.remoteId,
             'sync_status': incoming.syncStatus,
             'last_modified_at': remoteMs,
+            'pet_id': incoming.petId,
+            'pet_local_uuid': incoming.petLocalUuid,
             'last_seen_latitude': incoming.lastSeenLatitude,
             'last_seen_longitude': incoming.lastSeenLongitude,
-            'name': incoming.name,
             'details': incoming.details,
-            'disappearance_date': incoming.disappearanceDate.millisecondsSinceEpoch,
+            'disappearance_date':
+                incoming.disappearanceDate.millisecondsSinceEpoch,
             'photo_url': _preferOfflineImageSource(
               currentSource: local.photoUrl,
               remoteSource: incoming.photoUrl,
             ),
             'phone': incoming.phone,
-            'comments_json': jsonEncode(incoming.comments.map((c) => c.toMap()).toList()),
+            'comments_json': jsonEncode(
+              incoming.comments.map((c) => c.toMap()).toList(),
+            ),
             'updated_at': now,
             'needs_sync': 0,
           },
@@ -797,6 +975,9 @@ class LocalDatabaseManager {
   }
 
   Future<int> addFoundPetReport({
+    int? petId,
+    String? petLocalUuid,
+    int? matchedLostPetReportId,
     required double latitude,
     required double longitude,
     required String details,
@@ -806,12 +987,39 @@ class LocalDatabaseManager {
   }) async {
     final Database db = await database;
     final int now = DateTime.now().millisecondsSinceEpoch;
+    final String reportLocalUuid = _generateLocalUuid('found');
+    int? resolvedPetId = petId;
+    String? resolvedPetLocalUuid = petLocalUuid;
+    if (resolvedPetLocalUuid == null || resolvedPetLocalUuid.isEmpty) {
+      resolvedPetLocalUuid = 'found_pet_$reportLocalUuid';
+      resolvedPetId = await db.insert(_petsTable, <String, Object?>{
+        'local_uuid': resolvedPetLocalUuid,
+        'remote_id': null,
+        'name': null,
+        'photo_path': null,
+        'total_walks': 0,
+        'registered_at': now,
+        'adoption_date': null,
+        'birth_date': null,
+        'status': 'normal',
+        'is_ownerless': 1,
+        'sync_status': 'created',
+        'last_modified_at': now,
+        'synced_at': null,
+        'created_at': now,
+        'updated_at': now,
+        'needs_sync': 1,
+      });
+    }
     final FoundPetReportRecord draft = FoundPetReportRecord(
       id: 0,
-      localUuid: _generateLocalUuid('found'),
+      localUuid: reportLocalUuid,
       remoteId: null,
       syncStatus: 'created',
       lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(now),
+      petId: resolvedPetId,
+      petLocalUuid: resolvedPetLocalUuid,
+      matchedLostPetReportId: matchedLostPetReportId,
       latitude: latitude,
       longitude: longitude,
       details: details,
@@ -877,7 +1085,9 @@ class LocalDatabaseManager {
     );
   }
 
-  Future<void> upsertFoundPetReportsFromRemoteBatch(List<FoundPetReportRecord> batch) async {
+  Future<void> upsertFoundPetReportsFromRemoteBatch(
+    List<FoundPetReportRecord> batch,
+  ) async {
     if (batch.isEmpty) return;
     final Database db = await database;
     final int now = DateTime.now().millisecondsSinceEpoch;
@@ -898,13 +1108,18 @@ class LocalDatabaseManager {
             'remote_id': incoming.remoteId,
             'sync_status': incoming.syncStatus,
             'last_modified_at': remoteMs,
+            'pet_id': incoming.petId,
+            'pet_local_uuid': incoming.petLocalUuid,
+            'matched_lost_pet_report_id': incoming.matchedLostPetReportId,
             'latitude': incoming.latitude,
             'longitude': incoming.longitude,
             'details': incoming.details,
             'found_date': incoming.foundDate.millisecondsSinceEpoch,
             'photo_url': incoming.photoUrl,
             'phone': incoming.phone,
-            'comments_json': jsonEncode(incoming.comments.map((c) => c.toMap()).toList()),
+            'comments_json': jsonEncode(
+              incoming.comments.map((c) => c.toMap()).toList(),
+            ),
             'created_at': remoteMs,
             'updated_at': remoteMs,
             'needs_sync': 0,
@@ -912,8 +1127,11 @@ class LocalDatabaseManager {
           continue;
         }
 
-        final FoundPetReportRecord local = FoundPetReportRecord.fromMap(rows.first);
-        if (local.needsSync && local.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
+        final FoundPetReportRecord local = FoundPetReportRecord.fromMap(
+          rows.first,
+        );
+        if (local.needsSync &&
+            local.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
           continue;
         }
 
@@ -924,6 +1142,9 @@ class LocalDatabaseManager {
             'remote_id': incoming.remoteId,
             'sync_status': incoming.syncStatus,
             'last_modified_at': remoteMs,
+            'pet_id': incoming.petId,
+            'pet_local_uuid': incoming.petLocalUuid,
+            'matched_lost_pet_report_id': incoming.matchedLostPetReportId,
             'latitude': incoming.latitude,
             'longitude': incoming.longitude,
             'details': incoming.details,
@@ -933,7 +1154,9 @@ class LocalDatabaseManager {
               remoteSource: incoming.photoUrl,
             ),
             'phone': incoming.phone,
-            'comments_json': jsonEncode(incoming.comments.map((c) => c.toMap()).toList()),
+            'comments_json': jsonEncode(
+              incoming.comments.map((c) => c.toMap()).toList(),
+            ),
             'updated_at': now,
             'needs_sync': 0,
           },
@@ -1038,7 +1261,9 @@ class LocalDatabaseManager {
     );
   }
 
-  Future<void> upsertGenericReportsFromRemoteBatch(List<GenericReportRecord> batch) async {
+  Future<void> upsertGenericReportsFromRemoteBatch(
+    List<GenericReportRecord> batch,
+  ) async {
     if (batch.isEmpty) return;
     final Database db = await database;
     final int now = DateTime.now().millisecondsSinceEpoch;
@@ -1066,7 +1291,9 @@ class LocalDatabaseManager {
             'risk_level_code': incoming.riskLevelCode,
             'impact_radius_meters': incoming.impactRadiusMeters,
             'photo_url': incoming.photoUrl,
-            'comments_json': jsonEncode(incoming.comments.map((c) => c.toMap()).toList()),
+            'comments_json': jsonEncode(
+              incoming.comments.map((c) => c.toMap()).toList(),
+            ),
             'created_at': remoteMs,
             'updated_at': remoteMs,
             'needs_sync': 0,
@@ -1074,8 +1301,11 @@ class LocalDatabaseManager {
           continue;
         }
 
-        final GenericReportRecord local = GenericReportRecord.fromMap(rows.first);
-        if (local.needsSync && local.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
+        final GenericReportRecord local = GenericReportRecord.fromMap(
+          rows.first,
+        );
+        if (local.needsSync &&
+            local.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
           continue;
         }
 
@@ -1096,7 +1326,9 @@ class LocalDatabaseManager {
               currentSource: local.photoUrl,
               remoteSource: incoming.photoUrl,
             ),
-            'comments_json': jsonEncode(incoming.comments.map((c) => c.toMap()).toList()),
+            'comments_json': jsonEncode(
+              incoming.comments.map((c) => c.toMap()).toList(),
+            ),
             'updated_at': now,
             'needs_sync': 0,
           },
@@ -1159,7 +1391,10 @@ class LocalDatabaseManager {
           rows = await txn.query(
             _petsTable,
             where: 'id = ? AND created_at = ?',
-            whereArgs: <Object?>[incoming.id, incoming.createdAt.millisecondsSinceEpoch],
+            whereArgs: <Object?>[
+              incoming.id,
+              incoming.createdAt.millisecondsSinceEpoch,
+            ],
             limit: 1,
           );
         }
@@ -1168,9 +1403,16 @@ class LocalDatabaseManager {
 
         if (rows.isEmpty) {
           await txn.insert(_petsTable, <String, Object?>{
+            'local_uuid': incoming.localUuid,
             'remote_id': incoming.remoteId,
             'name': incoming.name,
             'photo_path': incoming.photoPath,
+            'total_walks': incoming.totalWalks,
+            'registered_at': incoming.registeredAt.millisecondsSinceEpoch,
+            'adoption_date': incoming.adoptionDate?.millisecondsSinceEpoch,
+            'birth_date': incoming.birthDate?.millisecondsSinceEpoch,
+            'status': incoming.status,
+            'is_ownerless': incoming.isOwnerless ? 1 : 0,
             'sync_status': incoming.syncStatus,
             'last_modified_at': remoteMs,
             'synced_at': remoteMs,
@@ -1182,7 +1424,8 @@ class LocalDatabaseManager {
         }
 
         final PetRecord local = PetRecord.fromMap(rows.first);
-        if (local.needsSync && local.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
+        if (local.needsSync &&
+            local.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
           continue;
         }
 
@@ -1195,8 +1438,15 @@ class LocalDatabaseManager {
           _petsTable,
           <String, Object?>{
             'remote_id': incoming.remoteId,
+            'local_uuid': incoming.localUuid,
             'name': incoming.name,
             'photo_path': resolvedPhotoPath,
+            'total_walks': incoming.totalWalks,
+            'registered_at': incoming.registeredAt.millisecondsSinceEpoch,
+            'adoption_date': incoming.adoptionDate?.millisecondsSinceEpoch,
+            'birth_date': incoming.birthDate?.millisecondsSinceEpoch,
+            'status': incoming.status,
+            'is_ownerless': incoming.isOwnerless ? 1 : 0,
             'sync_status': incoming.syncStatus,
             'last_modified_at': remoteMs,
             'synced_at': now,
@@ -1262,7 +1512,10 @@ class LocalDatabaseManager {
           rows = await txn.query(
             _routesTable,
             where: 'id = ? AND created_at = ?',
-            whereArgs: <Object?>[incoming.id, incoming.createdAt.millisecondsSinceEpoch],
+            whereArgs: <Object?>[
+              incoming.id,
+              incoming.createdAt.millisecondsSinceEpoch,
+            ],
             limit: 1,
           );
         }
@@ -1273,7 +1526,9 @@ class LocalDatabaseManager {
           await txn.insert(_routesTable, <String, Object?>{
             'remote_id': incoming.remoteId,
             'name': incoming.name,
-            'points_json': jsonEncode(incoming.points.map((p) => p.toMap()).toList()),
+            'points_json': jsonEncode(
+              incoming.points.map((p) => p.toMap()).toList(),
+            ),
             'sync_status': incoming.syncStatus,
             'last_modified_at': remoteMs,
             'synced_at': remoteMs,
@@ -1285,7 +1540,8 @@ class LocalDatabaseManager {
         }
 
         final RouteRecord local = RouteRecord.fromMap(rows.first);
-        if (local.needsSync && local.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
+        if (local.needsSync &&
+            local.lastModifiedAt.isAfter(incoming.lastModifiedAt)) {
           continue;
         }
 
@@ -1294,7 +1550,9 @@ class LocalDatabaseManager {
           <String, Object?>{
             'remote_id': incoming.remoteId,
             'name': incoming.name,
-            'points_json': jsonEncode(incoming.points.map((p) => p.toMap()).toList()),
+            'points_json': jsonEncode(
+              incoming.points.map((p) => p.toMap()).toList(),
+            ),
             'sync_status': incoming.syncStatus,
             'last_modified_at': remoteMs,
             'synced_at': now,

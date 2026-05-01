@@ -68,10 +68,19 @@ class PetsController extends AsyncListController<PetRecord> {
     return count + 1;
   }
 
-  Future<int> addPet({required String name, String? photoPath}) async {
+  Future<int> addPet({
+    String? name,
+    String? photoPath,
+    DateTime? adoptionDate,
+    DateTime? birthDate,
+    bool isOwnerless = false,
+  }) async {
     final int petId = await _repository.addPet(
       name: name,
       photoPath: photoPath,
+      adoptionDate: adoptionDate,
+      birthDate: birthDate,
+      isOwnerless: isOwnerless,
     );
     await reload();
     return petId;
@@ -79,15 +88,33 @@ class PetsController extends AsyncListController<PetRecord> {
 
   Future<void> updatePet({
     required int petId,
-    required String name,
+    required String? name,
     String? photoPath,
+    DateTime? adoptionDate,
+    DateTime? birthDate,
   }) async {
-    await _repository.updatePet(petId: petId, name: name, photoPath: photoPath);
+    await _repository.updatePet(
+      petId: petId,
+      name: name,
+      photoPath: photoPath,
+      adoptionDate: adoptionDate,
+      birthDate: birthDate,
+    );
     await reload();
   }
 
   Future<void> deletePet({required int petId}) async {
     await _repository.deletePet(petId: petId);
+    await reload();
+  }
+
+  Future<void> incrementPetWalks({required Iterable<int> petIds}) async {
+    await _repository.incrementPetWalks(petIds: petIds);
+    await reload();
+  }
+
+  Future<void> markPetFound({required int petId}) async {
+    await _repository.markPetFound(petId: petId);
     await reload();
   }
 }
@@ -241,18 +268,20 @@ class LostPetReportsController
   }
 
   Future<void> addLostPetReport({
+    required int petId,
+    required String petLocalUuid,
     required double lastSeenLatitude,
     required double lastSeenLongitude,
-    required String name,
     required String details,
     required DateTime disappearanceDate,
-    required String photoUrl,
+    String? photoUrl,
     required String phone,
   }) async {
     await _repository.addLostPetReport(
+      petId: petId,
+      petLocalUuid: petLocalUuid,
       lastSeenLatitude: lastSeenLatitude,
       lastSeenLongitude: lastSeenLongitude,
-      name: name,
       details: details,
       disappearanceDate: disappearanceDate,
       photoUrl: photoUrl,
@@ -322,6 +351,9 @@ class FoundPetReportsController
   }
 
   Future<void> addFoundPetReport({
+    int? petId,
+    String? petLocalUuid,
+    int? matchedLostPetReportId,
     required double latitude,
     required double longitude,
     required String details,
@@ -330,6 +362,9 @@ class FoundPetReportsController
     String? phone,
   }) async {
     await _repository.addFoundPetReport(
+      petId: petId,
+      petLocalUuid: petLocalUuid,
+      matchedLostPetReportId: matchedLostPetReportId,
       latitude: latitude,
       longitude: longitude,
       details: details,

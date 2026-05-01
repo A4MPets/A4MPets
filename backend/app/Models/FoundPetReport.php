@@ -10,6 +10,9 @@ class FoundPetReport extends Model
 {
     protected $fillable = [
         'user_id',
+        'pet_id',
+        'matched_lost_pet_report_id',
+        'pet_local_uuid',
         'local_id',
         'remote_id',
         'latitude',
@@ -38,6 +41,16 @@ class FoundPetReport extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function pet(): BelongsTo
+    {
+        return $this->belongsTo(Pet::class);
+    }
+
+    public function matchedLostPetReport(): BelongsTo
+    {
+        return $this->belongsTo(LostPetReport::class, 'matched_lost_pet_report_id');
     }
 
     public function comments(): MorphMany

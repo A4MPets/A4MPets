@@ -11,9 +11,11 @@ extension _MapPageReportsState on _MapPageState {
     }
 
     unawaited(
-      ref.read(audioFeedbackServiceProvider).playDangerAlertWithSpeech(
-        NavigationAudioMessageBuilder.buildDangerMessage(),
-      ),
+      ref
+          .read(audioFeedbackServiceProvider)
+          .playDangerAlertWithSpeech(
+            NavigationAudioMessageBuilder.buildDangerMessage(),
+          ),
     );
   }
 
@@ -56,6 +58,52 @@ extension _MapPageReportsState on _MapPageState {
         );
   }
 
+  PetRecord? _findPetForFoundReport(
+    FoundPetReportRecord report,
+    List<PetRecord> pets,
+    List<LostPetReportRecord> lostReports,
+  ) {
+    for (final PetRecord pet in pets) {
+      if (pet.localUuid == report.petLocalUuid ||
+          (report.petId != null && pet.id == report.petId)) {
+        return pet;
+      }
+    }
+
+    final LostPetReportRecord? matchedLostPetReport =
+        _findLostReportForFoundReport(report, lostReports);
+    if (matchedLostPetReport == null) {
+      return null;
+    }
+
+    for (final PetRecord pet in pets) {
+      if (pet.localUuid == matchedLostPetReport.petLocalUuid) {
+        return pet;
+      }
+    }
+
+    return null;
+  }
+
+  LostPetReportRecord? _findLostReportForFoundReport(
+    FoundPetReportRecord report,
+    List<LostPetReportRecord> lostReports,
+  ) {
+    for (final LostPetReportRecord lostReport in lostReports) {
+      if (lostReport.petLocalUuid == report.petLocalUuid) {
+        return lostReport;
+      }
+      if (report.matchedLostPetReportId != null &&
+          (lostReport.id == report.matchedLostPetReportId ||
+              lostReport.remoteId ==
+                  report.matchedLostPetReportId.toString())) {
+        return lostReport;
+      }
+    }
+
+    return null;
+  }
+
   bool get _hasProximityAudioTargets {
     if (_visibleHazardCircles.isNotEmpty) {
       return true;
@@ -94,9 +142,14 @@ extension _MapPageReportsState on _MapPageState {
             route.isReportSelectorPanel ||
             route.isReportHazardPanel ||
             route.isLostPetReportPanel ||
+            route.isLostPetPetSelectionPanel ||
             route.isFoundPetReportPanel ||
+            route.isLostPetReportsListPanel ||
+            route.isFoundPetReportsListPanel ||
             route.isGenericReportPanel,
       );
+      _selectedLostPetForReport = null;
+      _selectedLostReportForFoundReport = null;
     });
   }
 
@@ -104,6 +157,7 @@ extension _MapPageReportsState on _MapPageState {
     _updatePageState(() {
       _manualLostPetLocation = null;
       _activeReportSelectionContext = null;
+      _selectedLostPetForReport = null;
     });
     _replaceOrPushReportPanel(_buildLostPetReportRoute(isDarkMode));
   }
@@ -112,8 +166,40 @@ extension _MapPageReportsState on _MapPageState {
     _updatePageState(() {
       _manualFoundPetLocation = null;
       _activeReportSelectionContext = null;
+      _selectedLostReportForFoundReport = null;
     });
     _replaceOrPushReportPanel(_buildFoundPetReportRoute(isDarkMode));
+  }
+
+  void _focusReportLocation(LatLng location) {
+    _updatePageState(() {
+      _reportFocusTarget = location;
+      _reportFocusRevision += 1;
+    });
+  }
+
+  void _openLostPetReportsListPanel(bool isDarkMode) {
+    _pushPanel(_buildLostPetReportsListRoute(isDarkMode));
+  }
+
+  void _openLostPetPetSelectionPanel(bool isDarkMode) {
+    ref.read(petsControllerProvider.notifier).reload();
+    _syncAndReloadData();
+    _pushPanel(_buildLostPetPetSelectionRoute(isDarkMode));
+  }
+
+  void _selectLostPetForReport(PetRecord pet) {
+    _updatePageState(() {
+      _selectedLostPetForReport = pet;
+      _activeReportSelectionContext = null;
+      if (_hasOpenPanels && _panelStack.last.isLostPetPetSelectionPanel) {
+        _panelStack.removeLast();
+      }
+    });
+  }
+
+  void _openFoundPetReportsListPanel(bool isDarkMode) {
+    _pushPanel(_buildFoundPetReportsListRoute(isDarkMode));
   }
 
   void _openGenericReportPanel(bool isDarkMode) {
@@ -319,13 +405,45 @@ extension _MapPageReportsState on _MapPageState {
           currentDeviceLocation: _latestUserLocation,
           currentLocationErrorText: _userLocationErrorText,
           selectedLocation: _manualLostPetLocation,
+          selectedPet: _selectedLostPetForReport,
           isSelectingOnMap:
               _activeReportSelectionContext ==
               _ReportMapSelectionContext.lostPet,
           onStartMapSelection: _startLostPetMapSelection,
           onUseCurrentLocation: _useCurrentLostPetLocation,
           onPreviewChanged: (_) {},
+          onSelectPetPressed: () => _openLostPetPetSelectionPanel(isDarkMode),
+          onViewFoundReportsPressed: () =>
+              _openFoundPetReportsListPanel(isDarkMode),
           onReported: _closeReportingFlowAfterSubmit,
+        );
+      },
+    );
+  }
+
+  _PanelRoute _buildLostPetPetSelectionRoute(bool isDarkMode) {
+    return _PanelRoute(
+      transitionKey: ++_panelTransitionSeed,
+      title: 'Seleccionar Mascota',
+      anchor: PanelAnchor.topLeft,
+      width: 380,
+      height: 620,
+      maxHeight: 620,
+      adaptHeightToContent: false,
+      expandHorizontal: false,
+      expandVertical: true,
+      scrollContent: false,
+      isLostPetPetSelectionPanel: true,
+      borderRadius: BorderRadius.circular(22),
+      contentBuilder: (BuildContext context) {
+        return ManagePetsPanelContent(
+          isDarkMode: isDarkMode,
+          selectionMode: true,
+          selectedPetId: _selectedLostPetForReport?.id,
+          onAddPetPressed: () => _openAddPetPanel(isDarkMode),
+          onViewPetPressed: (PetRecord pet) => _selectLostPetForReport(pet),
+          onEditPetPressed: (PetRecord pet) =>
+              _openEditPetPanel(isDarkMode, pet),
         );
       },
     );
@@ -346,6 +464,21 @@ extension _MapPageReportsState on _MapPageState {
       isFoundPetReportPanel: true,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
+        final List<PetRecord> pets =
+            ref.watch(petsControllerProvider).asData?.value ??
+            const <PetRecord>[];
+        final LostPetReportRecord? selectedLostPetReport =
+            _selectedLostReportForFoundReport;
+        PetRecord? selectedLostPet;
+        if (selectedLostPetReport != null) {
+          for (final PetRecord pet in pets) {
+            if (pet.localUuid == selectedLostPetReport.petLocalUuid) {
+              selectedLostPet = pet;
+              break;
+            }
+          }
+        }
+
         return FoundPetReportingPanelContent(
           isDarkMode: isDarkMode,
           currentDeviceLocation: _latestUserLocation,
@@ -357,7 +490,85 @@ extension _MapPageReportsState on _MapPageState {
           onStartMapSelection: _startFoundPetMapSelection,
           onUseCurrentLocation: _useCurrentFoundPetLocation,
           onPreviewChanged: (_) {},
+          selectedLostPetReport: selectedLostPetReport,
+          selectedLostPet: selectedLostPet,
+          onViewLostReportsPressed: () =>
+              _openLostPetReportsListPanel(isDarkMode),
           onReported: _closeReportingFlowAfterSubmit,
+        );
+      },
+    );
+  }
+
+  _PanelRoute _buildLostPetReportsListRoute(bool isDarkMode) {
+    return _PanelRoute(
+      transitionKey: ++_panelTransitionSeed,
+      title: 'Mascotas perdidas',
+      anchor: PanelAnchor.topLeft,
+      width: 380,
+      height: 620,
+      maxHeight: 620,
+      adaptHeightToContent: false,
+      expandHorizontal: false,
+      expandVertical: true,
+      scrollContent: false,
+      isLostPetReportsListPanel: true,
+      borderRadius: BorderRadius.circular(22),
+      contentBuilder: (BuildContext context) {
+        final List<LostPetReportRecord> reports =
+            ref.watch(lostPetReportsControllerProvider).asData?.value ??
+            const <LostPetReportRecord>[];
+        final List<PetRecord> pets =
+            ref.watch(petsControllerProvider).asData?.value ??
+            const <PetRecord>[];
+        return LostPetReportsListPanelContent(
+          isDarkMode: isDarkMode,
+          reports: reports,
+          pets: pets,
+          onSelectReport: (LostPetReportRecord report) {
+            _updatePageState(() {
+              _selectedLostReportForFoundReport = report;
+              if (_hasOpenPanels) {
+                _panelStack.removeLast();
+              }
+            });
+          },
+          onGoToLocation: _focusReportLocation,
+        );
+      },
+    );
+  }
+
+  _PanelRoute _buildFoundPetReportsListRoute(bool isDarkMode) {
+    return _PanelRoute(
+      transitionKey: ++_panelTransitionSeed,
+      title: 'Mascotas encontradas',
+      anchor: PanelAnchor.topLeft,
+      width: 380,
+      height: 620,
+      maxHeight: 620,
+      adaptHeightToContent: false,
+      expandHorizontal: false,
+      expandVertical: true,
+      scrollContent: false,
+      isFoundPetReportsListPanel: true,
+      borderRadius: BorderRadius.circular(22),
+      contentBuilder: (BuildContext context) {
+        final List<FoundPetReportRecord> reports =
+            ref.watch(foundPetReportsControllerProvider).asData?.value ??
+            const <FoundPetReportRecord>[];
+        final List<PetRecord> pets =
+            ref.watch(petsControllerProvider).asData?.value ??
+            const <PetRecord>[];
+        final List<LostPetReportRecord> lostReports =
+            ref.watch(lostPetReportsControllerProvider).asData?.value ??
+            const <LostPetReportRecord>[];
+        return FoundPetReportsListPanelContent(
+          isDarkMode: isDarkMode,
+          reports: reports,
+          pets: pets,
+          lostPetReports: lostReports,
+          onGoToLocation: _focusReportLocation,
         );
       },
     );
@@ -446,9 +657,25 @@ extension _MapPageReportsState on _MapPageState {
       isFoundPetDetailsPanel: true,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
+        final List<PetRecord> pets =
+            ref.watch(petsControllerProvider).asData?.value ??
+            const <PetRecord>[];
+        final List<LostPetReportRecord> lostReports =
+            ref.watch(lostPetReportsControllerProvider).asData?.value ??
+            const <LostPetReportRecord>[];
+        final PetRecord? matchedPet = _findPetForFoundReport(
+          report,
+          pets,
+          lostReports,
+        );
+        final LostPetReportRecord? matchedLostPetReport =
+            _findLostReportForFoundReport(report, lostReports);
+
         return FoundPetDetailsPanelContent(
           isDarkMode: isDarkMode,
           report: report,
+          pet: matchedPet,
+          matchedLostPetReport: matchedLostPetReport,
           onViewComments: () => _openFoundPetCommentsPanel(isDarkMode, report),
           debugDeleteLabel: kIsWeb && kDebugMode
               ? 'Borrar mascota encontrada'

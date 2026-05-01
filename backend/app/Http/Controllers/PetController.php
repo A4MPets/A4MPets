@@ -82,4 +82,14 @@ class PetController extends Controller
             'message' => 'Mascota marcada para eliminacion',
         ]);
     }
+
+    public function markFound(Pet $pet): JsonResponse
+    {
+        $pet = $this->petService->markFound($pet);
+
+        return response()->json([
+            'success' => true,
+            'data' => $pet,
+        ]);
+    }
 }

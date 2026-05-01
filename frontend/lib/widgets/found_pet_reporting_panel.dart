@@ -3,10 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../models/lost_pet_report_record.dart';
+import '../models/pet_record.dart';
 import '../providers/local_data_providers.dart';
 import '../theme/app_palette.dart';
 import 'location_picker_widget.dart';
 import 'reporting_form_widgets.dart';
+import 'shared/local_image_widget.dart';
 import 'shared/panel_scroll_view.dart';
 
 class FoundPetDraftPreview {
@@ -24,6 +27,9 @@ class FoundPetReportingPanelContent extends ConsumerStatefulWidget {
   final VoidCallback onStartMapSelection;
   final VoidCallback onUseCurrentLocation;
   final ValueChanged<FoundPetDraftPreview> onPreviewChanged;
+  final LostPetReportRecord? selectedLostPetReport;
+  final PetRecord? selectedLostPet;
+  final VoidCallback onViewLostReportsPressed;
   final VoidCallback onReported;
 
   const FoundPetReportingPanelContent({
@@ -36,6 +42,9 @@ class FoundPetReportingPanelContent extends ConsumerStatefulWidget {
     required this.onStartMapSelection,
     required this.onUseCurrentLocation,
     required this.onPreviewChanged,
+    required this.selectedLostPetReport,
+    required this.selectedLostPet,
+    required this.onViewLostReportsPressed,
     required this.onReported,
   });
 
@@ -180,6 +189,10 @@ class _FoundPetReportingPanelContentState
       await ref
           .read(foundPetReportsControllerProvider.notifier)
           .addFoundPetReport(
+            petLocalUuid: widget.selectedLostPetReport?.petLocalUuid,
+            matchedLostPetReportId: int.tryParse(
+              widget.selectedLostPetReport?.remoteId ?? '',
+            ),
             latitude: resolvedLocation!.latitude,
             longitude: resolvedLocation.longitude,
             details: _detailsController.text.trim(),
@@ -242,6 +255,13 @@ class _FoundPetReportingPanelContentState
                   errorText: locationError,
                   onStartSelection: widget.onStartMapSelection,
                   onUseCurrentLocation: widget.onUseCurrentLocation,
+                ),
+                const SizedBox(height: 8),
+                _FoundLostPetSelectionField(
+                  isDarkMode: widget.isDarkMode,
+                  selectedLostPetReport: widget.selectedLostPetReport,
+                  selectedLostPet: widget.selectedLostPet,
+                  onPressed: widget.onViewLostReportsPressed,
                 ),
                 const SizedBox(height: 10),
                 ReportingLabeledField(
@@ -316,6 +336,151 @@ class _FoundPetReportingPanelContentState
           backgroundColor: AppPalette.reportGreen,
         ),
       ],
+    );
+  }
+}
+
+class _FoundLostPetSelectionField extends StatelessWidget {
+  final bool isDarkMode;
+  final LostPetReportRecord? selectedLostPetReport;
+  final PetRecord? selectedLostPet;
+  final VoidCallback onPressed;
+
+  const _FoundLostPetSelectionField({
+    required this.isDarkMode,
+    required this.selectedLostPetReport,
+    required this.selectedLostPet,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ReportingSelectionButton(
+          isDarkMode: isDarkMode,
+          label: selectedLostPetReport == null
+              ? 'Seleccionar mascota perdida'
+              : 'Mascota perdida: ${selectedLostPet?.displayName ?? 'Seleccionada'}',
+          onPressed: onPressed,
+        ),
+        if (selectedLostPetReport != null) ...[
+          const SizedBox(height: 8),
+          _SelectedLostPetPreview(
+            isDarkMode: isDarkMode,
+            report: selectedLostPetReport!,
+            pet: selectedLostPet,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _SelectedLostPetPreview extends StatelessWidget {
+  final bool isDarkMode;
+  final LostPetReportRecord report;
+  final PetRecord? pet;
+
+  const _SelectedLostPetPreview({
+    required this.isDarkMode,
+    required this.report,
+    required this.pet,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color background = AppPalette.cardBackground(isDarkMode);
+    final Color border = AppPalette.border(isDarkMode);
+    final Color textColor = AppPalette.textPrimary(isDarkMode);
+    final String? photoSource = pet?.photoPath ?? report.photoUrl;
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: SizedBox(
+              width: 54,
+              height: 54,
+              child: photoSource != null && photoSource.isNotEmpty
+                  ? buildLocalImageWidget(
+                      source: photoSource,
+                      fit: BoxFit.cover,
+                      fallback: const _SelectedLostPetPlaceholder(),
+                      errorBuilder: (_, _, _) =>
+                          const _SelectedLostPetPlaceholder(),
+                    )
+                  : const _SelectedLostPetPlaceholder(),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  pet?.displayName ?? 'Mascota perdida seleccionada',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _formatDate(report.disappearanceDate),
+                  style: const TextStyle(
+                    color: AppPalette.textMutedDark,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  report.details,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _formatDate(DateTime date) {
+    final String day = date.day.toString().padLeft(2, '0');
+    final String month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}';
+  }
+}
+
+class _SelectedLostPetPlaceholder extends StatelessWidget {
+  const _SelectedLostPetPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppPalette.placeholderGray,
+      alignment: Alignment.center,
+      child: const Icon(Icons.pets, color: AppPalette.iconGray, size: 24),
     );
   }
 }

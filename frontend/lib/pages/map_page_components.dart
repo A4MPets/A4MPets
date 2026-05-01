@@ -19,6 +19,8 @@ class _PanelRoute {
   final bool isReportHazardPanel;
   final bool isLostPetReportPanel;
   final bool isFoundPetReportPanel;
+  final bool isLostPetReportsListPanel;
+  final bool isFoundPetReportsListPanel;
   final bool isGenericReportPanel;
   final bool isHazardDetailsPanel;
   final bool isLostPetDetailsPanel;
@@ -27,6 +29,7 @@ class _PanelRoute {
   final bool isHazardSettingsPanel;
   final bool isHazardCommentsPanel;
   final bool isManagePetsPanel;
+  final bool isLostPetPetSelectionPanel;
   final bool isManageRoutesPanel;
   final bool isProfilePanel;
   final bool isLoginPanel;
@@ -63,6 +66,8 @@ class _PanelRoute {
     this.isReportHazardPanel = false,
     this.isLostPetReportPanel = false,
     this.isFoundPetReportPanel = false,
+    this.isLostPetReportsListPanel = false,
+    this.isFoundPetReportsListPanel = false,
     this.isGenericReportPanel = false,
     this.isHazardDetailsPanel = false,
     this.isLostPetDetailsPanel = false,
@@ -71,6 +76,7 @@ class _PanelRoute {
     this.isHazardSettingsPanel = false,
     this.isHazardCommentsPanel = false,
     this.isManagePetsPanel = false,
+    this.isLostPetPetSelectionPanel = false,
     this.isManageRoutesPanel = false,
     this.isProfilePanel = false,
     this.isLoginPanel = false,
@@ -283,9 +289,8 @@ class _TripStartPanelContent extends StatelessWidget {
                         isDarkMode: isDarkMode,
                         isSelected:
                             selectedTransport == _TripTransportMethod.walking,
-                        onPressed: () => onTransportChanged(
-                          _TripTransportMethod.walking,
-                        ),
+                        onPressed: () =>
+                            onTransportChanged(_TripTransportMethod.walking),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -295,9 +300,8 @@ class _TripStartPanelContent extends StatelessWidget {
                         isDarkMode: isDarkMode,
                         isSelected:
                             selectedTransport == _TripTransportMethod.vehicle,
-                        onPressed: () => onTransportChanged(
-                          _TripTransportMethod.vehicle,
-                        ),
+                        onPressed: () =>
+                            onTransportChanged(_TripTransportMethod.vehicle),
                       ),
                     ),
                   ],
@@ -483,8 +487,10 @@ class _TripPetSelectionPanelContent extends StatelessWidget {
                         border: Border.all(
                           color: selected
                               ? AppPalette.primaryBlue
-                              : Colors.transparent,
-                          width: selected ? 2 : 0,
+                              : (pet.isLost
+                                    ? AppPalette.reportYellow
+                                    : Colors.transparent),
+                          width: selected || pet.isLost ? 2 : 0,
                         ),
                       ),
                       child: Column(
@@ -541,7 +547,7 @@ class _TripPetSelectionPanelContent extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            pet.name,
+                            pet.displayName,
                             textAlign: TextAlign.center,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -635,8 +641,7 @@ class _TripActivePanelContent extends StatelessWidget {
               child: _TripTransportButton(
                 label: 'A pie',
                 isDarkMode: isDarkMode,
-                isSelected:
-                    selectedTransport == _TripTransportMethod.walking,
+                isSelected: selectedTransport == _TripTransportMethod.walking,
                 onPressed: () =>
                     onTransportChanged(_TripTransportMethod.walking),
               ),
@@ -646,8 +651,7 @@ class _TripActivePanelContent extends StatelessWidget {
               child: _TripTransportButton(
                 label: 'En vehículo',
                 isDarkMode: isDarkMode,
-                isSelected:
-                    selectedTransport == _TripTransportMethod.vehicle,
+                isSelected: selectedTransport == _TripTransportMethod.vehicle,
                 onPressed: () =>
                     onTransportChanged(_TripTransportMethod.vehicle),
               ),

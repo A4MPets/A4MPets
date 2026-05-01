@@ -29,9 +29,16 @@ class LocalDatabaseSchema {
     await db.execute('''
       CREATE TABLE $petsTable (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        local_uuid TEXT NOT NULL UNIQUE,
         remote_id TEXT,
-        name TEXT NOT NULL,
+        name TEXT,
         photo_path TEXT,
+        total_walks INTEGER NOT NULL DEFAULT 0,
+        registered_at INTEGER NOT NULL,
+        adoption_date INTEGER,
+        birth_date INTEGER,
+        status TEXT NOT NULL DEFAULT 'normal',
+        is_ownerless INTEGER NOT NULL DEFAULT 0,
         sync_status TEXT NOT NULL DEFAULT 'created',
         last_modified_at INTEGER NOT NULL,
         synced_at INTEGER,
@@ -148,10 +155,10 @@ class LocalDatabaseSchema {
 
     if (oldVersion < 4) {
       await db.execute(
-        'ALTER TABLE $hazardsTable ADD COLUMN reported_by_username TEXT NOT NULL DEFAULT "Anonimo"',
+        "ALTER TABLE $hazardsTable ADD COLUMN reported_by_username TEXT NOT NULL DEFAULT 'Anonimo'",
       );
       await db.execute(
-        'ALTER TABLE $hazardsTable ADD COLUMN comments_json TEXT NOT NULL DEFAULT "[]"',
+        "ALTER TABLE $hazardsTable ADD COLUMN comments_json TEXT NOT NULL DEFAULT '[]'",
       );
     }
 
@@ -172,13 +179,13 @@ class LocalDatabaseSchema {
       await db.execute('ALTER TABLE $hazardsTable ADD COLUMN local_uuid TEXT');
       await db.execute('ALTER TABLE $hazardsTable ADD COLUMN remote_id TEXT');
       await db.execute(
-        'ALTER TABLE $hazardsTable ADD COLUMN sync_status TEXT NOT NULL DEFAULT "created"',
+        "ALTER TABLE $hazardsTable ADD COLUMN sync_status TEXT NOT NULL DEFAULT 'created'",
       );
       await db.execute(
         'ALTER TABLE $hazardsTable ADD COLUMN last_modified_at INTEGER',
       );
       await db.execute(
-        'UPDATE $hazardsTable SET local_uuid = COALESCE(local_uuid, "legacy-" || id)',
+        "UPDATE $hazardsTable SET local_uuid = COALESCE(local_uuid, 'legacy-' || id)",
       );
       await db.execute(
         'UPDATE $hazardsTable SET last_modified_at = COALESCE(last_modified_at, updated_at, created_at)',
@@ -200,7 +207,7 @@ class LocalDatabaseSchema {
 
       await db.execute('ALTER TABLE $petsTable ADD COLUMN remote_id TEXT');
       await db.execute(
-        'ALTER TABLE $petsTable ADD COLUMN sync_status TEXT NOT NULL DEFAULT "created"',
+        "ALTER TABLE $petsTable ADD COLUMN sync_status TEXT NOT NULL DEFAULT 'created'",
       );
       await db.execute(
         'ALTER TABLE $petsTable ADD COLUMN last_modified_at INTEGER',
@@ -209,7 +216,7 @@ class LocalDatabaseSchema {
 
       await db.execute('ALTER TABLE $routesTable ADD COLUMN remote_id TEXT');
       await db.execute(
-        'ALTER TABLE $routesTable ADD COLUMN sync_status TEXT NOT NULL DEFAULT "created"',
+        "ALTER TABLE $routesTable ADD COLUMN sync_status TEXT NOT NULL DEFAULT 'created'",
       );
       await db.execute(
         'ALTER TABLE $routesTable ADD COLUMN last_modified_at INTEGER',
@@ -219,10 +226,10 @@ class LocalDatabaseSchema {
 
     if (oldVersion < 8) {
       await db.execute(
-        'UPDATE $hazardsTable SET category_code = "possible_rabies_vectors" WHERE category_code = "aggressive_animals"',
+        "UPDATE $hazardsTable SET category_code = 'possible_rabies_vectors' WHERE category_code = 'aggressive_animals'",
       );
       await db.execute(
-        'UPDATE $hazardsTable SET category_code = "pest_presence" WHERE category_code IN ("undefined", "unknown", "unspecified", "")',
+        "UPDATE $hazardsTable SET category_code = 'pest_presence' WHERE category_code IN ('undefined', 'unknown', 'unspecified', '')",
       );
       await db.execute(
         _createLostPetReportsTableSql(lostPetReportsTable, ifNotExists: true),
@@ -236,8 +243,11 @@ class LocalDatabaseSchema {
     }
 
     if (oldVersion < 9) {
-      await db.execute(
-        'ALTER TABLE $genericReportsTable ADD COLUMN impact_radius_meters INTEGER NOT NULL DEFAULT 0',
+      await _ensureColumn(
+        db,
+        genericReportsTable,
+        'impact_radius_meters',
+        'INTEGER NOT NULL DEFAULT 0',
       );
       await db.execute(
         'UPDATE $genericReportsTable SET impact_radius_meters = 0 WHERE impact_radius_meters IS NULL',
@@ -245,15 +255,187 @@ class LocalDatabaseSchema {
     }
 
     if (oldVersion < 10) {
-      await db.execute(
-        'ALTER TABLE $lostPetReportsTable ADD COLUMN comments_json TEXT NOT NULL DEFAULT "[]"',
+      await _ensureColumn(
+        db,
+        lostPetReportsTable,
+        'comments_json',
+        "TEXT NOT NULL DEFAULT '[]'",
+      );
+      await _ensureColumn(
+        db,
+        foundPetReportsTable,
+        'comments_json',
+        "TEXT NOT NULL DEFAULT '[]'",
+      );
+      await _ensureColumn(
+        db,
+        genericReportsTable,
+        'comments_json',
+        "TEXT NOT NULL DEFAULT '[]'",
+      );
+    }
+
+    if (oldVersion < 11) {
+      await _ensureColumn(db, petsTable, 'local_uuid', 'TEXT');
+      await _ensureColumn(
+        db,
+        petsTable,
+        'total_walks',
+        'INTEGER NOT NULL DEFAULT 0',
+      );
+      await _ensureColumn(db, petsTable, 'registered_at', 'INTEGER');
+      await _ensureColumn(db, petsTable, 'adoption_date', 'INTEGER');
+      await _ensureColumn(db, petsTable, 'birth_date', 'INTEGER');
+      await _ensureColumn(
+        db,
+        petsTable,
+        'status',
+        "TEXT NOT NULL DEFAULT 'normal'",
+      );
+      await _ensureColumn(
+        db,
+        petsTable,
+        'is_ownerless',
+        'INTEGER NOT NULL DEFAULT 0',
       );
       await db.execute(
-        'ALTER TABLE $foundPetReportsTable ADD COLUMN comments_json TEXT NOT NULL DEFAULT "[]"',
+        "UPDATE $petsTable SET local_uuid = COALESCE(local_uuid, 'pt_' || id || '_' || created_at)",
       );
       await db.execute(
-        'ALTER TABLE $genericReportsTable ADD COLUMN comments_json TEXT NOT NULL DEFAULT "[]"',
+        'UPDATE $petsTable SET registered_at = COALESCE(registered_at, created_at)',
       );
+      await db.execute(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_pets_local_uuid ON $petsTable(local_uuid)',
+      );
+
+      await _ensureColumn(db, lostPetReportsTable, 'pet_id', 'INTEGER');
+      await _ensureColumn(
+        db,
+        lostPetReportsTable,
+        'pet_local_uuid',
+        "TEXT NOT NULL DEFAULT ''",
+      );
+      await _ensureColumn(db, foundPetReportsTable, 'pet_id', 'INTEGER');
+      await _ensureColumn(db, foundPetReportsTable, 'pet_local_uuid', 'TEXT');
+      await _ensureColumn(
+        db,
+        foundPetReportsTable,
+        'matched_lost_pet_report_id',
+        'INTEGER',
+      );
+    }
+  }
+
+  static Future<void> ensureCurrentSchema({
+    required Database db,
+    required String petsTable,
+    required String lostPetReportsTable,
+    required String foundPetReportsTable,
+    required String genericReportsTable,
+  }) async {
+    await _ensureColumn(
+      db,
+      petsTable,
+      'local_uuid',
+      'TEXT',
+      backfillSql:
+          "UPDATE $petsTable SET local_uuid = COALESCE(local_uuid, 'pt_' || id || '_' || created_at)",
+    );
+    await _ensureColumn(
+      db,
+      petsTable,
+      'total_walks',
+      'INTEGER NOT NULL DEFAULT 0',
+    );
+    await _ensureColumn(
+      db,
+      petsTable,
+      'registered_at',
+      'INTEGER',
+      backfillSql:
+          'UPDATE $petsTable SET registered_at = COALESCE(registered_at, created_at)',
+    );
+    await _ensureColumn(db, petsTable, 'adoption_date', 'INTEGER');
+    await _ensureColumn(db, petsTable, 'birth_date', 'INTEGER');
+    await _ensureColumn(
+      db,
+      petsTable,
+      'status',
+      "TEXT NOT NULL DEFAULT 'normal'",
+    );
+    await _ensureColumn(
+      db,
+      petsTable,
+      'is_ownerless',
+      'INTEGER NOT NULL DEFAULT 0',
+    );
+    await db.execute(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_pets_local_uuid ON $petsTable(local_uuid)',
+    );
+
+    await _ensureColumn(
+      db,
+      lostPetReportsTable,
+      'comments_json',
+      "TEXT NOT NULL DEFAULT '[]'",
+    );
+    await _ensureColumn(db, lostPetReportsTable, 'pet_id', 'INTEGER');
+    await _ensureColumn(
+      db,
+      lostPetReportsTable,
+      'pet_local_uuid',
+      "TEXT NOT NULL DEFAULT ''",
+    );
+
+    await _ensureColumn(
+      db,
+      foundPetReportsTable,
+      'comments_json',
+      "TEXT NOT NULL DEFAULT '[]'",
+    );
+    await _ensureColumn(db, foundPetReportsTable, 'pet_id', 'INTEGER');
+    await _ensureColumn(db, foundPetReportsTable, 'pet_local_uuid', 'TEXT');
+    await _ensureColumn(
+      db,
+      foundPetReportsTable,
+      'matched_lost_pet_report_id',
+      'INTEGER',
+    );
+
+    await _ensureColumn(
+      db,
+      genericReportsTable,
+      'comments_json',
+      "TEXT NOT NULL DEFAULT '[]'",
+    );
+    await _ensureColumn(
+      db,
+      genericReportsTable,
+      'impact_radius_meters',
+      'INTEGER NOT NULL DEFAULT 0',
+    );
+  }
+
+  static Future<void> _ensureColumn(
+    Database db,
+    String tableName,
+    String columnName,
+    String definition, {
+    String? backfillSql,
+  }) async {
+    final List<Map<String, Object?>> columns = await db.rawQuery(
+      'PRAGMA table_info($tableName)',
+    );
+    final bool exists = columns.any(
+      (Map<String, Object?> column) => column['name'] == columnName,
+    );
+    if (!exists) {
+      await db.execute(
+        'ALTER TABLE $tableName ADD COLUMN $columnName $definition',
+      );
+    }
+    if (backfillSql != null) {
+      await db.execute(backfillSql);
     }
   }
 
@@ -271,9 +453,10 @@ class LocalDatabaseSchema {
         remote_id TEXT,
         sync_status TEXT NOT NULL DEFAULT 'created',
         last_modified_at INTEGER NOT NULL,
+        pet_id INTEGER,
+        pet_local_uuid TEXT NOT NULL,
         last_seen_latitude REAL NOT NULL,
         last_seen_longitude REAL NOT NULL,
-        name TEXT NOT NULL,
         details TEXT NOT NULL,
         disappearance_date INTEGER NOT NULL,
         photo_url TEXT,
@@ -300,6 +483,9 @@ class LocalDatabaseSchema {
         remote_id TEXT,
         sync_status TEXT NOT NULL DEFAULT 'created',
         last_modified_at INTEGER NOT NULL,
+        pet_id INTEGER,
+        pet_local_uuid TEXT,
+        matched_lost_pet_report_id INTEGER,
         latitude REAL NOT NULL,
         longitude REAL NOT NULL,
         details TEXT NOT NULL,

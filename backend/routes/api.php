@@ -73,6 +73,7 @@ Route::middleware('api.token')->group(function (): void {
         Route::get('/', [PetController::class, 'index']);
         Route::post('/sync', [PetController::class, 'sync']);
         Route::post('/', [PetController::class, 'store']);
+        Route::post('/{pet}/mark-found', [PetController::class, 'markFound']);
         Route::put('/{pet}', [PetController::class, 'update']);
         Route::delete('/{pet}', [PetController::class, 'destroy']);
     });

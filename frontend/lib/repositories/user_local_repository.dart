@@ -167,10 +167,19 @@ class UserLocalRepository {
     return databaseManager.getPetsCount();
   }
 
-  Future<int> addPet({required String name, String? photoPath}) async {
+  Future<int> addPet({
+    String? name,
+    String? photoPath,
+    DateTime? adoptionDate,
+    DateTime? birthDate,
+    bool isOwnerless = false,
+  }) async {
     final int petId = await databaseManager.addPet(
       name: name,
       photoPath: photoPath,
+      adoptionDate: adoptionDate,
+      birthDate: birthDate,
+      isOwnerless: isOwnerless,
     );
     await databaseManager.markUserDataForFutureSync();
     unawaited(syncCoordinator.scheduleSync());
@@ -179,13 +188,17 @@ class UserLocalRepository {
 
   Future<void> updatePet({
     required int petId,
-    required String name,
+    required String? name,
     String? photoPath,
+    DateTime? adoptionDate,
+    DateTime? birthDate,
   }) async {
     await databaseManager.updatePet(
       petId: petId,
       name: name,
       photoPath: photoPath,
+      adoptionDate: adoptionDate,
+      birthDate: birthDate,
     );
     await databaseManager.markUserDataForFutureSync();
     unawaited(syncCoordinator.scheduleSync());
@@ -193,6 +206,18 @@ class UserLocalRepository {
 
   Future<void> deletePet({required int petId}) async {
     await databaseManager.deletePet(petId: petId);
+    await databaseManager.markUserDataForFutureSync();
+    unawaited(syncCoordinator.scheduleSync());
+  }
+
+  Future<void> incrementPetWalks({required Iterable<int> petIds}) async {
+    await databaseManager.incrementPetWalks(petIds: petIds);
+    await databaseManager.markUserDataForFutureSync();
+    unawaited(syncCoordinator.scheduleSync());
+  }
+
+  Future<void> markPetFound({required int petId}) async {
+    await databaseManager.markPetFound(petId: petId);
     await databaseManager.markUserDataForFutureSync();
     unawaited(syncCoordinator.scheduleSync());
   }
@@ -321,18 +346,20 @@ class UserLocalRepository {
   }
 
   Future<void> addLostPetReport({
+    required int petId,
+    required String petLocalUuid,
     required double lastSeenLatitude,
     required double lastSeenLongitude,
-    required String name,
     required String details,
     required DateTime disappearanceDate,
-    required String photoUrl,
+    String? photoUrl,
     required String phone,
   }) async {
     await databaseManager.addLostPetReport(
+      petId: petId,
+      petLocalUuid: petLocalUuid,
       lastSeenLatitude: lastSeenLatitude,
       lastSeenLongitude: lastSeenLongitude,
-      name: name,
       details: details,
       disappearanceDate: disappearanceDate,
       photoUrl: photoUrl,
@@ -381,6 +408,9 @@ class UserLocalRepository {
   }
 
   Future<void> addFoundPetReport({
+    int? petId,
+    String? petLocalUuid,
+    int? matchedLostPetReportId,
     required double latitude,
     required double longitude,
     required String details,
@@ -389,6 +419,9 @@ class UserLocalRepository {
     String? phone,
   }) async {
     await databaseManager.addFoundPetReport(
+      petId: petId,
+      petLocalUuid: petLocalUuid,
+      matchedLostPetReportId: matchedLostPetReportId,
       latitude: latitude,
       longitude: longitude,
       details: details,

@@ -18,6 +18,8 @@ class StoreFoundPetReportRequest extends FormRequest
     {
         return [
             'local_id' => ['required', 'string'],
+            'pet_local_uuid' => ['nullable', 'string'],
+            'matched_lost_pet_report_id' => ['nullable', 'integer'],
             'latitude' => ['required', 'numeric'],
             'longitude' => ['required', 'numeric'],
             'details' => ['required', 'string'],

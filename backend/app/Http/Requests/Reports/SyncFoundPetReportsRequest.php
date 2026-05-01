@@ -20,6 +20,8 @@ class SyncFoundPetReportsRequest extends FormRequest
             'found_pet_reports' => ['required', 'array'],
             'found_pet_reports.*.local_id' => ['required', 'string'],
             'found_pet_reports.*.remote_id' => ['nullable', 'string'],
+            'found_pet_reports.*.pet_local_uuid' => ['nullable', 'string'],
+            'found_pet_reports.*.matched_lost_pet_report_id' => ['nullable', 'integer'],
             'found_pet_reports.*.latitude' => ['required', 'numeric'],
             'found_pet_reports.*.longitude' => ['required', 'numeric'],
             'found_pet_reports.*.details' => ['required', 'string'],
