@@ -17,15 +17,12 @@ class ReportCommentsApiTest extends TestCase
         $user = User::factory()->create();
         $headers = $this->authHeaders($user);
         $pet = $this->postJson('/api/pets', [
-            'local_id' => 'pet-comment-1',
-            'local_uuid' => 'pet-comment-1',
             'name' => 'Milo',
             'photo_path' => 'https://example.com/lost.jpg',
         ], $headers)->assertCreated()->json('data');
 
         $lostReportId = $this->postJson('/api/lost-pet-reports', [
-            'local_id' => 'lost-comment-1',
-            'pet_local_uuid' => $pet['local_uuid'],
+            'pet_id' => $pet['id'],
             'last_seen_latitude' => 3.4516,
             'last_seen_longitude' => -76.5320,
             'details' => 'Brown dog with blue collar',
@@ -45,7 +42,6 @@ class ReportCommentsApiTest extends TestCase
             ->assertJsonPath('data.0.comment_text', 'I saw this pet near the park.');
 
         $foundReportId = $this->postJson('/api/found-pet-reports', [
-            'local_id' => 'found-comment-1',
             'latitude' => 3.4520,
             'longitude' => -76.5330,
             'details' => 'Small white dog waiting by the corner',

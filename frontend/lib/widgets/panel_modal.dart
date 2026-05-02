@@ -162,30 +162,41 @@ class _AppModalPanelState extends State<AppModalPanel> {
                   ),
                   child: Stack(
                     children: [
-                      if (!widget.isMinimized && widget.scrollContent)
+                      if (widget.scrollContent)
                         if (widget.adaptHeightToContent)
-                          _PanelScrollableBody(
-                            topPadding: resolvedTopPadding,
-                            adaptHeightToContent: true,
-                            child: widget.child,
-                          )
-                        else
-                          Positioned.fill(
+                          Offstage(
+                            offstage: widget.isMinimized,
                             child: _PanelScrollableBody(
                               topPadding: resolvedTopPadding,
-                              adaptHeightToContent: false,
+                              adaptHeightToContent: true,
                               child: widget.child,
                             ),
                           )
-                      else if (!widget.isMinimized)
-                        Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            16,
-                            resolvedTopPadding,
-                            16,
-                            18,
+                        else
+                          Positioned.fill(
+                            child: Offstage(
+                              offstage: widget.isMinimized,
+                              child: _PanelScrollableBody(
+                                topPadding: resolvedTopPadding,
+                                adaptHeightToContent: false,
+                                child: widget.child,
+                              ),
+                            ),
+                          )
+                      else
+                        Positioned.fill(
+                          child: Offstage(
+                            offstage: widget.isMinimized,
+                            child: Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                16,
+                                resolvedTopPadding,
+                                16,
+                                18,
+                              ),
+                              child: widget.child,
+                            ),
                           ),
-                          child: widget.child,
                         ),
                       if (hasTitle)
                         Positioned(

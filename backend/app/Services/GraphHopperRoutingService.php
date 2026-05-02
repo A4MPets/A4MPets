@@ -232,7 +232,7 @@ class GraphHopperRoutingService
             ->whereNotNull('incident_latitude')
             ->whereNotNull('incident_longitude')
             ->whereNotNull('impact_radius_meters')
-            ->orderByDesc('last_modified_at')
+            ->orderByDesc('updated_at')
             ->limit(30)
             ->get([
                 'incident_latitude',
@@ -263,11 +263,10 @@ class GraphHopperRoutingService
     private function loadGenericReportAvoidanceAreas(array $selectedRiskFilters): array
     {
         $reports = GenericReport::query()
-            ->where('sync_status', '!=', 'deleted')
             ->where('impact_radius_meters', '>', 0)
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
-            ->orderByDesc('last_modified_at')
+            ->orderByDesc('updated_at')
             ->limit(30)
             ->get([
                 'latitude',

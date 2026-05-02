@@ -209,7 +209,7 @@ extension _MapPagePanelsState on _MapPageState {
         panel.isLostPetPetSelectionPanel ||
         panel.isTripPetSelectionPanel) {
       final AsyncValue<List<PetRecord>> petsValue = ref.watch(
-        petsControllerProvider,
+        myPetsControllerProvider,
       );
       final AsyncValue<LocalUserProfile> profileValue = ref.watch(
         localUserProfileProvider,

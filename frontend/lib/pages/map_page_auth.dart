@@ -2,6 +2,7 @@ part of 'map_page.dart';
 
 void _invalidateUserScopedData(WidgetRef ref) {
   ref.invalidate(localUserProfileProvider);
+  ref.invalidate(myPetsControllerProvider);
   ref.invalidate(petsControllerProvider);
   ref.invalidate(routesControllerProvider);
   ref.invalidate(hazardReportsControllerProvider);
@@ -16,6 +17,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       return;
     }
 
+    ref.invalidate(localUserProfileProvider);
     _pushPanel(_buildProfileRoute(isDarkMode));
   }
 
@@ -159,6 +161,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
   }
 
   void _openPetDetailsPanel(bool isDarkMode, PetRecord pet) {
+    ref.read(myPetsControllerProvider.notifier).reload();
     _pushPanel(_buildPetDetailsRoute(isDarkMode, pet));
   }
 
@@ -182,13 +185,13 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       return;
     }
 
-    await ref.read(petsControllerProvider.notifier).reload();
+    await ref.read(myPetsControllerProvider.notifier).reload();
     if (!mounted) {
       return;
     }
 
     final List<PetRecord> pets =
-        ref.read(petsControllerProvider).asData?.value ?? const <PetRecord>[];
+        ref.read(myPetsControllerProvider).asData?.value ?? const <PetRecord>[];
     PetRecord? savedPet;
     for (final PetRecord pet in pets) {
       if (pet.id == petId) {
@@ -248,9 +251,10 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       width: 360,
       height: 430,
       maxHeight: 520,
-      adaptHeightToContent: true,
+      adaptHeightToContent: false,
       expandHorizontal: false,
       expandVertical: false,
+      scrollContent: false,
       isLoginPanel: true,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
@@ -271,9 +275,10 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       width: 360,
       height: 520,
       maxHeight: 620,
-      adaptHeightToContent: true,
+      adaptHeightToContent: false,
       expandHorizontal: false,
       expandVertical: false,
+      scrollContent: false,
       isRegisterPanel: true,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {

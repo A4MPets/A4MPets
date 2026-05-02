@@ -127,6 +127,8 @@ extension _MapPageTripState on _MapPageState {
     if (_hasOpenPanels) {
       return;
     }
+    ref.read(myPetsControllerProvider.notifier).reload();
+    ref.read(routesControllerProvider.notifier).reload();
     _updatePageState(() {
       _isTripStartPanelMinimized = false;
     });
@@ -134,7 +136,7 @@ extension _MapPageTripState on _MapPageState {
   }
 
   void _openTripPetSelectorPanel(bool isDarkMode) {
-    ref.read(petsControllerProvider.notifier).reload();
+    ref.read(myPetsControllerProvider.notifier).reload();
     _syncAndReloadData();
     _pushPanel(_buildTripPetSelectorRoute(isDarkMode));
   }
@@ -321,7 +323,7 @@ extension _MapPageTripState on _MapPageState {
     if (completedPetIds.isNotEmpty) {
       unawaited(
         ref
-            .read(petsControllerProvider.notifier)
+            .read(myPetsControllerProvider.notifier)
             .incrementPetWalks(petIds: completedPetIds),
       );
     }
@@ -756,7 +758,7 @@ extension _MapPageTripState on _MapPageState {
         return Consumer(
           builder: (BuildContext context, WidgetRef ref, Widget? child) {
             final AsyncValue<List<PetRecord>> petsValue = ref.watch(
-              petsControllerProvider,
+              myPetsControllerProvider,
             );
             return _TripPetSelectionPanelContent(
               isDarkMode: isDarkMode,

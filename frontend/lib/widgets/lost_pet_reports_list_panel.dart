@@ -58,6 +58,9 @@ class _LostPetReportsListPanelContentState
     final Map<String, PetRecord> petsByUuid = <String, PetRecord>{
       for (final PetRecord pet in widget.pets) pet.localUuid: pet,
     };
+    final Map<int, PetRecord> petsById = <int, PetRecord>{
+      for (final PetRecord pet in widget.pets) pet.id: pet,
+    };
     final List<String> tokens = _queryController.text
         .toLowerCase()
         .split(RegExp(r'\s+'))
@@ -110,8 +113,10 @@ class _LostPetReportsListPanelContentState
                 : Column(
                     children: visible
                         .map((LostPetReportRecord report) {
-                          final PetRecord? pet =
-                              petsByUuid[report.petLocalUuid];
+                          final PetRecord? pet = report.petId == null
+                              ? petsByUuid[report.petLocalUuid]
+                              : petsById[report.petId!] ??
+                                    petsByUuid[report.petLocalUuid];
                           return _LostReportCard(
                             isDarkMode: widget.isDarkMode,
                             report: report,

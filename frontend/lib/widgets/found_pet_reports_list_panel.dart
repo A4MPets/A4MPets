@@ -29,7 +29,8 @@ class FoundPetReportsListPanelContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color textColor = AppPalette.textPrimary(isDarkMode);
     final Map<String, PetRecord> petsByUuid = <String, PetRecord>{
-      for (final PetRecord pet in pets) pet.localUuid: pet,
+      for (final PetRecord pet in pets)
+        if (pet.localUuid.isNotEmpty) pet.localUuid: pet,
     };
     final Map<int, PetRecord> petsById = <int, PetRecord>{
       for (final PetRecord pet in pets) pet.id: pet,
@@ -37,7 +38,12 @@ class FoundPetReportsListPanelContent extends StatelessWidget {
     final Map<String, LostPetReportRecord> lostReportsByPetUuid =
         <String, LostPetReportRecord>{
           for (final LostPetReportRecord report in lostPetReports)
-            report.petLocalUuid: report,
+            if (report.petLocalUuid.isNotEmpty) report.petLocalUuid: report,
+        };
+    final Map<int, LostPetReportRecord> lostReportsByPetId =
+        <int, LostPetReportRecord>{
+          for (final LostPetReportRecord report in lostPetReports)
+            if (report.petId != null) report.petId!: report,
         };
     final Map<int, LostPetReportRecord> lostReportsById =
         <int, LostPetReportRecord>{
@@ -67,8 +73,10 @@ class FoundPetReportsListPanelContent extends StatelessWidget {
           : Column(
               children: reports
                   .map((FoundPetReportRecord report) {
+                    final bool hasPetLocalUuid =
+                        (report.petLocalUuid ?? '').isNotEmpty;
                     final LostPetReportRecord? matchedLostPetReport =
-                        report.petLocalUuid == null
+                        !hasPetLocalUuid
                         ? (report.matchedLostPetReportId == null
                               ? null
                               : lostReportsById[report
@@ -84,7 +92,7 @@ class FoundPetReportsListPanelContent extends StatelessWidget {
                                         lostReportsByRemoteId[report
                                             .matchedLostPetReportId!
                                             .toString()]);
-                    final PetRecord? matchedPet = report.petLocalUuid == null
+                    final PetRecord? matchedPet = !hasPetLocalUuid
                         ? (report.petId == null
                               ? null
                               : petsById[report.petId!])
@@ -94,12 +102,21 @@ class FoundPetReportsListPanelContent extends StatelessWidget {
                                         ? null
                                         : petsById[report.petId!])
                                   : petsByUuid[matchedLostPetReport
-                                        .petLocalUuid]);
+                                            .petLocalUuid] ??
+                                        (matchedLostPetReport.petId == null
+                                            ? null
+                                            : petsById[matchedLostPetReport
+                                                  .petId!]));
+                    final LostPetReportRecord? resolvedLostPetReport =
+                        matchedLostPetReport ??
+                        (report.petId == null
+                            ? null
+                            : lostReportsByPetId[report.petId!]);
                     return _FoundReportCard(
                       isDarkMode: isDarkMode,
                       report: report,
                       pet: matchedPet,
-                      matchedLostPetReport: matchedLostPetReport,
+                      matchedLostPetReport: resolvedLostPetReport,
                       onGoToLocation: onGoToLocation,
                     );
                   })

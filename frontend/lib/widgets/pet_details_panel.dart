@@ -97,7 +97,7 @@ class PetDetailsPanelContent extends ConsumerWidget {
             child: ElevatedButton(
               onPressed: () async {
                 await ref
-                    .read(petsControllerProvider.notifier)
+                    .read(myPetsControllerProvider.notifier)
                     .markPetFound(petId: pet.id);
                 await ref
                     .read(lostPetReportsControllerProvider.notifier)

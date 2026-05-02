@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Hazards\StoreHazardRequest;
-use App\Http\Requests\Hazards\SyncHazardsRequest;
 use App\Http\Requests\Hazards\UpdateHazardRequest;
 use App\Http\Requests\Reports\StoreReportCommentRequest;
 use App\Models\HazardReport;
@@ -110,25 +109,6 @@ class HazardReportController extends Controller
         ]);
     }
 
-    public function sync(SyncHazardsRequest $request): JsonResponse
-    {
-        $syncResults = $this->hazardReportService->sync(
-            $request->validated('hazards'),
-            $request->user()?->id
-        );
-
-        return response()->json([
-            'success' => true,
-            'message' => sprintf(
-                'Sincronizacion completada: %d sincronizados, %d conflictos, %d errores',
-                $syncResults['synced'],
-                $syncResults['conflicts'],
-                $syncResults['errors']
-            ),
-            'sync_results' => $syncResults,
-        ]);
-    }
-
     public function comments(HazardReport $hazardReport): JsonResponse
     {
         $hazardReport->load(['comments', 'comments.user', 'riskLevel', 'category', 'estimatedDuration']);
@@ -154,16 +134,5 @@ class HazardReportController extends Controller
             'message' => 'Comentario agregado exitosamente',
             'data' => $this->reportCommentFormatter->formatComment($comment),
         ], 201);
-    }
-
-    public function getUnsynced(): JsonResponse
-    {
-        $unsynced = $this->hazardReportService->unsynced();
-
-        return response()->json([
-            'success' => true,
-            'count' => $unsynced->count(),
-            'data' => $unsynced,
-        ]);
     }
 }

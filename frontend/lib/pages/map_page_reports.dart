@@ -64,8 +64,9 @@ extension _MapPageReportsState on _MapPageState {
     List<LostPetReportRecord> lostReports,
   ) {
     for (final PetRecord pet in pets) {
-      if (pet.localUuid == report.petLocalUuid ||
-          (report.petId != null && pet.id == report.petId)) {
+      if ((report.petId != null && pet.id == report.petId) ||
+          ((report.petLocalUuid ?? '').isNotEmpty &&
+              pet.localUuid == report.petLocalUuid)) {
         return pet;
       }
     }
@@ -77,7 +78,10 @@ extension _MapPageReportsState on _MapPageState {
     }
 
     for (final PetRecord pet in pets) {
-      if (pet.localUuid == matchedLostPetReport.petLocalUuid) {
+      if ((matchedLostPetReport.petId != null &&
+              pet.id == matchedLostPetReport.petId) ||
+          (matchedLostPetReport.petLocalUuid.isNotEmpty &&
+              pet.localUuid == matchedLostPetReport.petLocalUuid)) {
         return pet;
       }
     }
@@ -90,7 +94,11 @@ extension _MapPageReportsState on _MapPageState {
     List<LostPetReportRecord> lostReports,
   ) {
     for (final LostPetReportRecord lostReport in lostReports) {
-      if (lostReport.petLocalUuid == report.petLocalUuid) {
+      if ((report.petLocalUuid ?? '').isNotEmpty &&
+          lostReport.petLocalUuid == report.petLocalUuid) {
+        return lostReport;
+      }
+      if (report.petId != null && lostReport.petId == report.petId) {
         return lostReport;
       }
       if (report.matchedLostPetReportId != null &&
@@ -123,6 +131,7 @@ extension _MapPageReportsState on _MapPageState {
       return;
     }
 
+    _reloadReportData();
     _pushPanel(_buildReportSelectorRoute(isDarkMode));
   }
 
@@ -154,6 +163,9 @@ extension _MapPageReportsState on _MapPageState {
   }
 
   void _openLostPetReportPanel(bool isDarkMode) {
+    ref.read(myPetsControllerProvider.notifier).reload();
+    ref.read(lostPetReportsControllerProvider.notifier).reload();
+    ref.read(foundPetReportsControllerProvider.notifier).reload();
     _updatePageState(() {
       _manualLostPetLocation = null;
       _activeReportSelectionContext = null;
@@ -163,6 +175,9 @@ extension _MapPageReportsState on _MapPageState {
   }
 
   void _openFoundPetReportPanel(bool isDarkMode) {
+    ref.read(petsControllerProvider.notifier).reload();
+    ref.read(lostPetReportsControllerProvider.notifier).reload();
+    ref.read(foundPetReportsControllerProvider.notifier).reload();
     _updatePageState(() {
       _manualFoundPetLocation = null;
       _activeReportSelectionContext = null;
@@ -179,11 +194,13 @@ extension _MapPageReportsState on _MapPageState {
   }
 
   void _openLostPetReportsListPanel(bool isDarkMode) {
+    ref.read(petsControllerProvider.notifier).reload();
+    ref.read(lostPetReportsControllerProvider.notifier).reload();
     _pushPanel(_buildLostPetReportsListRoute(isDarkMode));
   }
 
   void _openLostPetPetSelectionPanel(bool isDarkMode) {
-    ref.read(petsControllerProvider.notifier).reload();
+    ref.read(myPetsControllerProvider.notifier).reload();
     _syncAndReloadData();
     _pushPanel(_buildLostPetPetSelectionRoute(isDarkMode));
   }
@@ -199,10 +216,14 @@ extension _MapPageReportsState on _MapPageState {
   }
 
   void _openFoundPetReportsListPanel(bool isDarkMode) {
+    ref.read(petsControllerProvider.notifier).reload();
+    ref.read(foundPetReportsControllerProvider.notifier).reload();
+    ref.read(lostPetReportsControllerProvider.notifier).reload();
     _pushPanel(_buildFoundPetReportsListRoute(isDarkMode));
   }
 
   void _openGenericReportPanel(bool isDarkMode) {
+    ref.read(genericReportsControllerProvider.notifier).reload();
     _updatePageState(() {
       _manualGenericReportLocation = null;
       _activeReportSelectionContext = null;
@@ -299,7 +320,11 @@ extension _MapPageReportsState on _MapPageState {
     bool isDarkMode,
     LostPetReportRecord report,
   ) async {
-    if (_hasOpenPanels && !_panelStack.last.isLostPetDetailsPanel) {
+    ref.read(lostPetReportsControllerProvider.notifier).reload();
+    ref.read(petsControllerProvider.notifier).reload();
+    if (_hasOpenPanels &&
+        !_panelStack.last.isLostPetDetailsPanel &&
+        !_panelStack.last.isFoundPetDetailsPanel) {
       return;
     }
     _updatePageState(() {
@@ -307,9 +332,16 @@ extension _MapPageReportsState on _MapPageState {
       _selectedLostPetReport = report;
       _selectedFoundPetReport = null;
       _selectedGenericReport = null;
+      _reportFocusTarget = LatLng(
+        report.lastSeenLatitude,
+        report.lastSeenLongitude,
+      );
+      _reportFocusRevision += 1;
     });
     final _PanelRoute route = _buildLostPetDetailsRoute(isDarkMode, report);
-    if (_hasOpenPanels && _panelStack.last.isLostPetDetailsPanel) {
+    if (_hasOpenPanels &&
+        (_panelStack.last.isLostPetDetailsPanel ||
+            _panelStack.last.isFoundPetDetailsPanel)) {
       _replaceTopPanel(route);
       return;
     }
@@ -320,6 +352,9 @@ extension _MapPageReportsState on _MapPageState {
     bool isDarkMode,
     FoundPetReportRecord report,
   ) async {
+    ref.read(foundPetReportsControllerProvider.notifier).reload();
+    ref.read(lostPetReportsControllerProvider.notifier).reload();
+    ref.read(petsControllerProvider.notifier).reload();
     if (_hasOpenPanels && !_panelStack.last.isFoundPetDetailsPanel) {
       return;
     }
@@ -328,6 +363,8 @@ extension _MapPageReportsState on _MapPageState {
       _selectedLostPetReport = null;
       _selectedFoundPetReport = report;
       _selectedGenericReport = null;
+      _reportFocusTarget = LatLng(report.latitude, report.longitude);
+      _reportFocusRevision += 1;
     });
     final _PanelRoute route = _buildFoundPetDetailsRoute(isDarkMode, report);
     if (_hasOpenPanels && _panelStack.last.isFoundPetDetailsPanel) {
@@ -341,6 +378,7 @@ extension _MapPageReportsState on _MapPageState {
     bool isDarkMode,
     GenericReportRecord report,
   ) async {
+    ref.read(genericReportsControllerProvider.notifier).reload();
     if (_hasOpenPanels && !_panelStack.last.isGenericReportDetailsPanel) {
       return;
     }
@@ -349,6 +387,8 @@ extension _MapPageReportsState on _MapPageState {
       _selectedLostPetReport = null;
       _selectedFoundPetReport = null;
       _selectedGenericReport = report;
+      _reportFocusTarget = LatLng(report.latitude, report.longitude);
+      _reportFocusRevision += 1;
     });
     final _PanelRoute route = _buildGenericReportDetailsRoute(
       isDarkMode,
@@ -472,7 +512,10 @@ extension _MapPageReportsState on _MapPageState {
         PetRecord? selectedLostPet;
         if (selectedLostPetReport != null) {
           for (final PetRecord pet in pets) {
-            if (pet.localUuid == selectedLostPetReport.petLocalUuid) {
+            if ((selectedLostPetReport.petId != null &&
+                    pet.id == selectedLostPetReport.petId) ||
+                (selectedLostPetReport.petLocalUuid.isNotEmpty &&
+                    pet.localUuid == selectedLostPetReport.petLocalUuid)) {
               selectedLostPet = pet;
               break;
             }
@@ -624,9 +667,21 @@ extension _MapPageReportsState on _MapPageState {
       isLostPetDetailsPanel: true,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
+        final List<PetRecord> pets =
+            ref.watch(petsControllerProvider).asData?.value ??
+            const <PetRecord>[];
+        PetRecord? pet;
+        for (final PetRecord item in pets) {
+          if ((report.petId != null && item.id == report.petId) ||
+              item.localUuid == report.petLocalUuid) {
+            pet = item;
+            break;
+          }
+        }
         return LostPetDetailsPanelContent(
           isDarkMode: isDarkMode,
           report: report,
+          pet: pet,
           onViewComments: () => _openLostPetCommentsPanel(isDarkMode, report),
           debugDeleteLabel: kIsWeb && kDebugMode
               ? 'Borrar mascota perdida'
@@ -676,6 +731,10 @@ extension _MapPageReportsState on _MapPageState {
           report: report,
           pet: matchedPet,
           matchedLostPetReport: matchedLostPetReport,
+          onViewMatchedLostReport: matchedLostPetReport == null
+              ? null
+              : () =>
+                    _openLostPetDetailsPanel(isDarkMode, matchedLostPetReport),
           onViewComments: () => _openFoundPetCommentsPanel(isDarkMode, report),
           debugDeleteLabel: kIsWeb && kDebugMode
               ? 'Borrar mascota encontrada'

@@ -34,7 +34,7 @@ class ManagePetsPanelContent extends ConsumerWidget {
       localUserProfileProvider,
     );
     final AsyncValue<List<PetRecord>> petsValue = ref.watch(
-      petsControllerProvider,
+      myPetsControllerProvider,
     );
 
     final Color cardBorder = AppPalette.border(isDarkMode);
@@ -58,7 +58,7 @@ class ManagePetsPanelContent extends ConsumerWidget {
                   avatarPath: profile.avatarPath,
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const SizedBox.shrink(),
               error: (Object error, StackTrace stackTrace) {
                 return UserIdentityHeader(
                   isDarkMode: isDarkMode,
@@ -119,8 +119,7 @@ class ManagePetsPanelContent extends ConsumerWidget {
                       },
                     );
                   },
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
+                  loading: () => const SizedBox.shrink(),
                   error: (Object error, StackTrace stackTrace) {
                     return Center(
                       child: Text(
@@ -202,7 +201,7 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
   Future<void> _loadDefaultPetName() async {
     try {
       final int nextNumber = await ref
-          .read(petsControllerProvider.notifier)
+          .read(myPetsControllerProvider.notifier)
           .getNextDefaultPetNumber();
       if (!mounted) {
         return;
@@ -268,7 +267,7 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
 
     try {
       final int petId = await ref
-          .read(petsControllerProvider.notifier)
+          .read(myPetsControllerProvider.notifier)
           .addPet(
             name: resolvedName,
             photoPath: _storedPhotoPath,
@@ -843,7 +842,7 @@ class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
 
     try {
       await ref
-          .read(petsControllerProvider.notifier)
+          .read(myPetsControllerProvider.notifier)
           .updatePet(
             petId: widget.pet.id,
             name: resolvedName,
@@ -903,7 +902,7 @@ class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
 
     try {
       await ref
-          .read(petsControllerProvider.notifier)
+          .read(myPetsControllerProvider.notifier)
           .deletePet(petId: widget.pet.id);
 
       if (!mounted) {

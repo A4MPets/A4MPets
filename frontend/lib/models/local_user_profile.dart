@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class LocalUserProfile {
   final int id;
   final String username;
@@ -33,16 +35,18 @@ class LocalUserProfile {
 
   factory LocalUserProfile.fromMap(Map<String, Object?> map) {
     return LocalUserProfile(
-      id: map['id'] as int,
-      username: map['username'] as String,
+      id: _readInt(map['id']) ?? 1,
+      username: map['username'] as String? ?? 'Usuario',
       avatarPath: map['avatar_path'] as String?,
-      isAuthenticated: (map['is_authenticated'] as int? ?? 0) == 1,
-      backendUserId: map['backend_user_id'] as int?,
+      isAuthenticated: _readBool(map['is_authenticated']),
+      backendUserId: _readInt(map['backend_user_id']),
       email: map['email'] as String?,
       accessToken: map['access_token'] as String?,
       lastSyncedAt: map['last_synced_at'] == null
           ? null
-          : DateTime.fromMillisecondsSinceEpoch(map['last_synced_at'] as int),
+          : DateTime.fromMillisecondsSinceEpoch(
+              _readInt(map['last_synced_at']) ?? 0,
+            ),
     );
   }
 
@@ -57,6 +61,42 @@ class LocalUserProfile {
       'access_token': accessToken,
       'last_synced_at': lastSyncedAt?.millisecondsSinceEpoch,
     };
+  }
+
+  factory LocalUserProfile.fromJson(String raw) {
+    return LocalUserProfile.fromMap(
+      (jsonDecode(raw) as Map<String, dynamic>).cast<String, Object?>(),
+    );
+  }
+
+  String toJson() {
+    return jsonEncode(toMap());
+  }
+
+  static int? _readInt(Object? value) {
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    if (value is String) {
+      return int.tryParse(value);
+    }
+    return null;
+  }
+
+  static bool _readBool(Object? value) {
+    if (value is bool) {
+      return value;
+    }
+    if (value is num) {
+      return value != 0;
+    }
+    if (value is String) {
+      return value == '1' || value.toLowerCase() == 'true';
+    }
+    return false;
   }
 
   LocalUserProfile copyWith({

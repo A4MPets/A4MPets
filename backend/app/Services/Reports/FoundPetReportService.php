@@ -19,12 +19,8 @@ class FoundPetReportService
     {
         $query = FoundPetReport::query()->with(['pet', 'matchedLostPetReport', 'comments', 'comments.user']);
 
-        if (! $includeArchived) {
-            $query->where('sync_status', '!=', 'deleted');
-        }
-
         return $query
-            ->orderByDesc('last_modified_at')
+            ->orderByDesc('updated_at')
             ->paginate($perPage, ['*'], 'page', $page);
     }
 
@@ -33,32 +29,19 @@ class FoundPetReportService
      */
     public function store(?int $userId, array $validated): FoundPetReport
     {
-        $comments = (array) ($validated['comments'] ?? []);
         [$pet, $matchedReport] = $this->resolvePetContext($userId, $validated);
-        $report = FoundPetReport::updateOrCreate(
-            ['local_id' => $validated['local_id']],
-            [
-                'user_id' => $userId,
-                'pet_id' => $pet->id,
-                'matched_lost_pet_report_id' => $matchedReport?->id,
-                'pet_local_uuid' => $pet->local_uuid ?? $pet->local_id,
-                'latitude' => $validated['latitude'],
-                'longitude' => $validated['longitude'],
-                'details' => $validated['details'],
-                'found_date' => $validated['found_date'],
-                'photo_url' => $validated['photo_url'] ?? null,
-                'phone' => $validated['phone'] ?? null,
-                'sync_status' => 'synced',
-                'last_modified_at' => now(),
-                'synced_at' => now(),
-            ]
-        );
-
-        $this->ensureRemoteId($report);
-
-        if ($comments !== []) {
-            $this->reportCommentService->syncComments($report, $comments);
-        }
+        $report = FoundPetReport::create([
+            'user_id' => $userId,
+            'pet_id' => $pet->id,
+            'matched_lost_pet_report_id' => $matchedReport?->id,
+            'pet_local_uuid' => $pet->local_uuid ?? null,
+            'latitude' => $validated['latitude'],
+            'longitude' => $validated['longitude'],
+            'details' => $validated['details'],
+            'found_date' => $validated['found_date'],
+            'photo_url' => $validated['photo_url'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+        ]);
 
         return $report->refresh()->load(['pet', 'matchedLostPetReport', 'comments', 'comments.user']);
     }
@@ -68,37 +51,31 @@ class FoundPetReportService
      */
     public function update(FoundPetReport $report, array $validated): FoundPetReport
     {
-        $comments = (array) ($validated['comments'] ?? []);
-        [$pet, $matchedReport] = $this->resolvePetContext($report->user_id, $validated, $report->local_id);
+        [$pet, $matchedReport] = $this->resolvePetContext($report->user_id, $validated);
         $report->update([
             'pet_id' => $pet->id,
             'matched_lost_pet_report_id' => $matchedReport?->id,
-            'pet_local_uuid' => $pet->local_uuid ?? $pet->local_id,
+            'pet_local_uuid' => $pet->local_uuid ?? null,
             'latitude' => $validated['latitude'],
             'longitude' => $validated['longitude'],
             'details' => $validated['details'],
             'found_date' => $validated['found_date'],
             'photo_url' => $validated['photo_url'] ?? null,
             'phone' => $validated['phone'] ?? null,
-            'sync_status' => 'synced',
-            'last_modified_at' => now(),
-            'synced_at' => now(),
         ]);
-
-        if ($comments !== []) {
-            $this->reportCommentService->syncComments($report, $comments);
-        }
 
         return $report->refresh()->load(['pet', 'matchedLostPetReport', 'comments', 'comments.user']);
     }
 
     public function delete(FoundPetReport $report): void
     {
-        $report->update([
-            'sync_status' => 'deleted',
-            'last_modified_at' => now(),
-            'synced_at' => now(),
-        ]);
+        $report->comments()->delete();
+        $report->delete();
+    }
+
+    public function canMutate(?int $userId, FoundPetReport $report): bool
+    {
+        return $userId !== null && (int) $report->user_id === (int) $userId;
     }
 
     /**
@@ -195,52 +172,25 @@ class FoundPetReportService
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      * @return array{0: Pet, 1: LostPetReport|null}
      */
     private function resolvePetContext(?int $userId, array $data, ?string $fallbackLocalId = null): array
     {
         $matchedReport = null;
         if (! empty($data['matched_lost_pet_report_id'])) {
-            $matchedReportQuery = LostPetReport::query()
-                ->where('sync_status', '!=', 'deleted');
-
-            if ($userId !== null) {
-                $matchedReportQuery->where('user_id', $userId);
-            }
-
-            $matchedReport = $matchedReportQuery
-                ->where(function ($query) use ($data): void {
-                    $query->where('id', $data['matched_lost_pet_report_id'])
-                        ->orWhere('remote_id', (string) $data['matched_lost_pet_report_id']);
-                })
+            $matchedReport = LostPetReport::query()
+                ->with('pet')
+                ->where('id', $data['matched_lost_pet_report_id'])
                 ->first();
-        }
-
-        if (! $matchedReport && ! empty($data['pet_local_uuid'])) {
-            $matchedReportQuery = LostPetReport::query()
-                ->where('sync_status', '!=', 'deleted')
-                ->where('pet_local_uuid', $data['pet_local_uuid']);
-
-            if ($userId !== null) {
-                $matchedReportQuery->where('user_id', $userId);
-            }
-
-            $matchedReport = $matchedReportQuery->first();
         }
 
         if ($matchedReport?->pet) {
             return [$matchedReport->pet, $matchedReport];
         }
 
-        if (! empty($data['pet_local_uuid'])) {
-            $petQuery = Pet::query()
-                ->where('sync_status', '!=', 'deleted')
-                ->where(function ($query) use ($data): void {
-                    $query->where('local_uuid', $data['pet_local_uuid'])
-                        ->orWhere('local_id', $data['pet_local_uuid'])
-                        ->orWhere('remote_id', $data['pet_local_uuid']);
-                });
+        if (! empty($data['pet_id'])) {
+            $petQuery = Pet::query()->where('id', $data['pet_id']);
 
             if ($userId !== null) {
                 $petQuery->where(function ($query) use ($userId): void {
@@ -259,31 +209,15 @@ class FoundPetReportService
             }
         }
 
-        $localUuid = $data['pet_local_uuid']
-            ?? 'found_'.($fallbackLocalId ?? $data['local_id'] ?? uniqid('', true));
-        $pet = Pet::firstOrCreate(
-            [
-                'user_id' => null,
-                'local_id' => $localUuid,
-            ],
-            [
-                'local_uuid' => $localUuid,
-                'remote_id' => null,
-                'name' => null,
-                'photo_path' => $data['photo_url'] ?? null,
-                'total_walks' => 0,
-                'registered_at' => now(),
-                'status' => 'normal',
-                'is_ownerless' => true,
-                'sync_status' => 'synced',
-                'last_modified_at' => now(),
-                'synced_at' => now(),
-            ]
-        );
-
-        if (! $pet->remote_id) {
-            $pet->update(['remote_id' => (string) $pet->id]);
-        }
+        $pet = Pet::create([
+            'user_id' => null,
+            'name' => null,
+            'photo_path' => $data['photo_url'] ?? null,
+            'total_walks' => 0,
+            'registered_at' => now(),
+            'status' => 'normal',
+            'is_ownerless' => true,
+        ]);
 
         return [$pet, null];
     }

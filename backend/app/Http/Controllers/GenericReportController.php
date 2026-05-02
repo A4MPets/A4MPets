@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Reports\StoreGenericReportRequest;
 use App\Http\Requests\Reports\StoreReportCommentRequest;
-use App\Http\Requests\Reports\SyncGenericReportsRequest;
 use App\Http\Requests\Reports\UpdateGenericReportRequest;
 use App\Models\GenericReport;
 use App\Services\Comments\ReportCommentFormatter;
@@ -66,6 +65,13 @@ class GenericReportController extends Controller
 
     public function update(UpdateGenericReportRequest $request, GenericReport $genericReport): JsonResponse
     {
+        if (! $this->genericReportService->canMutate($request->user()?->id, $genericReport)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado',
+            ], 403);
+        }
+
         $report = $this->genericReportService->update($genericReport, $request->validated());
 
         return response()->json([
@@ -76,24 +82,18 @@ class GenericReportController extends Controller
 
     public function destroy(GenericReport $genericReport): JsonResponse
     {
+        if (! $this->genericReportService->canMutate(request()->user()?->id, $genericReport)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado',
+            ], 403);
+        }
+
         $this->genericReportService->delete($genericReport);
 
         return response()->json([
             'success' => true,
-            'message' => 'Reporte marcado para eliminacion',
-        ]);
-    }
-
-    public function sync(SyncGenericReportsRequest $request): JsonResponse
-    {
-        $results = $this->genericReportService->sync(
-            $request->user()?->id,
-            $request->validated('generic_reports')
-        );
-
-        return response()->json([
-            'success' => true,
-            'sync_results' => $results,
+            'message' => 'Reporte eliminado',
         ]);
     }
 

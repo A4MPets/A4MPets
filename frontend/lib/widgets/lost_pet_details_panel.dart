@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../models/lost_pet_report_record.dart';
+import '../models/pet_record.dart';
 import '../theme/app_palette.dart';
-import 'shared/panel_scroll_view.dart';
 import 'shared/local_image_widget.dart';
+import 'shared/panel_scroll_view.dart';
 
 class LostPetDetailsPanelContent extends StatelessWidget {
   final bool isDarkMode;
   final LostPetReportRecord report;
+  final PetRecord? pet;
   final VoidCallback onViewComments;
   final String? debugDeleteLabel;
   final VoidCallback? onDebugDelete;
@@ -16,6 +18,7 @@ class LostPetDetailsPanelContent extends StatelessWidget {
     super.key,
     required this.isDarkMode,
     required this.report,
+    required this.pet,
     required this.onViewComments,
     this.debugDeleteLabel,
     this.onDebugDelete,
@@ -24,6 +27,7 @@ class LostPetDetailsPanelContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color textColor = AppPalette.textPrimary(isDarkMode);
+    final String title = pet?.displayName ?? 'Mascota perdida';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -33,40 +37,74 @@ class LostPetDetailsPanelContent extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (report.photoUrl != null && report.photoUrl!.isNotEmpty)
-                  SizedBox(
-                    height: 180,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(14),
-                      child: buildLocalImageWidget(
-                        source: report.photoUrl,
-                        fit: BoxFit.cover,
-                        fallback: const _ImageFallback(),
-                        errorBuilder: (_, _, _) => const _ImageFallback(),
-                      ),
-                    ),
-                  ),
-                if (report.photoUrl != null && report.photoUrl!.isNotEmpty)
-                  const SizedBox(height: 12),
                 Text(
-                  'Mascota perdida',
+                  title,
                   style: TextStyle(
                     color: textColor,
                     fontSize: 18,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
+                _PhotoBlock(
+                  isDarkMode: isDarkMode,
+                  label: 'Foto de la mascota',
+                  source: pet?.photoPath,
+                  placeholderIcon: Icons.pets,
+                ),
+                const SizedBox(height: 12),
+                const SizedBox(height: 12),
+                if (pet != null) ...[
+                  _DetailsRow(
+                    isDarkMode: isDarkMode,
+                    label: 'Fecha de registro',
+                    value: _formatDate(pet!.registeredAt),
+                  ),
+                  if (pet!.adoptionDate != null)
+                    _DetailsRow(
+                      isDarkMode: isDarkMode,
+                      label: 'Fecha de adopcion',
+                      value: _formatDate(pet!.adoptionDate!),
+                    ),
+                  if (pet!.birthDate != null)
+                    _DetailsRow(
+                      isDarkMode: isDarkMode,
+                      label: 'Fecha de nacimiento',
+                      value: _formatDate(pet!.birthDate!),
+                    ),
+                  const SizedBox(height: 10),
+                ],
+                _SectionTitle(isDarkMode: isDarkMode, label: 'Reporte'),
                 const SizedBox(height: 8),
                 _DetailsRow(
-                  label: 'Fecha',
+                  isDarkMode: isDarkMode,
+                  label: 'Fecha de desaparicion',
                   value: _formatDate(report.disappearanceDate),
                 ),
-                const SizedBox(height: 8),
-                _DetailsRow(label: 'Detalles', value: report.details),
-                if (report.phone != null &&
-                    report.phone!.trim().isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  _DetailsRow(label: 'Telefono', value: report.phone!),
+                _DetailsRow(
+                  isDarkMode: isDarkMode,
+                  label: 'Ultima ubicacion',
+                  value:
+                      '${report.lastSeenLatitude.toStringAsFixed(5)}, ${report.lastSeenLongitude.toStringAsFixed(5)}',
+                ),
+                _DetailsRow(
+                  isDarkMode: isDarkMode,
+                  label: 'Detalles',
+                  value: report.details,
+                ),
+                if (report.phone != null && report.phone!.trim().isNotEmpty)
+                  _DetailsRow(
+                    isDarkMode: isDarkMode,
+                    label: 'Telefono',
+                    value: report.phone!,
+                  ),
+                if (report.photoUrl != null && report.photoUrl!.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _PhotoBlock(
+                    isDarkMode: isDarkMode,
+                    label: 'Foto del reporte',
+                    source: report.photoUrl,
+                    placeholderIcon: Icons.image_outlined,
+                  ),
                 ],
               ],
             ),
@@ -125,44 +163,121 @@ class LostPetDetailsPanelContent extends StatelessWidget {
   }
 }
 
-class _ImageFallback extends StatelessWidget {
-  const _ImageFallback();
+class _PhotoBlock extends StatelessWidget {
+  final bool isDarkMode;
+  final String label;
+  final String? source;
+  final IconData placeholderIcon;
+
+  const _PhotoBlock({
+    required this.isDarkMode,
+    required this.label,
+    required this.source,
+    required this.placeholderIcon,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(color: AppPalette.placeholderGray);
+    final String? imageSource = source?.trim();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _SectionTitle(isDarkMode: isDarkMode, label: label),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 180,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: imageSource != null && imageSource.isNotEmpty
+                ? buildLocalImageWidget(
+                    source: imageSource,
+                    fit: BoxFit.cover,
+                    fallback: _ImageFallback(icon: placeholderIcon),
+                    errorBuilder: (_, _, _) =>
+                        _ImageFallback(icon: placeholderIcon),
+                  )
+                : _ImageFallback(icon: placeholderIcon),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ImageFallback extends StatelessWidget {
+  final IconData icon;
+
+  const _ImageFallback({required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppPalette.placeholderGray,
+      alignment: Alignment.center,
+      child: Icon(icon, color: AppPalette.iconGray, size: 34),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final bool isDarkMode;
+  final String label;
+
+  const _SectionTitle({required this.isDarkMode, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: TextStyle(
+        color: AppPalette.textPrimary(isDarkMode),
+        fontSize: 13,
+        fontWeight: FontWeight.w800,
+      ),
+    );
   }
 }
 
 class _DetailsRow extends StatelessWidget {
+  final bool isDarkMode;
   final String label;
   final String value;
 
-  const _DetailsRow({required this.label, required this.value});
+  const _DetailsRow({
+    required this.isDarkMode,
+    required this.label,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppPalette.textMutedDark,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: isDarkMode
+                  ? AppPalette.textMutedDark
+                  : AppPalette.iconGray,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            color: AppPalette.charcoal,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              color: AppPalette.textPrimary(isDarkMode),
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

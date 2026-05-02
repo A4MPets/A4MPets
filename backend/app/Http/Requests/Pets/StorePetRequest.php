@@ -17,8 +17,6 @@ class StorePetRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'local_id' => ['required', 'string'],
-            'local_uuid' => ['nullable', 'string'],
             'name' => ['nullable', 'string', 'max:255'],
             'photo_path' => ['nullable', 'string', 'max:500'],
             'total_walks' => ['nullable', 'integer', 'min:0'],

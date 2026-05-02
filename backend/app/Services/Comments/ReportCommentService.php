@@ -43,8 +43,6 @@ class ReportCommentService
                 'is_anonymous' => $isAnonymous,
                 'comment_text' => $commentText,
                 'commented_at' => $commentedAtValue,
-                'last_modified_at' => now(),
-                'synced_at' => now(),
             ];
             $payload['content_hash'] = ReportComment::makeContentHash($payload);
 
@@ -72,7 +70,6 @@ class ReportCommentService
         }
 
         $this->pruneDuplicateComments($commentable);
-        $commentable->update(['last_modified_at' => now()]);
     }
 
     /**
@@ -97,8 +94,6 @@ class ReportCommentService
             'is_anonymous' => $isAnonymous || $user === null,
             'comment_text' => $validated['comment_text'],
             'commented_at' => $commentedAt,
-            'last_modified_at' => $commentedAt,
-            'synced_at' => now(),
         ];
         $payload['content_hash'] = ReportComment::makeContentHash($payload);
 
@@ -110,8 +105,6 @@ class ReportCommentService
             ],
             $payload
         );
-
-        $commentable->update(['last_modified_at' => now()]);
 
         return $comment;
     }

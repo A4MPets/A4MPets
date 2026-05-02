@@ -451,10 +451,16 @@ class _TripPetSelectionPanelContent extends StatelessWidget {
         Expanded(
           child: petsValue.when(
             data: (List<PetRecord> pets) {
-              if (pets.isEmpty) {
+              final List<PetRecord> availablePets = pets
+                  .where((PetRecord pet) => !pet.isLost)
+                  .toList(growable: false);
+
+              if (availablePets.isEmpty) {
                 return Center(
                   child: Text(
-                    'No hay mascotas registradas',
+                    pets.isEmpty
+                        ? 'No hay mascotas registradas'
+                        : 'No hay mascotas disponibles para iniciar viaje',
                     style: TextStyle(
                       color: textColor,
                       fontSize: 14,
@@ -471,9 +477,9 @@ class _TripPetSelectionPanelContent extends StatelessWidget {
                   mainAxisSpacing: 10,
                   childAspectRatio: 0.95,
                 ),
-                itemCount: pets.length,
+                itemCount: availablePets.length,
                 itemBuilder: (BuildContext context, int index) {
-                  final PetRecord pet = pets[index];
+                  final PetRecord pet = availablePets[index];
                   final bool selected = selectedPetIds.contains(pet.id);
 
                   return InkWell(
@@ -564,10 +570,12 @@ class _TripPetSelectionPanelContent extends StatelessWidget {
                 },
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const SizedBox.shrink(),
             error: (Object error, StackTrace stackTrace) => Center(
               child: Text(
-                'No se pudieron cargar las mascotas',
+                error.toString().contains('Debes iniciar sesion')
+                    ? 'Inicia sesion para seleccionar tus mascotas'
+                    : 'No se pudieron cargar las mascotas',
                 style: TextStyle(
                   color: textColor,
                   fontSize: 13,

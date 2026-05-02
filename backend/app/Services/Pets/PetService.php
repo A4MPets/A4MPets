@@ -2,8 +2,8 @@
 
 namespace App\Services\Pets;
 
-use App\Models\Pet;
 use App\Models\LostPetReport;
+use App\Models\Pet;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Log;
@@ -15,12 +15,17 @@ class PetService
     {
         $query = $this->queryForUser($userId);
 
-        if (! $includeArchived) {
-            $query->where('sync_status', '!=', 'deleted');
-        }
-
         return $query
-            ->orderByDesc('last_modified_at')
+            ->orderByDesc('updated_at')
+            ->paginate($perPage, ['*'], 'page', $page);
+    }
+
+    public function paginateOwnedForUser(int $userId, int $perPage, int $page): LengthAwarePaginator
+    {
+        return Pet::query()
+            ->where('user_id', $userId)
+            ->where('is_ownerless', false)
+            ->orderByDesc('updated_at')
             ->paginate($perPage, ['*'], 'page', $page);
     }
 
@@ -29,31 +34,17 @@ class PetService
      */
     public function store(?int $userId, array $validated): Pet
     {
-        $localUuid = $validated['local_uuid'] ?? $validated['local_id'];
-        $pet = Pet::updateOrCreate(
-            [
-                'user_id' => $userId,
-                'local_id' => $validated['local_id'],
-            ],
-            [
-                'local_uuid' => $localUuid,
-                'name' => $validated['name'] ?? null,
-                'photo_path' => $validated['photo_path'] ?? null,
-                'total_walks' => $validated['total_walks'] ?? 0,
-                'registered_at' => $validated['registered_at'] ?? now(),
-                'adoption_date' => $validated['adoption_date'] ?? null,
-                'birth_date' => $validated['birth_date'] ?? null,
-                'status' => $this->normalizePetStatus($validated['status'] ?? 'normal'),
-                'is_ownerless' => (bool) ($validated['is_ownerless'] ?? false),
-                'sync_status' => 'synced',
-                'last_modified_at' => now(),
-                'synced_at' => now(),
-            ]
-        );
-
-        $this->ensureRemoteId($pet);
-
-        return $pet;
+        return Pet::create([
+            'user_id' => $userId,
+            'name' => $validated['name'] ?? null,
+            'photo_path' => $validated['photo_path'] ?? null,
+            'total_walks' => $validated['total_walks'] ?? 0,
+            'registered_at' => $validated['registered_at'] ?? now(),
+            'adoption_date' => $validated['adoption_date'] ?? null,
+            'birth_date' => $validated['birth_date'] ?? null,
+            'status' => $this->normalizePetStatus($validated['status'] ?? 'normal'),
+            'is_ownerless' => (bool) ($validated['is_ownerless'] ?? false),
+        ]);
     }
 
     /**
@@ -70,8 +61,6 @@ class PetService
             'birth_date' => $validated['birth_date'] ?? null,
             'status' => $this->normalizePetStatus($validated['status'] ?? $pet->status ?? 'normal'),
             'is_ownerless' => (bool) ($validated['is_ownerless'] ?? $pet->is_ownerless),
-            'sync_status' => 'synced',
-            'last_modified_at' => now(),
         ]);
 
         return $pet->refresh();
@@ -79,31 +68,25 @@ class PetService
 
     public function delete(Pet $pet): void
     {
-        $pet->update([
-            'sync_status' => 'deleted',
-            'last_modified_at' => now(),
-        ]);
+        $pet->delete();
     }
 
     public function markFound(Pet $pet): Pet
     {
         $pet->update([
             'status' => 'normal',
-            'sync_status' => 'synced',
-            'last_modified_at' => now(),
-            'synced_at' => now(),
         ]);
 
         LostPetReport::query()
             ->where('pet_id', $pet->id)
-            ->where('sync_status', '!=', 'deleted')
-            ->update([
-                'sync_status' => 'deleted',
-                'last_modified_at' => now(),
-                'synced_at' => now(),
-            ]);
+            ->delete();
 
         return $pet->refresh();
+    }
+
+    public function canMutate(?int $userId, Pet $pet): bool
+    {
+        return $userId !== null && (int) $pet->user_id === (int) $userId;
     }
 
     /**
@@ -198,13 +181,13 @@ class PetService
 
     private function queryForUser(?int $userId): Builder
     {
-        return Pet::query()->where(function (Builder $query) use ($userId): void {
-            if ($userId) {
-                $query->where('user_id', $userId);
-            } else {
-                $query->whereNull('user_id');
-            }
-        });
+        $query = Pet::query();
+
+        if ($userId) {
+            $query->where('user_id', $userId);
+        }
+
+        return $query;
     }
 
     private function ensureRemoteId(Pet $pet): void

@@ -95,8 +95,7 @@ class ManageRoutesPanelContent extends ConsumerWidget {
                         },
                       );
                     },
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
+                    loading: () => const SizedBox.shrink(),
                     error: (_, _) => Center(
                       child: Text(
                         'No se pudieron cargar las rutas',

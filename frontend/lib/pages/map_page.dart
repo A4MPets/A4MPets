@@ -257,12 +257,22 @@ class _MapPageState extends ConsumerState<MapPage> {
   }
 
   void _syncAndReloadData() {
-    ref.read(userDataSyncCoordinatorProvider).syncNow().then((_) {
-      if (mounted) {
-        ref.read(petsControllerProvider.notifier).reload();
-        ref.read(routesControllerProvider.notifier).reload();
-      }
-    });
+    ref.read(myPetsControllerProvider.notifier).reload();
+    ref.read(petsControllerProvider.notifier).reload();
+    ref.read(routesControllerProvider.notifier).reload();
+    ref.read(hazardReportsControllerProvider.notifier).reload();
+    ref.read(lostPetReportsControllerProvider.notifier).reload();
+    ref.read(foundPetReportsControllerProvider.notifier).reload();
+    ref.read(genericReportsControllerProvider.notifier).reload();
+  }
+
+  void _reloadReportData() {
+    ref.read(hazardReportsControllerProvider.notifier).reload();
+    ref.read(lostPetReportsControllerProvider.notifier).reload();
+    ref.read(foundPetReportsControllerProvider.notifier).reload();
+    ref.read(genericReportsControllerProvider.notifier).reload();
+    ref.read(petsControllerProvider.notifier).reload();
+    ref.read(myPetsControllerProvider.notifier).reload();
   }
 
   List<HazardReportRecord> get _visibleHazardCircles {

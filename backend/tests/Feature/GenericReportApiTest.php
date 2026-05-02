@@ -12,13 +12,12 @@ class GenericReportApiTest extends TestCase
     use CreatesApiToken;
     use RefreshDatabase;
 
-    public function test_generic_report_store_update_and_sync_keep_impact_radius(): void
+    public function test_generic_report_store_update_and_comments_keep_impact_radius(): void
     {
         $user = User::factory()->create();
         $headers = $this->authHeaders($user);
 
         $storeResponse = $this->postJson('/api/generic-reports', [
-            'local_id' => 'generic-local-1',
             'latitude' => 3.4516,
             'longitude' => -76.5320,
             'description' => 'Loose cable near the sidewalk',
@@ -51,27 +50,6 @@ class GenericReportApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.impact_radius_meters', 0);
 
-        $this->postJson('/api/generic-reports/sync', [
-            'generic_reports' => [
-                [
-                    'local_id' => 'generic-local-2',
-                    'remote_id' => null,
-                    'latitude' => 3.4520,
-                    'longitude' => -76.5330,
-                    'description' => 'Broken glass in the park',
-                    'reported_date' => now()->subHour()->format('Y-m-d H:i:s'),
-                    'risk_level_code' => 'high',
-                    'impact_radius_meters' => 80,
-                    'photo_url' => null,
-                    'sync_status' => 'synced',
-                    'last_modified_at' => now()->format('Y-m-d H:i:s'),
-                ],
-            ],
-        ], $headers)
-            ->assertOk()
-            ->assertJsonPath('sync_results.synced', 1)
-            ->assertJsonPath('sync_results.errors', 0);
-
         $this->postJson('/api/generic-reports/'.$genericReportId.'/comments', [
             'comment_text' => 'This zone still looks risky.',
         ], $headers)
@@ -88,6 +66,6 @@ class GenericReportApiTest extends TestCase
 
         $this->getJson('/api/generic-reports', $headers)
             ->assertOk()
-            ->assertJsonCount(1, 'data');
+            ->assertJsonCount(0, 'data');
     }
 }

@@ -186,13 +186,20 @@ class _FoundPetReportingPanelContentState
     });
 
     try {
+      final LostPetReportRecord? selectedReport = widget.selectedLostPetReport;
+      final String selectedPetLocalUuid =
+          widget.selectedLostPet?.localUuid ??
+          selectedReport?.petLocalUuid ??
+          '';
+
       await ref
           .read(foundPetReportsControllerProvider.notifier)
           .addFoundPetReport(
-            petLocalUuid: widget.selectedLostPetReport?.petLocalUuid,
-            matchedLostPetReportId: int.tryParse(
-              widget.selectedLostPetReport?.remoteId ?? '',
-            ),
+            petId: widget.selectedLostPet?.id ?? selectedReport?.petId,
+            petLocalUuid: selectedPetLocalUuid.trim().isEmpty
+                ? null
+                : selectedPetLocalUuid,
+            matchedLostPetReportId: selectedReport?.id,
             latitude: resolvedLocation!.latitude,
             longitude: resolvedLocation.longitude,
             details: _detailsController.text.trim(),
@@ -208,12 +215,12 @@ class _FoundPetReportingPanelContentState
       }
 
       widget.onReported();
-    } catch (_) {
+    } catch (error) {
       if (!mounted) {
         return;
       }
       setState(() {
-        _saveErrorText = 'No se pudo guardar el reporte. Intenta nuevamente.';
+        _saveErrorText = _saveFailureMessage(error);
       });
     } finally {
       if (mounted) {
@@ -222,6 +229,17 @@ class _FoundPetReportingPanelContentState
         });
       }
     }
+  }
+
+  String _saveFailureMessage(Object error) {
+    final String message = error.toString().replaceFirst('Exception: ', '');
+    if (message.trim().isEmpty) {
+      return 'No se pudo guardar el reporte. Intenta nuevamente.';
+    }
+    if (message.contains('Debes iniciar sesion')) {
+      return 'Debes iniciar sesion para reportar una mascota encontrada.';
+    }
+    return 'No se pudo guardar el reporte. Detalle: $message';
   }
 
   String _formatDate(DateTime date) {

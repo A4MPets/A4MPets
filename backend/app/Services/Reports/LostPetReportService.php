@@ -18,12 +18,8 @@ class LostPetReportService
     {
         $query = LostPetReport::query()->with(['pet', 'comments', 'comments.user']);
 
-        if (! $includeArchived) {
-            $query->where('sync_status', '!=', 'deleted');
-        }
-
         return $query
-            ->orderByDesc('last_modified_at')
+            ->orderByDesc('updated_at')
             ->paginate($perPage, ['*'], 'page', $page);
     }
 
@@ -32,40 +28,25 @@ class LostPetReportService
      */
     public function store(?int $userId, array $validated): LostPetReport
     {
-        $comments = (array) ($validated['comments'] ?? []);
-        $pet = $this->resolvePetForUser($userId, $validated['pet_local_uuid']);
-        $this->ensureNoActiveReportForPet($pet, $validated['local_id']);
+        $pet = $this->resolvePetForUser($userId, (int) $validated['pet_id']);
+        $this->ensureNoActiveReportForPet($pet);
 
-        $report = LostPetReport::updateOrCreate(
-            ['local_id' => $validated['local_id']],
-            [
-                'user_id' => $userId,
-                'pet_id' => $pet->id,
-                'pet_local_uuid' => $pet->local_uuid ?? $pet->local_id,
-                'last_seen_latitude' => $validated['last_seen_latitude'],
-                'last_seen_longitude' => $validated['last_seen_longitude'],
-                'name' => null,
-                'details' => $validated['details'],
-                'disappearance_date' => $validated['disappearance_date'],
-                'photo_url' => $validated['photo_url'] ?? $pet->photo_path,
-                'phone' => $validated['phone'],
-                'sync_status' => 'synced',
-                'last_modified_at' => now(),
-                'synced_at' => now(),
-            ]
-        );
-
-        $this->ensureRemoteId($report);
-        $pet->update([
-            'status' => 'perdida',
-            'sync_status' => 'synced',
-            'last_modified_at' => now(),
-            'synced_at' => now(),
+        $report = LostPetReport::create([
+            'user_id' => $userId,
+            'pet_id' => $pet->id,
+            'pet_local_uuid' => $pet->local_uuid ?? null,
+            'last_seen_latitude' => $validated['last_seen_latitude'],
+            'last_seen_longitude' => $validated['last_seen_longitude'],
+            'name' => null,
+            'details' => $validated['details'],
+            'disappearance_date' => $validated['disappearance_date'],
+            'photo_url' => $validated['photo_url'] ?? null,
+            'phone' => $validated['phone'],
         ]);
 
-        if ($comments !== []) {
-            $this->reportCommentService->syncComments($report, $comments);
-        }
+        $pet->update([
+            'status' => 'perdida',
+        ]);
 
         return $report->refresh()->load(['pet', 'comments', 'comments.user']);
     }
@@ -75,33 +56,22 @@ class LostPetReportService
      */
     public function update(LostPetReport $report, array $validated): LostPetReport
     {
-        $comments = (array) ($validated['comments'] ?? []);
-        $pet = $this->resolvePetForUser($report->user_id, $validated['pet_local_uuid']);
-        $this->ensureNoActiveReportForPet($pet, $report->local_id);
+        $pet = $this->resolvePetForUser($report->user_id, (int) $validated['pet_id']);
+        $this->ensureNoActiveReportForPet($pet, $report);
         $report->update([
             'pet_id' => $pet->id,
-            'pet_local_uuid' => $pet->local_uuid ?? $pet->local_id,
+            'pet_local_uuid' => $pet->local_uuid ?? null,
             'last_seen_latitude' => $validated['last_seen_latitude'],
             'last_seen_longitude' => $validated['last_seen_longitude'],
             'name' => null,
             'details' => $validated['details'],
             'disappearance_date' => $validated['disappearance_date'],
-            'photo_url' => $validated['photo_url'] ?? $pet->photo_path,
+            'photo_url' => $validated['photo_url'] ?? null,
             'phone' => $validated['phone'],
-            'sync_status' => 'synced',
-            'last_modified_at' => now(),
-            'synced_at' => now(),
         ]);
-
-        if ($comments !== []) {
-            $this->reportCommentService->syncComments($report, $comments);
-        }
 
         $pet->update([
             'status' => 'perdida',
-            'sync_status' => 'synced',
-            'last_modified_at' => now(),
-            'synced_at' => now(),
         ]);
 
         return $report->refresh()->load(['pet', 'comments', 'comments.user']);
@@ -109,20 +79,19 @@ class LostPetReportService
 
     public function delete(LostPetReport $report): void
     {
-        $report->update([
-            'sync_status' => 'deleted',
-            'last_modified_at' => now(),
-            'synced_at' => now(),
-        ]);
-
         if ($report->pet) {
             $report->pet->update([
                 'status' => 'normal',
-                'sync_status' => 'synced',
-                'last_modified_at' => now(),
-                'synced_at' => now(),
             ]);
         }
+
+        $report->comments()->delete();
+        $report->delete();
+    }
+
+    public function canMutate(?int $userId, LostPetReport $report): bool
+    {
+        return $userId !== null && (int) $report->user_id === (int) $userId;
     }
 
     /**
@@ -237,32 +206,23 @@ class LostPetReportService
         ]);
     }
 
-    private function resolvePetForUser(?int $userId, string $localUuid, ?string $remoteId = null): Pet
+    private function resolvePetForUser(?int $userId, int $petId): Pet
     {
         return Pet::query()
-            ->where(function ($query) use ($userId): void {
-                $userId ? $query->where('user_id', $userId) : $query->whereNull('user_id');
-            })
-            ->where('sync_status', '!=', 'deleted')
-            ->where(function ($query) use ($localUuid, $remoteId): void {
-                $query->where('local_uuid', $localUuid)
-                    ->orWhere('local_id', $localUuid)
-                    ->orWhere('remote_id', $localUuid);
-                if ($remoteId !== null && $remoteId !== '') {
-                    $query->orWhere('remote_id', $remoteId)
-                        ->orWhere('id', $remoteId);
-                }
-            })
+            ->where('user_id', $userId)
+            ->where('id', $petId)
             ->firstOrFail();
     }
 
-    private function ensureNoActiveReportForPet(Pet $pet, string $currentLocalId): void
+    private function ensureNoActiveReportForPet(Pet $pet, ?LostPetReport $currentReport = null): void
     {
-        $exists = LostPetReport::query()
-            ->where('pet_id', $pet->id)
-            ->where('local_id', '!=', $currentLocalId)
-            ->where('sync_status', '!=', 'deleted')
-            ->exists();
+        $query = LostPetReport::query()->where('pet_id', $pet->id);
+
+        if ($currentReport !== null) {
+            $query->where('id', '!=', $currentReport->id);
+        }
+
+        $exists = $query->exists();
 
         abort_if($exists, 422, 'La mascota ya tiene un reporte de perdida activo.');
     }

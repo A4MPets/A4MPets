@@ -54,6 +54,7 @@ class BackendApiClient {
     String? bearerToken,
     Duration timeout = const Duration(seconds: 10),
   }) async {
+    http.Response? lastServerError;
     for (final String baseUrl in baseUrls) {
       try {
         final http.Response response = await _httpClient
@@ -68,12 +69,13 @@ class BackendApiClient {
           workingBaseUrl = baseUrl;
           return response;
         }
+        lastServerError = response;
       } catch (_) {
         // Try the next known local endpoint.
       }
     }
 
-    return null;
+    return lastServerError;
   }
 
   Future<http.Response?> getWithFallback(
@@ -81,6 +83,7 @@ class BackendApiClient {
     String? bearerToken,
     Duration timeout = const Duration(seconds: 10),
   }) async {
+    http.Response? lastServerError;
     for (final String baseUrl in baseUrls) {
       try {
         final http.Response response = await _httpClient
@@ -94,12 +97,13 @@ class BackendApiClient {
           workingBaseUrl = baseUrl;
           return response;
         }
+        lastServerError = response;
       } catch (_) {
         // Try the next known local endpoint.
       }
     }
 
-    return null;
+    return lastServerError;
   }
 
   Future<http.Response?> putWithFallback(
@@ -108,6 +112,7 @@ class BackendApiClient {
     String? bearerToken,
     Duration timeout = const Duration(seconds: 10),
   }) async {
+    http.Response? lastServerError;
     for (final String baseUrl in baseUrls) {
       try {
         final http.Response response = await _httpClient
@@ -122,12 +127,13 @@ class BackendApiClient {
           workingBaseUrl = baseUrl;
           return response;
         }
+        lastServerError = response;
       } catch (_) {
         // Try the next known local endpoint.
       }
     }
 
-    return null;
+    return lastServerError;
   }
 
   Future<http.Response?> deleteWithFallback(
@@ -135,6 +141,7 @@ class BackendApiClient {
     String? bearerToken,
     Duration timeout = const Duration(seconds: 10),
   }) async {
+    http.Response? lastServerError;
     for (final String baseUrl in baseUrls) {
       try {
         final http.Response response = await _httpClient
@@ -148,11 +155,12 @@ class BackendApiClient {
           workingBaseUrl = baseUrl;
           return response;
         }
+        lastServerError = response;
       } catch (_) {
         // Try the next known local endpoint.
       }
     }
 
-    return null;
+    return lastServerError;
   }
 }

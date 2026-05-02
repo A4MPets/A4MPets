@@ -12,6 +12,7 @@ class FoundPetDetailsPanelContent extends StatelessWidget {
   final FoundPetReportRecord report;
   final PetRecord? pet;
   final LostPetReportRecord? matchedLostPetReport;
+  final VoidCallback? onViewMatchedLostReport;
   final VoidCallback onViewComments;
   final String? debugDeleteLabel;
   final VoidCallback? onDebugDelete;
@@ -22,6 +23,7 @@ class FoundPetDetailsPanelContent extends StatelessWidget {
     required this.report,
     required this.pet,
     required this.matchedLostPetReport,
+    required this.onViewMatchedLostReport,
     required this.onViewComments,
     this.debugDeleteLabel,
     this.onDebugDelete,
@@ -71,26 +73,10 @@ class FoundPetDetailsPanelContent extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  petName,
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 12),
                 if (selectedPet != null) ...[
                   _DetailsRow(
                     label: 'Nombre',
                     value: petName,
-                    isDarkMode: isDarkMode,
-                  ),
-                  const SizedBox(height: 8),
-                  _DetailsRow(
-                    label: 'Paseos completados',
-                    value: '${selectedPet.totalWalks}',
                     isDarkMode: isDarkMode,
                   ),
                   const SizedBox(height: 8),
@@ -138,26 +124,13 @@ class FoundPetDetailsPanelContent extends StatelessWidget {
                   ),
                 ],
                 if (linkedLostPetReport != null) ...[
-                  const SizedBox(height: 8),
-                  _DetailsRow(
-                    label: 'Perdida reportada',
-                    value: _formatDate(linkedLostPetReport.disappearanceDate),
+                  const SizedBox(height: 12),
+                  _LinkedLostPetReportCard(
                     isDarkMode: isDarkMode,
+                    report: linkedLostPetReport,
+                    pet: selectedPet,
+                    onPressed: onViewMatchedLostReport,
                   ),
-                  const SizedBox(height: 8),
-                  _DetailsRow(
-                    label: 'Detalles del reporte perdido',
-                    value: linkedLostPetReport.details,
-                    isDarkMode: isDarkMode,
-                  ),
-                  if ((linkedLostPetReport.phone ?? '').trim().isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    _DetailsRow(
-                      label: 'Telefono del reporte perdido',
-                      value: linkedLostPetReport.phone!,
-                      isDarkMode: isDarkMode,
-                    ),
-                  ],
                 ],
                 if (showReportImage) ...[
                   const SizedBox(height: 12),
@@ -220,6 +193,111 @@ class FoundPetDetailsPanelContent extends StatelessWidget {
     final String day = date.day.toString().padLeft(2, '0');
     final String month = date.month.toString().padLeft(2, '0');
     return '$day/$month/${date.year}';
+  }
+}
+
+class _LinkedLostPetReportCard extends StatelessWidget {
+  final bool isDarkMode;
+  final LostPetReportRecord report;
+  final PetRecord? pet;
+  final VoidCallback? onPressed;
+
+  const _LinkedLostPetReportCard({
+    required this.isDarkMode,
+    required this.report,
+    required this.pet,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color textColor = AppPalette.textPrimary(isDarkMode);
+    final String? photoSource = pet?.photoPath;
+    final bool hasPhoto = photoSource != null && photoSource.trim().isNotEmpty;
+
+    return Material(
+      color: AppPalette.cardBackground(isDarkMode),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onPressed,
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppPalette.border(isDarkMode)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(
+                  width: 56,
+                  height: 56,
+                  child: hasPhoto
+                      ? buildLocalImageWidget(
+                          source: photoSource,
+                          fit: BoxFit.cover,
+                          fallback: const _ImageFallback(),
+                          errorBuilder: (_, _, _) => const _ImageFallback(),
+                        )
+                      : const _ImageFallback(),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      pet?.displayName ?? 'Mascota perdida',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Reporte de perdida: ${FoundPetDetailsPanelContent._formatDate(report.disappearanceDate)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: isDarkMode
+                            ? AppPalette.textMutedDark
+                            : AppPalette.iconGray,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      report.details,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.chevron_right,
+                color: AppPalette.textPrimary(isDarkMode),
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

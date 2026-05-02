@@ -22,7 +22,6 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
 
         GenericReport::create([
             'user_id' => $user->id,
-            'local_id' => 'generic-route-1',
             'latitude' => 3.4516,
             'longitude' => -76.5320,
             'description' => 'Sharp debris near the route',
@@ -30,14 +29,10 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
             'risk_level_code' => 'medium',
             'impact_radius_meters' => 60,
             'photo_url' => null,
-            'sync_status' => 'synced',
-            'last_modified_at' => now(),
-            'synced_at' => now(),
         ]);
 
         GenericReport::create([
             'user_id' => $user->id,
-            'local_id' => 'generic-route-2',
             'latitude' => 3.4518,
             'longitude' => -76.5322,
             'description' => 'Informational report only',
@@ -45,9 +40,6 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
             'risk_level_code' => 'low',
             'impact_radius_meters' => 0,
             'photo_url' => null,
-            'sync_status' => 'synced',
-            'last_modified_at' => now(),
-            'synced_at' => now(),
         ]);
 
         Http::fake([
@@ -112,7 +104,6 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
 
         HazardReport::create([
             'user_id' => $user->id,
-            'local_id' => 'hazard-routing-unknown',
             'incident_latitude' => 3.4516,
             'incident_longitude' => -76.5320,
             'impact_radius_meters' => 35,
@@ -124,13 +115,10 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
             'reported_at' => now(),
             'reported_by_username' => 'Tester',
             'status' => 'synced',
-            'last_modified_at' => now(),
-            'synced_at' => now(),
         ]);
 
         HazardReport::create([
             'user_id' => $user->id,
-            'local_id' => 'hazard-routing-medium',
             'incident_latitude' => 3.4517,
             'incident_longitude' => -76.5321,
             'impact_radius_meters' => 35,
@@ -142,8 +130,6 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
             'reported_at' => now(),
             'reported_by_username' => 'Tester',
             'status' => 'synced',
-            'last_modified_at' => now(),
-            'synced_at' => now(),
         ]);
 
         Http::fake([
@@ -197,7 +183,6 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
 
         GenericReport::create([
             'user_id' => $user->id,
-            'local_id' => 'generic-route-empty',
             'latitude' => 3.4516,
             'longitude' => -76.5320,
             'description' => 'Would normally affect routing',
@@ -205,9 +190,6 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
             'risk_level_code' => 'high',
             'impact_radius_meters' => 80,
             'photo_url' => null,
-            'sync_status' => 'synced',
-            'last_modified_at' => now(),
-            'synced_at' => now(),
         ]);
 
         Http::fake([

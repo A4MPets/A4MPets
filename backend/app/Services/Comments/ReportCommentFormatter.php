@@ -21,7 +21,6 @@ class ReportCommentFormatter
             'is_anonymous' => $comment->is_anonymous,
             'comment_text' => $comment->comment_text,
             'created_at' => optional($comment->commented_at ?? $comment->created_at)?->toIso8601String(),
-            'last_modified_at' => optional($comment->last_modified_at)?->toIso8601String(),
         ];
     }
 }

@@ -28,8 +28,6 @@ class StoreHazardRequest extends FormRequest
             'reported_at' => ['nullable', 'date'],
             'evidence_photo_url' => ['nullable', 'string', 'max:500'],
             'reported_by_username' => ['nullable', 'string', 'max:100'],
-            'local_id' => ['required', 'string', 'unique:hazard_reports,local_id'],
-            'comments' => ['sometimes', 'array'],
         ];
     }
 }

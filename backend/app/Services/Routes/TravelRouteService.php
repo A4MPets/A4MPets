@@ -14,13 +14,9 @@ class TravelRouteService
     {
         $query = $this->queryForUser($userId);
 
-        if (! $includeArchived) {
-            $query->where('sync_status', '!=', 'deleted');
-        }
-
         return $query
             ->with('routePoints')
-            ->orderByDesc('last_modified_at')
+            ->orderByDesc('updated_at')
             ->paginate($perPage, ['*'], 'page', $page);
     }
 
@@ -29,23 +25,11 @@ class TravelRouteService
      */
     public function store(?int $userId, array $validated): TravelRoute
     {
-        $route = TravelRoute::updateOrCreate(
-            [
-                'user_id' => $userId,
-                'local_id' => $validated['local_id'],
-            ],
-            [
-                'name' => $validated['name'],
-                'points_json' => $validated['points_json'],
-                'sync_status' => 'synced',
-                'last_modified_at' => now(),
-                'synced_at' => now(),
-            ]
-        );
-
-        $this->ensureRemoteId($route);
-
-        return $route;
+        return TravelRoute::create([
+            'user_id' => $userId,
+            'name' => $validated['name'],
+            'points_json' => $validated['points_json'],
+        ]);
     }
 
     /**
@@ -56,8 +40,6 @@ class TravelRouteService
         $route->update([
             'name' => $validated['name'],
             'points_json' => $validated['points_json'],
-            'sync_status' => 'synced',
-            'last_modified_at' => now(),
         ]);
 
         return $route->refresh();
@@ -65,10 +47,12 @@ class TravelRouteService
 
     public function delete(TravelRoute $route): void
     {
-        $route->update([
-            'sync_status' => 'deleted',
-            'last_modified_at' => now(),
-        ]);
+        $route->delete();
+    }
+
+    public function canMutate(?int $userId, TravelRoute $route): bool
+    {
+        return $userId !== null && (int) $route->user_id === (int) $userId;
     }
 
     /**
@@ -150,13 +134,13 @@ class TravelRouteService
 
     private function queryForUser(?int $userId): Builder
     {
-        return TravelRoute::query()->where(function (Builder $query) use ($userId): void {
-            if ($userId) {
-                $query->where('user_id', $userId);
-            } else {
-                $query->whereNull('user_id');
-            }
-        });
+        $query = TravelRoute::query();
+
+        if ($userId) {
+            $query->where('user_id', $userId);
+        }
+
+        return $query;
     }
 
     private function ensureRemoteId(TravelRoute $route): void

@@ -17,7 +17,7 @@ class UpdateLostPetReportRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'pet_local_uuid' => ['required', 'string'],
+            'pet_id' => ['required', 'integer'],
             'last_seen_latitude' => ['required', 'numeric'],
             'last_seen_longitude' => ['required', 'numeric'],
             'details' => ['required', 'string'],

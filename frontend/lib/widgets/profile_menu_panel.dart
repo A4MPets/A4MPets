@@ -99,108 +99,108 @@ class _ProfileMenuPanelState extends ConsumerState<ProfileMenuPanel> {
     );
 
     return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          userProfile.when(
-            data: (LocalUserProfile profile) {
-              return UserIdentityHeader(
-                isDarkMode: widget.isDarkMode,
-                username: profile.username,
-                avatarPath: profile.avatarPath,
-                onEditAvatarPressed: profile.isAuthenticated
-                    ? _handleEditAvatar
-                    : null,
-                isEditingAvatar: _isPickingAvatar,
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (Object error, StackTrace stackTrace) {
-              return UserIdentityHeader(
-                isDarkMode: widget.isDarkMode,
-                username: 'Usuario',
-              );
-            },
-          ),
-          const SizedBox(height: 22),
-          userProfile.when(
-            data: (LocalUserProfile profile) {
-              if (profile.isAuthenticated) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _ActionButton(
-                      label: 'Cerrar sesión',
-                      height: 46,
-                      background: AppPalette.primaryBlue,
-                      foreground: const Color(0xFFFFFFFF),
-                      onPressed: _handleLogoutPressed,
-                    ),
-                    if (_actionErrorText != null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        _actionErrorText!,
-                        style: const TextStyle(
-                          color: Color(0xFFD7263D),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 14),
-                  ],
-                );
-              }
-
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        userProfile.when(
+          data: (LocalUserProfile profile) {
+            return UserIdentityHeader(
+              isDarkMode: widget.isDarkMode,
+              username: profile.username,
+              avatarPath: profile.avatarPath,
+              onEditAvatarPressed: profile.isAuthenticated
+                  ? _handleEditAvatar
+                  : null,
+              isEditingAvatar: _isPickingAvatar,
+            );
+          },
+          loading: () => const SizedBox.shrink(),
+          error: (Object error, StackTrace stackTrace) {
+            return UserIdentityHeader(
+              isDarkMode: widget.isDarkMode,
+              username: 'Usuario',
+            );
+          },
+        ),
+        const SizedBox(height: 22),
+        userProfile.when(
+          data: (LocalUserProfile profile) {
+            if (profile.isAuthenticated) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _ActionButton(
-                          label: 'Iniciar Sesión',
-                          height: 46,
-                          background: const Color(0xFF5984BC),
-                          foreground: const Color(0xFFFFFFFF),
-                          onPressed: widget.onLoginPressed,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _ActionButton(
-                          label: 'Registrarse',
-                          height: 46,
-                          background: const Color(0xFF5984BC),
-                          foreground: const Color(0xFFFFFFFF),
-                          onPressed: widget.onRegisterPressed,
-                        ),
-                      ),
-                    ],
+                  _ActionButton(
+                    label: 'Cerrar sesión',
+                    height: 46,
+                    background: AppPalette.primaryBlue,
+                    foreground: const Color(0xFFFFFFFF),
+                    onPressed: _handleLogoutPressed,
                   ),
+                  if (_actionErrorText != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _actionErrorText!,
+                      style: const TextStyle(
+                        color: Color(0xFFD7263D),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 14),
                 ],
               );
-            },
-            loading: () => const SizedBox(height: 14),
-            error: (Object error, StackTrace stackTrace) =>
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ActionButton(
+                        label: 'Iniciar Sesión',
+                        height: 46,
+                        background: const Color(0xFF5984BC),
+                        foreground: const Color(0xFFFFFFFF),
+                        onPressed: widget.onLoginPressed,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _ActionButton(
+                        label: 'Registrarse',
+                        height: 46,
+                        background: const Color(0xFF5984BC),
+                        foreground: const Color(0xFFFFFFFF),
+                        onPressed: widget.onRegisterPressed,
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 14),
-          ),
-          _ActionButton(
-            label: 'Gestionar Mascotas',
-            height: 48,
-            background: neutralButtonBackground,
-            foreground: neutralButtonText,
-            onPressed: widget.onManagePetsPressed,
-          ),
-          const SizedBox(height: 10),
-          _ActionButton(
-            label: 'Gestionar Rutas',
-            height: 48,
-            background: neutralButtonBackground,
-            foreground: neutralButtonText,
-            onPressed: widget.onManageRoutesPressed,
-          ),
-        ],
+              ],
+            );
+          },
+          loading: () => const SizedBox(height: 14),
+          error: (Object error, StackTrace stackTrace) =>
+              const SizedBox(height: 14),
+        ),
+        _ActionButton(
+          label: 'Gestionar Mascotas',
+          height: 48,
+          background: neutralButtonBackground,
+          foreground: neutralButtonText,
+          onPressed: widget.onManagePetsPressed,
+        ),
+        const SizedBox(height: 10),
+        _ActionButton(
+          label: 'Gestionar Rutas',
+          height: 48,
+          background: neutralButtonBackground,
+          foreground: neutralButtonText,
+          onPressed: widget.onManageRoutesPressed,
+        ),
+      ],
     );
   }
 }
