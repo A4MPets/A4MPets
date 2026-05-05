@@ -1,6 +1,7 @@
 part of 'map_page.dart';
 
 class _PanelRoute {
+  final PanelKind kind;
   final int transitionKey;
   final String? title;
   final PanelAnchor anchor;
@@ -14,30 +15,6 @@ class _PanelRoute {
   final bool expandHorizontal;
   final bool expandVertical;
   final bool scrollContent;
-  final bool isAddRoutePanel;
-  final bool isReportSelectorPanel;
-  final bool isReportHazardPanel;
-  final bool isLostPetReportPanel;
-  final bool isFoundPetReportPanel;
-  final bool isLostPetReportsListPanel;
-  final bool isFoundPetReportsListPanel;
-  final bool isGenericReportPanel;
-  final bool isHazardDetailsPanel;
-  final bool isLostPetDetailsPanel;
-  final bool isFoundPetDetailsPanel;
-  final bool isGenericReportDetailsPanel;
-  final bool isHazardSettingsPanel;
-  final bool isHazardCommentsPanel;
-  final bool isManagePetsPanel;
-  final bool isLostPetPetSelectionPanel;
-  final bool isManageRoutesPanel;
-  final bool isProfilePanel;
-  final bool isLoginPanel;
-  final bool isRegisterPanel;
-  final bool isTripStartPanel;
-  final bool isTripPanel;
-  final bool isTripPetSelectionPanel;
-  final bool isTripRouteSelectionPanel;
   final bool canMinimize;
   final bool isMinimized;
   final double minimizedHeight;
@@ -47,6 +24,7 @@ class _PanelRoute {
   final Widget Function(BuildContext context) contentBuilder;
 
   _PanelRoute({
+    PanelKind? kind,
     required this.transitionKey,
     required this.contentBuilder,
     this.title,
@@ -61,37 +39,143 @@ class _PanelRoute {
     this.expandHorizontal = false,
     this.expandVertical = false,
     this.scrollContent = true,
-    this.isAddRoutePanel = false,
-    this.isReportSelectorPanel = false,
-    this.isReportHazardPanel = false,
-    this.isLostPetReportPanel = false,
-    this.isFoundPetReportPanel = false,
-    this.isLostPetReportsListPanel = false,
-    this.isFoundPetReportsListPanel = false,
-    this.isGenericReportPanel = false,
-    this.isHazardDetailsPanel = false,
-    this.isLostPetDetailsPanel = false,
-    this.isFoundPetDetailsPanel = false,
-    this.isGenericReportDetailsPanel = false,
-    this.isHazardSettingsPanel = false,
-    this.isHazardCommentsPanel = false,
-    this.isManagePetsPanel = false,
-    this.isLostPetPetSelectionPanel = false,
-    this.isManageRoutesPanel = false,
-    this.isProfilePanel = false,
-    this.isLoginPanel = false,
-    this.isRegisterPanel = false,
-    this.isTripStartPanel = false,
-    this.isTripPanel = false,
-    this.isTripPetSelectionPanel = false,
-    this.isTripRouteSelectionPanel = false,
+    bool isAddRoutePanel = false,
+    bool isReportSelectorPanel = false,
+    bool isReportHazardPanel = false,
+    bool isLostPetReportPanel = false,
+    bool isFoundPetReportPanel = false,
+    bool isLostPetReportsListPanel = false,
+    bool isFoundPetReportsListPanel = false,
+    bool isGenericReportPanel = false,
+    bool isHazardDetailsPanel = false,
+    bool isLostPetDetailsPanel = false,
+    bool isFoundPetDetailsPanel = false,
+    bool isGenericReportDetailsPanel = false,
+    bool isHazardSettingsPanel = false,
+    bool isHazardCommentsPanel = false,
+    bool isManagePetsPanel = false,
+    bool isLostPetPetSelectionPanel = false,
+    bool isManageRoutesPanel = false,
+    bool isProfilePanel = false,
+    bool isLoginPanel = false,
+    bool isRegisterPanel = false,
+    bool isTripStartPanel = false,
+    bool isTripPanel = false,
+    bool isTripPetSelectionPanel = false,
+    bool isTripRouteSelectionPanel = false,
     this.canMinimize = false,
     this.isMinimized = false,
     this.minimizedHeight = 74,
     this.borderRadius = const BorderRadius.all(Radius.circular(20)),
     this.contentTopPadding,
     this.onToggleMinimize,
-  });
+  }) : kind =
+           kind ??
+           _resolvePanelKind(
+             isAddRoutePanel: isAddRoutePanel,
+             isReportSelectorPanel: isReportSelectorPanel,
+             isReportHazardPanel: isReportHazardPanel,
+             isLostPetReportPanel: isLostPetReportPanel,
+             isFoundPetReportPanel: isFoundPetReportPanel,
+             isLostPetReportsListPanel: isLostPetReportsListPanel,
+             isFoundPetReportsListPanel: isFoundPetReportsListPanel,
+             isGenericReportPanel: isGenericReportPanel,
+             isHazardDetailsPanel: isHazardDetailsPanel,
+             isLostPetDetailsPanel: isLostPetDetailsPanel,
+             isFoundPetDetailsPanel: isFoundPetDetailsPanel,
+             isGenericReportDetailsPanel: isGenericReportDetailsPanel,
+             isHazardSettingsPanel: isHazardSettingsPanel,
+             isHazardCommentsPanel: isHazardCommentsPanel,
+             isManagePetsPanel: isManagePetsPanel,
+             isLostPetPetSelectionPanel: isLostPetPetSelectionPanel,
+             isManageRoutesPanel: isManageRoutesPanel,
+             isProfilePanel: isProfilePanel,
+             isLoginPanel: isLoginPanel,
+             isRegisterPanel: isRegisterPanel,
+             isTripStartPanel: isTripStartPanel,
+             isTripPanel: isTripPanel,
+             isTripPetSelectionPanel: isTripPetSelectionPanel,
+             isTripRouteSelectionPanel: isTripRouteSelectionPanel,
+           );
+
+  bool get isAddRoutePanel => kind == PanelKind.addRoute;
+  bool get isReportSelectorPanel => kind == PanelKind.reportSelector;
+  bool get isReportHazardPanel => kind == PanelKind.reportHazard;
+  bool get isLostPetReportPanel => kind == PanelKind.lostPetReport;
+  bool get isFoundPetReportPanel => kind == PanelKind.foundPetReport;
+  bool get isLostPetReportsListPanel => kind == PanelKind.lostPetReportsList;
+  bool get isFoundPetReportsListPanel => kind == PanelKind.foundPetReportsList;
+  bool get isGenericReportPanel => kind == PanelKind.genericReport;
+  bool get isHazardDetailsPanel => kind == PanelKind.hazardDetails;
+  bool get isLostPetDetailsPanel => kind == PanelKind.lostPetDetails;
+  bool get isFoundPetDetailsPanel => kind == PanelKind.foundPetDetails;
+  bool get isGenericReportDetailsPanel =>
+      kind == PanelKind.genericReportDetails;
+  bool get isHazardSettingsPanel => kind == PanelKind.hazardSettings;
+  bool get isHazardCommentsPanel => kind == PanelKind.hazardComments;
+  bool get isManagePetsPanel => kind == PanelKind.managePets;
+  bool get isLostPetPetSelectionPanel => kind == PanelKind.lostPetPetSelection;
+  bool get isManageRoutesPanel => kind == PanelKind.manageRoutes;
+  bool get isProfilePanel => kind == PanelKind.profile;
+  bool get isLoginPanel => kind == PanelKind.login;
+  bool get isRegisterPanel => kind == PanelKind.register;
+  bool get isTripStartPanel => kind == PanelKind.tripStart;
+  bool get isTripPanel => kind == PanelKind.tripActive;
+  bool get isTripPetSelectionPanel => kind == PanelKind.tripPetSelection;
+  bool get isTripRouteSelectionPanel => kind == PanelKind.tripRouteSelection;
+
+  static PanelKind _resolvePanelKind({
+    required bool isAddRoutePanel,
+    required bool isReportSelectorPanel,
+    required bool isReportHazardPanel,
+    required bool isLostPetReportPanel,
+    required bool isFoundPetReportPanel,
+    required bool isLostPetReportsListPanel,
+    required bool isFoundPetReportsListPanel,
+    required bool isGenericReportPanel,
+    required bool isHazardDetailsPanel,
+    required bool isLostPetDetailsPanel,
+    required bool isFoundPetDetailsPanel,
+    required bool isGenericReportDetailsPanel,
+    required bool isHazardSettingsPanel,
+    required bool isHazardCommentsPanel,
+    required bool isManagePetsPanel,
+    required bool isLostPetPetSelectionPanel,
+    required bool isManageRoutesPanel,
+    required bool isProfilePanel,
+    required bool isLoginPanel,
+    required bool isRegisterPanel,
+    required bool isTripStartPanel,
+    required bool isTripPanel,
+    required bool isTripPetSelectionPanel,
+    required bool isTripRouteSelectionPanel,
+  }) {
+    if (isAddRoutePanel) return PanelKind.addRoute;
+    if (isReportSelectorPanel) return PanelKind.reportSelector;
+    if (isReportHazardPanel) return PanelKind.reportHazard;
+    if (isLostPetReportPanel) return PanelKind.lostPetReport;
+    if (isFoundPetReportPanel) return PanelKind.foundPetReport;
+    if (isLostPetReportsListPanel) return PanelKind.lostPetReportsList;
+    if (isFoundPetReportsListPanel) return PanelKind.foundPetReportsList;
+    if (isGenericReportPanel) return PanelKind.genericReport;
+    if (isHazardDetailsPanel) return PanelKind.hazardDetails;
+    if (isLostPetDetailsPanel) return PanelKind.lostPetDetails;
+    if (isFoundPetDetailsPanel) return PanelKind.foundPetDetails;
+    if (isGenericReportDetailsPanel) return PanelKind.genericReportDetails;
+    if (isHazardSettingsPanel) return PanelKind.hazardSettings;
+    if (isHazardCommentsPanel) return PanelKind.hazardComments;
+    if (isManagePetsPanel) return PanelKind.managePets;
+    if (isLostPetPetSelectionPanel) return PanelKind.lostPetPetSelection;
+    if (isManageRoutesPanel) return PanelKind.manageRoutes;
+    if (isProfilePanel) return PanelKind.profile;
+    if (isLoginPanel) return PanelKind.login;
+    if (isRegisterPanel) return PanelKind.register;
+    if (isTripStartPanel) return PanelKind.tripStart;
+    if (isTripPanel) return PanelKind.tripActive;
+    if (isTripPetSelectionPanel) return PanelKind.tripPetSelection;
+    if (isTripRouteSelectionPanel) return PanelKind.tripRouteSelection;
+    return PanelKind.profile;
+  }
 }
 
 class _ProximityAlertTarget {

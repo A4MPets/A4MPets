@@ -14,6 +14,7 @@ import '../models/hazard_report_record.dart';
 import '../models/lost_pet_report_record.dart';
 import '../models/colored_route_segment.dart';
 import '../theme/app_palette.dart';
+import 'map_widget_config.dart';
 
 /// Interactive map shell that renders user location, routes, hazards, and
 /// report overlays while delegating workflow decisions to parent callbacks.
@@ -21,120 +22,100 @@ class MapWidget extends StatefulWidget {
   final bool isDarkMode;
   final LatLng center;
   final double zoom;
-  final VoidCallback? onSettingsTap;
-  final VoidCallback? onReportDangerTap;
-  final VoidCallback? onModifyLocationTap;
-  final VoidCallback? onStartTrip;
-  final VoidCallback? onProfileTap;
-  final bool hideDefaultControls;
-  final bool keepReportDangerVisible;
-  final bool keepModifyLocationVisible;
-  final Widget? panelOverlay;
-  final List<LatLng> routePoints;
-  final List<LatLng> routePolylinePoints;
-  final List<dynamic> coloredRouteSegments;
-  final int? selectedRoutePointIndex;
-  final void Function(int index)? onRoutePointPointerDown;
-  final void Function(int index)? onRoutePointTap;
-  final bool canDragRoutePoints;
-  final void Function(int index)? onRoutePointDragStart;
-  final void Function(int index, LatLng point)? onRoutePointDragUpdate;
-  final void Function(int index, LatLng point)? onRoutePointDragEnd;
-  final bool isSelectingRoutePoint;
-  final void Function(LatLng)? onMapTap;
-  final List<HazardReportRecord> hazardReports;
-  final List<HazardReportRecord> visibleHazardCircles;
-  final List<LostPetReportRecord> lostPetReports;
-  final List<FoundPetReportRecord> foundPetReports;
-  final List<GenericReportRecord> genericReports;
-  final HazardReportRecord? highlightedHazard;
-  final LatLng? hazardDraftLocation;
-  final int? hazardDraftImpactRadiusMeters;
-  final String? hazardDraftRiskLevelCode;
-  final bool isSelectingHazardLocation;
-  final LatLng? lostPetDraftLocation;
-  final LatLng? foundPetDraftLocation;
-  final LatLng? genericReportDraftLocation;
-  final int? genericReportDraftImpactRadiusMeters;
-  final String? genericReportDraftRiskLevelCode;
-  final bool isSelectingReportLocation;
-  final bool routeSelectionHintAtTop;
-  final bool reportSelectionHintAtTop;
-  final String reportSelectionHintText;
-  final Color reportSelectionHintColor;
-  final void Function(HazardReportRecord report)? onHazardTap;
-  final void Function(LostPetReportRecord report)? onLostPetTap;
-  final void Function(FoundPetReportRecord report)? onFoundPetTap;
-  final void Function(GenericReportRecord report)? onGenericReportTap;
-  final LatLng? cameraFocusTarget;
-  final double? cameraFocusZoom;
-  final int cameraFocusRevision;
-  final void Function(LatLng location)? onUserLocationChanged;
-  final void Function(bool isLoading, String? errorText)?
-  onUserLocationStatusChanged;
-  final int locationRefreshRevision;
-  final LatLng? developerLocationMarker;
-  final bool isDeveloperModifyingLocation;
+  final MapControlsConfig controls;
+  final MapRouteOverlayConfig routeOverlay;
+  final MapReportOverlayConfig reportOverlay;
+  final MapCameraConfig camera;
+  final MapLocationConfig location;
 
   const MapWidget({
     super.key,
     required this.isDarkMode,
     required this.center,
     this.zoom = 13,
-    this.onSettingsTap,
-    this.onReportDangerTap,
-    this.onModifyLocationTap,
-    this.onStartTrip,
-    this.onProfileTap,
-    this.hideDefaultControls = false,
-    this.keepReportDangerVisible = false,
-    this.keepModifyLocationVisible = false,
-    this.panelOverlay,
-    this.routePoints = const [],
-    this.routePolylinePoints = const [],
-    this.coloredRouteSegments = const [],
-    this.selectedRoutePointIndex,
-    this.onRoutePointPointerDown,
-    this.onRoutePointTap,
-    this.canDragRoutePoints = false,
-    this.onRoutePointDragStart,
-    this.onRoutePointDragUpdate,
-    this.onRoutePointDragEnd,
-    this.isSelectingRoutePoint = false,
-    this.onMapTap,
-    this.hazardReports = const <HazardReportRecord>[],
-    this.visibleHazardCircles = const <HazardReportRecord>[],
-    this.lostPetReports = const <LostPetReportRecord>[],
-    this.foundPetReports = const <FoundPetReportRecord>[],
-    this.genericReports = const <GenericReportRecord>[],
-    this.highlightedHazard,
-    this.hazardDraftLocation,
-    this.hazardDraftImpactRadiusMeters,
-    this.hazardDraftRiskLevelCode,
-    this.isSelectingHazardLocation = false,
-    this.lostPetDraftLocation,
-    this.foundPetDraftLocation,
-    this.genericReportDraftLocation,
-    this.genericReportDraftImpactRadiusMeters,
-    this.genericReportDraftRiskLevelCode,
-    this.isSelectingReportLocation = false,
-    this.routeSelectionHintAtTop = false,
-    this.reportSelectionHintAtTop = false,
-    this.reportSelectionHintText = 'Toca el mapa para ubicar el reporte',
-    this.reportSelectionHintColor = AppPalette.primaryBlue,
-    this.onHazardTap,
-    this.onLostPetTap,
-    this.onFoundPetTap,
-    this.onGenericReportTap,
-    this.cameraFocusTarget,
-    this.cameraFocusZoom,
-    this.cameraFocusRevision = 0,
-    this.onUserLocationChanged,
-    this.onUserLocationStatusChanged,
-    this.locationRefreshRevision = 0,
-    this.developerLocationMarker,
-    this.isDeveloperModifyingLocation = false,
+    this.controls = const MapControlsConfig(),
+    this.routeOverlay = const MapRouteOverlayConfig(),
+    this.reportOverlay = const MapReportOverlayConfig(),
+    this.camera = const MapCameraConfig(),
+    this.location = const MapLocationConfig(),
   });
+
+  VoidCallback? get onSettingsTap => controls.onSettingsTap;
+  VoidCallback? get onReportDangerTap => controls.onReportDangerTap;
+  VoidCallback? get onModifyLocationTap => controls.onModifyLocationTap;
+  VoidCallback? get onStartTrip => controls.onStartTrip;
+  VoidCallback? get onProfileTap => controls.onProfileTap;
+  bool get hideDefaultControls => controls.hideDefaultControls;
+  bool get keepReportDangerVisible => controls.keepReportDangerVisible;
+  bool get keepModifyLocationVisible => controls.keepModifyLocationVisible;
+  Widget? get panelOverlay => controls.panelOverlay;
+
+  List<LatLng> get routePoints => routeOverlay.routePoints;
+  List<LatLng> get routePolylinePoints => routeOverlay.routePolylinePoints;
+  List<ColoredRouteSegment> get coloredRouteSegments =>
+      routeOverlay.coloredRouteSegments;
+  int? get selectedRoutePointIndex => routeOverlay.selectedRoutePointIndex;
+  void Function(int index)? get onRoutePointPointerDown =>
+      routeOverlay.onRoutePointPointerDown;
+  void Function(int index)? get onRoutePointTap => routeOverlay.onRoutePointTap;
+  bool get canDragRoutePoints => routeOverlay.canDragRoutePoints;
+  void Function(int index)? get onRoutePointDragStart =>
+      routeOverlay.onRoutePointDragStart;
+  void Function(int index, LatLng point)? get onRoutePointDragUpdate =>
+      routeOverlay.onRoutePointDragUpdate;
+  void Function(int index, LatLng point)? get onRoutePointDragEnd =>
+      routeOverlay.onRoutePointDragEnd;
+  bool get isSelectingRoutePoint => routeOverlay.isSelectingRoutePoint;
+  bool get routeSelectionHintAtTop => routeOverlay.routeSelectionHintAtTop;
+
+  void Function(LatLng)? get onMapTap => reportOverlay.onMapTap;
+  List<HazardReportRecord> get hazardReports => reportOverlay.hazardReports;
+  List<HazardReportRecord> get visibleHazardCircles =>
+      reportOverlay.visibleHazardCircles;
+  List<LostPetReportRecord> get lostPetReports => reportOverlay.lostPetReports;
+  List<FoundPetReportRecord> get foundPetReports =>
+      reportOverlay.foundPetReports;
+  List<GenericReportRecord> get genericReports => reportOverlay.genericReports;
+  HazardReportRecord? get highlightedHazard => reportOverlay.highlightedHazard;
+  LatLng? get hazardDraftLocation => reportOverlay.hazardDraftLocation;
+  int? get hazardDraftImpactRadiusMeters =>
+      reportOverlay.hazardDraftImpactRadiusMeters;
+  String? get hazardDraftRiskLevelCode =>
+      reportOverlay.hazardDraftRiskLevelCode;
+  bool get isSelectingHazardLocation => reportOverlay.isSelectingHazardLocation;
+  LatLng? get lostPetDraftLocation => reportOverlay.lostPetDraftLocation;
+  LatLng? get foundPetDraftLocation => reportOverlay.foundPetDraftLocation;
+  LatLng? get genericReportDraftLocation =>
+      reportOverlay.genericReportDraftLocation;
+  int? get genericReportDraftImpactRadiusMeters =>
+      reportOverlay.genericReportDraftImpactRadiusMeters;
+  String? get genericReportDraftRiskLevelCode =>
+      reportOverlay.genericReportDraftRiskLevelCode;
+  bool get isSelectingReportLocation => reportOverlay.isSelectingReportLocation;
+  bool get reportSelectionHintAtTop => reportOverlay.reportSelectionHintAtTop;
+  String get reportSelectionHintText => reportOverlay.reportSelectionHintText;
+  Color get reportSelectionHintColor => reportOverlay.reportSelectionHintColor;
+  void Function(HazardReportRecord report)? get onHazardTap =>
+      reportOverlay.onHazardTap;
+  void Function(LostPetReportRecord report)? get onLostPetTap =>
+      reportOverlay.onLostPetTap;
+  void Function(FoundPetReportRecord report)? get onFoundPetTap =>
+      reportOverlay.onFoundPetTap;
+  void Function(GenericReportRecord report)? get onGenericReportTap =>
+      reportOverlay.onGenericReportTap;
+
+  LatLng? get cameraFocusTarget => camera.cameraFocusTarget;
+  double? get cameraFocusZoom => camera.cameraFocusZoom;
+  int get cameraFocusRevision => camera.cameraFocusRevision;
+
+  void Function(LatLng location)? get onUserLocationChanged =>
+      location.onUserLocationChanged;
+  void Function(bool isLoading, String? errorText)?
+  get onUserLocationStatusChanged => location.onUserLocationStatusChanged;
+  int get locationRefreshRevision => location.locationRefreshRevision;
+  LatLng? get developerLocationMarker => location.developerLocationMarker;
+  bool get isDeveloperModifyingLocation =>
+      location.isDeveloperModifyingLocation;
 
   @override
   State<MapWidget> createState() => _MapWidgetState();
@@ -1793,7 +1774,7 @@ class _MapWidgetState extends State<MapWidget>
   List<Polyline> _buildRoutePolylines() {
     if (widget.coloredRouteSegments.isNotEmpty) {
       // Si hay segmentos coloreados, renderizar cada uno con su color
-      return (widget.coloredRouteSegments as List<ColoredRouteSegment>)
+      return widget.coloredRouteSegments
           .where((ColoredRouteSegment segment) => segment.points.length >= 2)
           .map(
             (ColoredRouteSegment segment) => Polyline(

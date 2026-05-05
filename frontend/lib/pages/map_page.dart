@@ -19,8 +19,12 @@ import '../models/route_record.dart';
 import '../providers/audio_feedback_provider.dart';
 import '../providers/audio_feedback_settings_provider.dart';
 import '../providers/local_data_providers.dart';
+import '../providers/panel_flow_provider.dart';
+import '../providers/report_flow_provider.dart';
+import '../providers/route_editor_provider.dart';
 import '../providers/theme_provider.dart';
 import '../providers/trip_transport_preference_provider.dart';
+import '../providers/trip_flow_provider.dart';
 import '../services/navigation_audio_message_builder.dart';
 import '../services/navigation_audio_progress.dart';
 import '../services/hazard_risk_filtering.dart';
@@ -42,6 +46,7 @@ import '../widgets/lost_pet_details_panel.dart';
 import '../widgets/lost_pet_reports_list_panel.dart';
 import '../widgets/lost_pet_reporting_panel.dart';
 import '../widgets/map_widget.dart';
+import '../widgets/map_widget_config.dart';
 import '../widgets/panel_modal.dart';
 import '../widgets/pet_details_panel.dart';
 import '../widgets/pet_management_panels.dart';
@@ -82,7 +87,8 @@ class _MapPageState extends ConsumerState<MapPage> {
   List<LatLng> _draftRoutePoints = <LatLng>[];
   List<LatLng> _draftRoutePolyline = <LatLng>[];
   List<LatLng> _routePolylineWaypoints = <LatLng>[];
-  List<dynamic> _hazardColoredRouteSegments = <dynamic>[];
+  List<ColoredRouteSegment> _hazardColoredRouteSegments =
+      <ColoredRouteSegment>[];
   _RouteMapTool _activeRouteTool = _RouteMapTool.addPoint;
   int? _selectedPointIndexForEdit;
   int? _selectedRouteId;
@@ -228,6 +234,115 @@ class _MapPageState extends ConsumerState<MapPage> {
     }
 
     setState(mutation);
+    _syncModularFlowProviders();
+  }
+
+  void _syncModularFlowProviders() {
+    ref
+        .read(panelFlowProvider.notifier)
+        .replace(
+          PanelFlowState(
+            transitionSeed: _panelTransitionSeed,
+            stack: _panelStack
+                .map(
+                  (_PanelRoute route) => PanelEntry(
+                    kind: route.kind,
+                    transitionKey: route.transitionKey,
+                    isMinimized: route.isMinimized,
+                  ),
+                )
+                .toList(growable: false),
+          ),
+        );
+    ref
+        .read(routeEditorProvider.notifier)
+        .replace(
+          RouteEditorState(
+            draftRoutePoints: _draftRoutePoints,
+            draftRoutePolyline: _draftRoutePolyline,
+            routePolylineWaypoints: _routePolylineWaypoints,
+            activeTool: _activeRouteTool == _RouteMapTool.editPoint
+                ? RouteMapTool.editPoint
+                : RouteMapTool.addPoint,
+            selectedPointIndexForEdit: _selectedPointIndexForEdit,
+            selectedRouteId: _selectedRouteId,
+            editingRouteId: _editingRouteId,
+            editingRouteName: _editingRouteName,
+          ),
+        );
+    ref
+        .read(reportFlowProvider.notifier)
+        .replace(
+          ReportFlowState(
+            isSelectingHazardLocationOnMap: _isSelectingHazardLocationOnMap,
+            activeSelectionContext:
+                _activeReportSelectionContext ==
+                    _ReportMapSelectionContext.hazard
+                ? ReportMapSelectionContext.hazard
+                : (_activeReportSelectionContext ==
+                          _ReportMapSelectionContext.lostPet
+                      ? ReportMapSelectionContext.lostPet
+                      : (_activeReportSelectionContext ==
+                                _ReportMapSelectionContext.foundPet
+                            ? ReportMapSelectionContext.foundPet
+                            : (_activeReportSelectionContext ==
+                                      _ReportMapSelectionContext.generic
+                                  ? ReportMapSelectionContext.generic
+                                  : null))),
+            manualHazardLocation: _manualHazardLocation,
+            manualLostPetLocation: _manualLostPetLocation,
+            manualFoundPetLocation: _manualFoundPetLocation,
+            manualGenericReportLocation: _manualGenericReportLocation,
+            hazardDraftPreview: _hazardDraftPreview == null
+                ? null
+                : ReportDraftState(
+                    location: _hazardDraftPreview!.location,
+                    impactRadiusMeters: _hazardDraftPreview!.impactRadiusMeters,
+                    riskLevelCode: _hazardDraftPreview!.riskLevelCode,
+                  ),
+            genericReportDraftPreview: _genericReportDraftPreview == null
+                ? null
+                : ReportDraftState(
+                    location: _genericReportDraftPreview!.location,
+                    impactRadiusMeters:
+                        _genericReportDraftPreview!.impactRadiusMeters,
+                    riskLevelCode: _genericReportDraftPreview!.riskLevelCode,
+                  ),
+            selectedHazard: _selectedHazard,
+            selectedLostPetReport: _selectedLostPetReport,
+            selectedFoundPetReport: _selectedFoundPetReport,
+            selectedGenericReport: _selectedGenericReport,
+            selectedLostPetForReport: _selectedLostPetForReport,
+            selectedLostReportForFoundReport: _selectedLostReportForFoundReport,
+            showLowRiskHazardCircles: _showLowRiskHazardCircles,
+            showMediumRiskHazardCircles: _showMediumRiskHazardCircles,
+            showHighRiskHazardCircles: _showHighRiskHazardCircles,
+            showLostPetReports: _showLostPetReports,
+            showFoundPetReports: _showFoundPetReports,
+            showGenericReports: _showGenericReports,
+          ),
+        );
+    ref
+        .read(tripFlowProvider.notifier)
+        .replace(
+          TripFlowState(
+            selectedPetIds: _selectedTripPetIds,
+            selectedTransport:
+                _selectedTripTransport == _TripTransportMethod.vehicle
+                ? TripTransportMethod.vehicle
+                : TripTransportMethod.walking,
+            selectedHazardRiskFilters: _selectedTripHazardRiskFilters,
+            selectedRoute: _selectedTripRoute,
+            isTripActive: _isTripActive,
+            arrivalHandled: _tripArrivalHandled,
+            startErrorText: _tripStartErrorText,
+            latestUserLocation: _latestUserLocation,
+            isUserLocationLoading: _isUserLocationLoading,
+            userLocationErrorText: _userLocationErrorText,
+            remainingWaypoints: _tripRemainingWaypoints,
+            activeNavigationInstructions: _activeNavigationInstructions,
+          ),
+        );
   }
 
   bool get _isTripNavigationContext {
@@ -350,140 +465,156 @@ class _MapPageState extends ConsumerState<MapPage> {
         isDarkMode: isDarkMode,
         center: const LatLng(3.4516, -76.5320),
         zoom: 13,
-        hideDefaultControls: _hasOpenPanels,
-        keepReportDangerVisible: _hasOpenPanels && _panelStack.last.isTripPanel,
-        keepModifyLocationVisible:
-            _hasOpenPanels &&
-            (_panelStack.last.isTripStartPanel || _panelStack.last.isTripPanel),
-        onProfileTap: () => _openProfilePanel(isDarkMode),
-        panelOverlay: Stack(
-          children: <Widget>[
-            _buildPanelOverlay(isDarkMode),
-            _buildProximityAlertOverlay(isDarkMode),
-          ],
+        controls: MapControlsConfig(
+          hideDefaultControls: _hasOpenPanels,
+          keepReportDangerVisible:
+              _hasOpenPanels && _panelStack.last.isTripPanel,
+          keepModifyLocationVisible:
+              _hasOpenPanels &&
+              (_panelStack.last.isTripStartPanel ||
+                  _panelStack.last.isTripPanel),
+          onProfileTap: () => _openProfilePanel(isDarkMode),
+          panelOverlay: Stack(
+            children: <Widget>[
+              _buildPanelOverlay(isDarkMode),
+              _buildProximityAlertOverlay(isDarkMode),
+            ],
+          ),
+          onSettingsTap: () => _openHazardLayersSettingsPanel(isDarkMode),
+          onStartTrip: () => _openStartTripPanel(isDarkMode),
+          onReportDangerTap: () => _openReportTypeSelectorPanel(isDarkMode),
         ),
-        routePoints: _renderedRoutePoints,
-        routePolylinePoints: _renderedRoutePolylinePoints,
-        coloredRouteSegments: _hazardColoredRouteSegments,
-        selectedRoutePointIndex: _selectedPointIndexForEdit,
-        onRoutePointPointerDown: (int index) {
-          if (_activeRouteTool != _RouteMapTool.editPoint) {
-            return;
-          }
-          setState(() {
-            _selectedPointIndexForEdit = index;
-          });
-        },
-        canDragRoutePoints:
-            _hasOpenPanels &&
-            _panelStack.last.isAddRoutePanel &&
-            _activeRouteTool == _RouteMapTool.editPoint,
-        onRoutePointDragStart: _onRoutePointDragStart,
-        onRoutePointDragUpdate: _onRoutePointDragUpdate,
-        onRoutePointDragEnd: _onRoutePointDragEnd,
-        onRoutePointTap: (int index) {
-          if (_activeRouteTool != _RouteMapTool.editPoint) {
-            return;
-          }
-          setState(() {
-            _selectedPointIndexForEdit = index;
-          });
-        },
-        isSelectingRoutePoint:
-            _hasOpenPanels &&
-            _panelStack.last.isAddRoutePanel &&
-            _activeRouteTool == _RouteMapTool.addPoint,
-        hazardReports: _visibleHazardCircles,
-        visibleHazardCircles: _visibleHazardCircles,
-        lostPetReports: _visibleLostPetReports,
-        foundPetReports: _visibleFoundPetReports,
-        genericReports: _visibleGenericReports,
-        highlightedHazard: _selectedHazard,
-        hazardDraftLocation:
-            _hasOpenPanels && _panelStack.last.isReportHazardPanel
-            ? (_manualHazardLocation ?? _latestUserLocation)
-            : null,
-        hazardDraftImpactRadiusMeters: _hazardDraftPreview?.impactRadiusMeters,
-        hazardDraftRiskLevelCode: _hazardDraftPreview?.riskLevelCode,
-        isSelectingHazardLocation:
-            _hasOpenPanels &&
-            _panelStack.last.isReportHazardPanel &&
-            _isSelectingHazardLocationOnMap,
-        lostPetDraftLocation:
-            _hasOpenPanels && _panelStack.last.isLostPetReportPanel
-            ? (_manualLostPetLocation ?? _latestUserLocation)
-            : null,
-        foundPetDraftLocation:
-            _hasOpenPanels && _panelStack.last.isFoundPetReportPanel
-            ? (_manualFoundPetLocation ?? _latestUserLocation)
-            : null,
-        genericReportDraftLocation:
-            _hasOpenPanels && _panelStack.last.isGenericReportPanel
-            ? (_manualGenericReportLocation ?? _latestUserLocation)
-            : null,
-        genericReportDraftImpactRadiusMeters:
-            _genericReportDraftPreview?.impactRadiusMeters,
-        genericReportDraftRiskLevelCode:
-            _genericReportDraftPreview?.riskLevelCode,
-        isSelectingReportLocation:
-            _activeReportSelectionContext != null &&
-            _activeReportSelectionContext != _ReportMapSelectionContext.hazard,
-        routeSelectionHintAtTop:
-            activePanel != null &&
-            activePanel.isAddRoutePanel &&
-            activePanelAnchoredBottom,
-        reportSelectionHintAtTop:
-            activePanel != null &&
-            (activePanel.isReportHazardPanel ||
-                activePanel.isLostPetReportPanel ||
-                activePanel.isFoundPetReportPanel ||
-                activePanel.isGenericReportPanel) &&
-            activePanelAnchoredBottom,
-        onHazardTap: (HazardReportRecord hazard) {
-          _openHazardDetailsPanel(isDarkMode, hazard);
-        },
-        onLostPetTap: (LostPetReportRecord report) {
-          _openLostPetDetailsPanel(isDarkMode, report);
-        },
-        onFoundPetTap: (FoundPetReportRecord report) {
-          _openFoundPetDetailsPanel(isDarkMode, report);
-        },
-        onGenericReportTap: (GenericReportRecord report) {
-          _openGenericReportDetailsPanel(isDarkMode, report);
-        },
-        reportSelectionHintText:
-            _activeReportSelectionContext == _ReportMapSelectionContext.lostPet
-            ? 'Toca el mapa para ubicar la mascota perdida'
-            : (_activeReportSelectionContext ==
-                      _ReportMapSelectionContext.foundPet
-                  ? 'Toca el mapa para ubicar la mascota encontrada'
-                  : 'Toca el mapa para ubicar el reporte'),
-        reportSelectionHintColor:
-            _activeReportSelectionContext == _ReportMapSelectionContext.lostPet
-            ? AppPalette.reportYellow
-            : (_activeReportSelectionContext ==
-                      _ReportMapSelectionContext.foundPet
-                  ? AppPalette.reportGreen
-                  : AppPalette.charcoal),
-        cameraFocusTarget:
-            tripFocusTarget ?? hazardFocusTarget ?? _reportFocusTarget,
-        cameraFocusZoom: tripFocusTarget != null
-            ? null
-            : (hazardFocusTarget == null
-                  ? null
-                  : _hazardFocusZoomFor(_selectedHazard!)),
-        cameraFocusRevision: tripFocusTarget != null
-            ? _tripUserFocusRevision
-            : (hazardFocusTarget != null
-                  ? _hazardFocusRevision
-                  : _reportFocusRevision),
-        onUserLocationChanged: _handleUserLocationChanged,
-        onUserLocationStatusChanged: _handleUserLocationStatusChanged,
-        locationRefreshRevision: _userLocationRefreshRevision,
-        onMapTap: _onMapTap,
-        onSettingsTap: () => _openHazardLayersSettingsPanel(isDarkMode),
-        onStartTrip: () => _openStartTripPanel(isDarkMode),
-        onReportDangerTap: () => _openReportTypeSelectorPanel(isDarkMode),
+        routeOverlay: MapRouteOverlayConfig(
+          routePoints: _renderedRoutePoints,
+          routePolylinePoints: _renderedRoutePolylinePoints,
+          coloredRouteSegments: _hazardColoredRouteSegments,
+          selectedRoutePointIndex: _selectedPointIndexForEdit,
+          onRoutePointPointerDown: (int index) {
+            if (_activeRouteTool != _RouteMapTool.editPoint) {
+              return;
+            }
+            setState(() {
+              _selectedPointIndexForEdit = index;
+            });
+          },
+          canDragRoutePoints:
+              _hasOpenPanels &&
+              _panelStack.last.isAddRoutePanel &&
+              _activeRouteTool == _RouteMapTool.editPoint,
+          onRoutePointDragStart: _onRoutePointDragStart,
+          onRoutePointDragUpdate: _onRoutePointDragUpdate,
+          onRoutePointDragEnd: _onRoutePointDragEnd,
+          onRoutePointTap: (int index) {
+            if (_activeRouteTool != _RouteMapTool.editPoint) {
+              return;
+            }
+            setState(() {
+              _selectedPointIndexForEdit = index;
+            });
+          },
+          isSelectingRoutePoint:
+              _hasOpenPanels &&
+              _panelStack.last.isAddRoutePanel &&
+              _activeRouteTool == _RouteMapTool.addPoint,
+          routeSelectionHintAtTop:
+              activePanel != null &&
+              activePanel.isAddRoutePanel &&
+              activePanelAnchoredBottom,
+        ),
+        reportOverlay: MapReportOverlayConfig(
+          hazardReports: _visibleHazardCircles,
+          visibleHazardCircles: _visibleHazardCircles,
+          lostPetReports: _visibleLostPetReports,
+          foundPetReports: _visibleFoundPetReports,
+          genericReports: _visibleGenericReports,
+          highlightedHazard: _selectedHazard,
+          hazardDraftLocation:
+              _hasOpenPanels && _panelStack.last.isReportHazardPanel
+              ? (_manualHazardLocation ?? _latestUserLocation)
+              : null,
+          hazardDraftImpactRadiusMeters:
+              _hazardDraftPreview?.impactRadiusMeters,
+          hazardDraftRiskLevelCode: _hazardDraftPreview?.riskLevelCode,
+          isSelectingHazardLocation:
+              _hasOpenPanels &&
+              _panelStack.last.isReportHazardPanel &&
+              _isSelectingHazardLocationOnMap,
+          lostPetDraftLocation:
+              _hasOpenPanels && _panelStack.last.isLostPetReportPanel
+              ? (_manualLostPetLocation ?? _latestUserLocation)
+              : null,
+          foundPetDraftLocation:
+              _hasOpenPanels && _panelStack.last.isFoundPetReportPanel
+              ? (_manualFoundPetLocation ?? _latestUserLocation)
+              : null,
+          genericReportDraftLocation:
+              _hasOpenPanels && _panelStack.last.isGenericReportPanel
+              ? (_manualGenericReportLocation ?? _latestUserLocation)
+              : null,
+          genericReportDraftImpactRadiusMeters:
+              _genericReportDraftPreview?.impactRadiusMeters,
+          genericReportDraftRiskLevelCode:
+              _genericReportDraftPreview?.riskLevelCode,
+          isSelectingReportLocation:
+              _activeReportSelectionContext != null &&
+              _activeReportSelectionContext !=
+                  _ReportMapSelectionContext.hazard,
+          reportSelectionHintAtTop:
+              activePanel != null &&
+              (activePanel.isReportHazardPanel ||
+                  activePanel.isLostPetReportPanel ||
+                  activePanel.isFoundPetReportPanel ||
+                  activePanel.isGenericReportPanel) &&
+              activePanelAnchoredBottom,
+          onHazardTap: (HazardReportRecord hazard) {
+            _openHazardDetailsPanel(isDarkMode, hazard);
+          },
+          onLostPetTap: (LostPetReportRecord report) {
+            _openLostPetDetailsPanel(isDarkMode, report);
+          },
+          onFoundPetTap: (FoundPetReportRecord report) {
+            _openFoundPetDetailsPanel(isDarkMode, report);
+          },
+          onGenericReportTap: (GenericReportRecord report) {
+            _openGenericReportDetailsPanel(isDarkMode, report);
+          },
+          reportSelectionHintText:
+              _activeReportSelectionContext ==
+                  _ReportMapSelectionContext.lostPet
+              ? 'Toca el mapa para ubicar la mascota perdida'
+              : (_activeReportSelectionContext ==
+                        _ReportMapSelectionContext.foundPet
+                    ? 'Toca el mapa para ubicar la mascota encontrada'
+                    : 'Toca el mapa para ubicar el reporte'),
+          reportSelectionHintColor:
+              _activeReportSelectionContext ==
+                  _ReportMapSelectionContext.lostPet
+              ? AppPalette.reportYellow
+              : (_activeReportSelectionContext ==
+                        _ReportMapSelectionContext.foundPet
+                    ? AppPalette.reportGreen
+                    : AppPalette.charcoal),
+          onMapTap: _onMapTap,
+        ),
+        camera: MapCameraConfig(
+          cameraFocusTarget:
+              tripFocusTarget ?? hazardFocusTarget ?? _reportFocusTarget,
+          cameraFocusZoom: tripFocusTarget != null
+              ? null
+              : (hazardFocusTarget == null
+                    ? null
+                    : _hazardFocusZoomFor(_selectedHazard!)),
+          cameraFocusRevision: tripFocusTarget != null
+              ? _tripUserFocusRevision
+              : (hazardFocusTarget != null
+                    ? _hazardFocusRevision
+                    : _reportFocusRevision),
+        ),
+        location: MapLocationConfig(
+          onUserLocationChanged: _handleUserLocationChanged,
+          onUserLocationStatusChanged: _handleUserLocationStatusChanged,
+          locationRefreshRevision: _userLocationRefreshRevision,
+        ),
       ),
     );
   }

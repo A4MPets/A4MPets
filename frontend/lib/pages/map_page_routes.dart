@@ -216,7 +216,7 @@ extension _MapPageRoutesState on _MapPageState {
     _draftRoutePoints = <LatLng>[];
     _draftRoutePolyline = <LatLng>[];
     _routePolylineWaypoints = <LatLng>[];
-    _hazardColoredRouteSegments = <dynamic>[];
+    _hazardColoredRouteSegments = <ColoredRouteSegment>[];
     _activeNavigationInstructions = const <RouteNavigationInstruction>[];
     _spokenFarApproachInstructionIds.clear();
     _spokenApproachInstructionIds.clear();
@@ -490,23 +490,24 @@ extension _MapPageRoutesState on _MapPageState {
     }
 
     try {
-      final PlannedRouteResult routeResult = await _routingService.buildRoadRoute(
-        waypoints: waypoints,
-        hazardRiskFilters: _selectedTripHazardRiskFilters.toList(
-          growable: false,
-        ),
-        travelMode: _selectedTripTransport == _TripTransportMethod.vehicle
-            ? 'vehicle'
-            : 'walking',
-        tripConfig: <String, Object?>{
-          'selected_pet_ids': _selectedTripPetIds.toList(growable: false),
-          'selected_route_id': _selectedTripRoute?.id,
-          'transport_method': _selectedTripTransport.name,
-          'hazard_risk_filters': _selectedTripHazardRiskFilters.toList(
-            growable: false,
-          ),
-        },
-      );
+      final PlannedRouteResult routeResult = await _routingService
+          .buildRoadRoute(
+            waypoints: waypoints,
+            hazardRiskFilters: _selectedTripHazardRiskFilters.toList(
+              growable: false,
+            ),
+            travelMode: _selectedTripTransport == _TripTransportMethod.vehicle
+                ? 'vehicle'
+                : 'walking',
+            tripConfig: <String, Object?>{
+              'selected_pet_ids': _selectedTripPetIds.toList(growable: false),
+              'selected_route_id': _selectedTripRoute?.id,
+              'transport_method': _selectedTripTransport.name,
+              'hazard_risk_filters': _selectedTripHazardRiskFilters.toList(
+                growable: false,
+              ),
+            },
+          );
       if (!mounted || requestVersion != _routePolylineRequestVersion) {
         return;
       }

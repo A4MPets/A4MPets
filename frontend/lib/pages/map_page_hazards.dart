@@ -346,7 +346,7 @@ extension _MapPageHazardsState on _MapPageState {
 
   void _analyzeRouteForHazards() {
     if (_draftRoutePolyline.length < 2) {
-      _hazardColoredRouteSegments = <dynamic>[];
+      _hazardColoredRouteSegments = <ColoredRouteSegment>[];
       return;
     }
 
