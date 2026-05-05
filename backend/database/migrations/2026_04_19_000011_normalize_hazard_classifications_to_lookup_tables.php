@@ -157,7 +157,7 @@ return new class extends Migration
             ['code' => 'undefined', 'label' => 'Sin definir', 'sort_order' => 0, 'created_at' => $now, 'updated_at' => $now],
             ['code' => 'contagious_disease', 'label' => 'Enfermedad contagiosa', 'sort_order' => 1, 'created_at' => $now, 'updated_at' => $now],
             ['code' => 'stagnant_water', 'label' => 'Agua estancada', 'sort_order' => 2, 'created_at' => $now, 'updated_at' => $now],
-            ['code' => 'waste_accumulation', 'label' => 'Acumulacion de residuos', 'sort_order' => 3, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'waste_accumulation', 'label' => 'Acumulación de residuos', 'sort_order' => 3, 'created_at' => $now, 'updated_at' => $now],
             ['code' => 'aggressive_animals', 'label' => 'Animales agresivos', 'sort_order' => 4, 'created_at' => $now, 'updated_at' => $now],
         ]);
 

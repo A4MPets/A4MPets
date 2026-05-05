@@ -121,7 +121,7 @@ class HazardReportRecord {
       case 'stagnant_water':
         return 'Aguas estancadas';
       case 'waste_accumulation':
-        return 'Acumulacion de residuos';
+        return 'Acumulación de residuos';
       case 'pest_presence':
         return 'Presencia de plagas';
       case 'possible_rabies_vectors':

@@ -1095,7 +1095,7 @@ extension _MapPageReportsState on _MapPageState {
             ),
           ),
           content: Text(
-            'Esta accion es solo para debug. ¿Deseas continuar?',
+            'Esta acción es solo para debug. ¿Deseas continuar?',
             style: TextStyle(color: AppPalette.dialogBody(isDarkMode)),
           ),
           actions: <Widget>[

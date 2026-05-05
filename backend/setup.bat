@@ -42,7 +42,7 @@ if errorlevel 1 goto error
 
 echo.
 echo ===================================
-echo Configuracion completada exitosamente!
+echo Configuración completada exitosamente!
 echo ===================================
 echo.
 echo Pasos finales:

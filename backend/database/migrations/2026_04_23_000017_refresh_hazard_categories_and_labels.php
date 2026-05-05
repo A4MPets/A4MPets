@@ -22,7 +22,7 @@ return new class extends Migration
             ->update(['label' => 'Aguas estancadas', 'updated_at' => $now]);
         DB::table('hazard_categories')
             ->where('code', 'waste_accumulation')
-            ->update(['label' => 'Acumulacion de residuos', 'updated_at' => $now]);
+            ->update(['label' => 'Acumulación de residuos', 'updated_at' => $now]);
 
         DB::table('hazard_estimated_durations')
             ->where('code', 'undefined')
@@ -75,7 +75,7 @@ return new class extends Migration
             ->update(['label' => 'Agua estancada', 'updated_at' => $now]);
         DB::table('hazard_categories')
             ->where('code', 'waste_accumulation')
-            ->update(['label' => 'Acumulacion de residuos', 'updated_at' => $now]);
+            ->update(['label' => 'Acumulación de residuos', 'updated_at' => $now]);
         DB::table('hazard_estimated_durations')
             ->where('code', 'undefined')
             ->update(['label' => 'Sin definir', 'updated_at' => $now]);

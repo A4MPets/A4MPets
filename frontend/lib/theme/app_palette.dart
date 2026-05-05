@@ -25,7 +25,7 @@ class AppPalette {
   static const Color white = Color(0xFFFFFFFF);
   static const Color charcoal = Color(0xFF404040);
   static const Color textMutedDark = Color(0xFFAAAAAA);
-  static const Color borderLight = Color(0xFFD9D9D9);
+  static const Color borderLight = Color.fromARGB(255, 110, 110, 110);
 
   static const Color cardDark = Color(0xFF2D2D2D);
   static const Color cardLight = Color(0xFFF4F4F4);

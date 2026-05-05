@@ -188,7 +188,7 @@ class _GenericReportPanelContentState
 
     if (_descriptionController.text.trim().isEmpty) {
       setState(() {
-        _descriptionErrorText = 'La descripcion es obligatoria.';
+        _descriptionErrorText = 'La descripción es obligatoria.';
       });
     }
 
@@ -264,7 +264,7 @@ class _GenericReportPanelContentState
               children: [
                 LocationPickerWidget(
                   isDarkMode: widget.isDarkMode,
-                  title: 'Ubicacion del reporte',
+                  title: 'Ubicación del reporte',
                   subtitle: 'Selecciona donde ocurre la situacion.',
                   hasManualLocation: widget.selectedLocation != null,
                   hasCurrentLocation: widget.currentDeviceLocation != null,
@@ -274,7 +274,7 @@ class _GenericReportPanelContentState
                 ),
                 const SizedBox(height: 10),
                 ReportingLabeledField(
-                  label: 'Descripcion',
+                  label: 'Descripción',
                   child: ReportingTextField(
                     isDarkMode: widget.isDarkMode,
                     controller: _descriptionController,

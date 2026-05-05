@@ -1,6 +1,6 @@
 # Inventario del backend
 
-Este archivo resume la funcion de cada archivo `.php` del backend, agrupado por carpetas.
+Este archivo resume la función de cada archivo `.php` del backend, agrupado por carpetas.
 
 ## app/
 
@@ -10,22 +10,22 @@ Este archivo resume la funcion de cada archivo `.php` del backend, agrupado por 
 - Controlador base compartido por los controladores de la aplicacion.
 
 #### app/Http/Controllers/AuthController.php
-- Gestiona registro, inicio de sesion, perfil actual, cierre de sesion y actualizacion del perfil autenticado.
+- Gestiona registro, inicio de sesion, perfil actual, cierre de sesion y actualización del perfil autenticado.
 
 #### app/Http/Controllers/HazardReportController.php
-- Expone el CRUD, busqueda, comentarios y sincronizacion de peligros, con resolucion de conflictos por timestamps.
+- Expone el CRUD, busqueda, comentarios y sincronización de peligros, con resolución de conflictos por timestamps.
 
 #### app/Http/Controllers/MediaController.php
 - Recibe imagenes en data URI o base64, las guarda por bucket y sirve archivos de media publicos.
 
 #### app/Http/Controllers/PetController.php
-- Maneja el listado, alta, edicion, borrado y sincronizacion de mascotas por usuario.
+- Maneja el listado, alta, edicion, borrado y sincronización de mascotas por usuario.
 
 #### app/Http/Controllers/RoutePlanningController.php
-- Valida solicitudes de planificacion y delega el calculo de ruta al servicio de GraphHopper.
+- Valida solicitudes de planificación y delega el calculo de ruta al servicio de GraphHopper.
 
 #### app/Http/Controllers/TravelRouteController.php
-- Administra el listado, alta, edicion, borrado y sincronizacion de rutas con sus puntos.
+- Administra el listado, alta, edicion, borrado y sincronización de rutas con sus puntos.
 
 ### app/Http/Middleware/
 
@@ -38,7 +38,7 @@ Este archivo resume la funcion de cada archivo `.php` del backend, agrupado por 
 - Modelo autenticable principal de Laravel, con relaciones hacia tokens, peligros, mascotas y rutas.
 
 #### app/Models/ApiToken.php
-- Representa los tokens API persistidos en la base de datos y su relacion con el usuario.
+- Representa los tokens API persistidos en la base de datos y su relación con el usuario.
 
 #### app/Models/Pet.php
 - Modelo de mascotas sincronizables, vinculado a usuario y campos locales/remotos.
@@ -53,7 +53,7 @@ Este archivo resume la funcion de cada archivo `.php` del backend, agrupado por 
 - Modelo principal de peligros; normaliza codigos, expone comentarios como JSON y resuelve conflictos LWW.
 
 #### app/Models/HazardComment.php
-- Modelo de comentarios de peligros, con hash de contenido y normalizacion de timestamps.
+- Modelo de comentarios de peligros, con hash de contenido y normalización de timestamps.
 
 #### app/Models/HazardCategory.php
 - Catálogo de categorias de peligro y helper para resolver IDs por codigo.
@@ -85,34 +85,34 @@ Este archivo resume la funcion de cada archivo `.php` del backend, agrupado por 
 ## config/
 
 #### config/app.php
-- Configuracion general de Laravel: nombre, entorno, locale, providers y aliases.
+- Configuración general de Laravel: nombre, entorno, locale, providers y aliases.
 
 #### config/auth.php
-- Configuracion de autenticacion, guards y providers.
+- Configuración de autenticacion, guards y providers.
 
 #### config/cache.php
-- Configuracion del sistema de cache.
+- Configuración del sistema de cache.
 
 #### config/cors.php
 - Reglas de CORS para exponer la API al frontend.
 
 #### config/database.php
-- Configuracion de conexiones, drivers y credenciales de base de datos.
+- Configuración de conexiones, drivers y credenciales de base de datos.
 
 #### config/filesystems.php
-- Configuracion de discos locales y publicos para archivos y media.
+- Configuración de discos locales y publicos para archivos y media.
 
 #### config/logging.php
-- Configuracion de canales y niveles de logging.
+- Configuración de canales y niveles de logging.
 
 #### config/mail.php
-- Configuracion del transporte y opciones de correo.
+- Configuración del transporte y opciones de correo.
 
 #### config/queue.php
-- Configuracion de colas y conexiones de jobs.
+- Configuración de colas y conexiones de jobs.
 
 #### config/session.php
-- Configuracion de sesiones, almacenamiento y cookies.
+- Configuración de sesiones, almacenamiento y cookies.
 
 #### config/services.php
 - Credenciales y endpoints externos, incluyendo GraphHopper y otros servicios integrados.
@@ -142,7 +142,7 @@ Este archivo resume la funcion de cada archivo `.php` del backend, agrupado por 
 - Actualiza el esquema de peligros para soportar codigos `undefined` y campos normalizados.
 
 #### database/migrations/2026_04_15_000005_create_api_tokens_table.php
-- Crea la tabla de tokens API usados por la autenticacion propia del backend.
+- Crea la tabla de tokens API usados por la autenticación propia del backend.
 
 #### database/migrations/2026_04_15_000006_create_pets_table.php
 - Crea la tabla de mascotas sincronizables.
@@ -160,7 +160,7 @@ Este archivo resume la funcion de cada archivo `.php` del backend, agrupado por 
 - Crea la tabla de comentarios de peligros.
 
 #### database/migrations/2026_04_19_000011_normalize_hazard_classifications_to_lookup_tables.php
-- Normaliza categoria, riesgo y duracion de peligros hacia tablas catalogo.
+- Normaliza categoria, riesgo y duración de peligros hacia tablas catalogo.
 
 #### database/migrations/2026_04_19_000012_normalize_route_points_into_child_table.php
 - Normaliza los puntos de rutas hacia la tabla hija `route_points`.
@@ -181,7 +181,7 @@ Este archivo resume la funcion de cada archivo `.php` del backend, agrupado por 
 ## routes/
 
 #### routes/api.php
-- Registra los endpoints JSON de auth, peligros, mascotas, rutas, media y planificacion de rutas.
+- Registra los endpoints JSON de auth, peligros, mascotas, rutas, media y planificación de rutas.
 
 #### routes/console.php
 - Registra comandos Artisan y tareas de consola.
@@ -192,7 +192,7 @@ Este archivo resume la funcion de cada archivo `.php` del backend, agrupado por 
 ## scripts/
 
 #### scripts/test_route_plan.php
-- Script de prueba rapida para llamar al endpoint de planificacion de ruta y revisar la respuesta.
+- Script de prueba rapida para llamar al endpoint de planificación de ruta y revisar la respuesta.
 
 ## tests/
 

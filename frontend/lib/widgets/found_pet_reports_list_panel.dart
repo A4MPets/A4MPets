@@ -224,7 +224,7 @@ class _FoundReportCard extends StatelessWidget {
           const SizedBox(height: 10),
           ReportingSecondaryButton(
             isDarkMode: isDarkMode,
-            label: 'Ir a ubicacion',
+            label: 'Ir a ubicación',
             onPressed: () =>
                 onGoToLocation(LatLng(report.latitude, report.longitude)),
           ),
@@ -267,7 +267,7 @@ class _FoundPetInfoSummary extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Informacion de la mascota',
+            'Información de la mascota',
             style: TextStyle(
               color: textColor,
               fontSize: 13,

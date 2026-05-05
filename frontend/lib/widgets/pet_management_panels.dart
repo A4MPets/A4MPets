@@ -321,11 +321,13 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
     return '$day/$month/${date.year}';
   }
 
+
   @override
   Widget build(BuildContext context) {
     final Color borderColor = AppPalette.border(widget.isDarkMode);
     final Color textColor = AppPalette.textPrimary(widget.isDarkMode);
     final double keyboardInset = MediaQuery.of(context).viewInsets.bottom;
+
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -357,7 +359,7 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
                       style: TextStyle(
                         color: textColor,
                         fontSize: 20,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w100,
                       ),
                     );
                   },
@@ -375,7 +377,7 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
             const SizedBox(height: 8),
             _OptionalDateButton(
               isDarkMode: widget.isDarkMode,
-              title: 'Fecha de adopcion',
+              title: 'Fecha de adopción',
               valueText: _formatOptionalDate(
                 _adoptionDate,
                 'Seleccionar fecha',
@@ -732,9 +734,8 @@ class _OptionalDateButton extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: onPressed,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppPalette.white,
-                    backgroundColor: AppPalette.primaryBlue,
-                    side: const BorderSide(color: AppPalette.primaryBlue),
+                    foregroundColor: AppPalette.textMutedDark,
+                    backgroundColor: AppPalette.fieldBackground(isDarkMode),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -747,8 +748,9 @@ class _OptionalDateButton extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
+                        color: AppPalette.textMutedDark,
                         fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w100,
                       ),
                     ),
                   ),
@@ -1083,7 +1085,7 @@ class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
               const SizedBox(height: 8),
               _OptionalDateButton(
                 isDarkMode: widget.isDarkMode,
-                title: 'Fecha de adopcion',
+                title: 'Fecha de adopción',
                 valueText: _formatOptionalDate(
                   _adoptionDate,
                   'Seleccionar fecha',

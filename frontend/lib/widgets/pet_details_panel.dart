@@ -84,7 +84,7 @@ class PetDetailsPanelContent extends ConsumerWidget {
                 ),
                 if (pet.adoptionDate != null)
                   _InfoRow(
-                    label: 'Fecha de adopcion',
+                    label: 'Fecha de adopción',
                     value: _formatDate(pet.adoptionDate!),
                   ),
                 if (pet.birthDate != null)

@@ -82,7 +82,7 @@ class GenericReportDetailsPanelContent extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 8),
-                _DetailsRow(label: 'Descripcion', value: report.description),
+                _DetailsRow(label: 'Descripción', value: report.description),
               ],
             ),
           ),

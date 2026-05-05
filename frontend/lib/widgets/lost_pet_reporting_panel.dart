@@ -139,7 +139,7 @@ class _LostPetReportingPanelContentState
 
     if (resolvedLocation == null) {
       _locationErrorText =
-          'Necesitamos una ubicacion valida para reportar la mascota perdida.';
+          'Necesitamos una ubicación valida para reportar la mascota perdida.';
     }
     if (selectedPet == null) {
       _petErrorText = 'Selecciona la mascota perdida.';
@@ -225,7 +225,7 @@ class _LostPetReportingPanelContentState
               children: [
                 LocationPickerWidget(
                   isDarkMode: widget.isDarkMode,
-                  title: 'Ultima ubicacion vista',
+                  title: 'Ultima ubicación vista',
                   subtitle: 'Selecciona donde fue vista por ultima vez.',
                   hasManualLocation: widget.selectedLocation != null,
                   hasCurrentLocation: widget.currentDeviceLocation != null,
@@ -270,7 +270,7 @@ class _LostPetReportingPanelContentState
                 ),
                 const SizedBox(height: 8),
                 ReportingLabeledField(
-                  label: 'Fecha de desaparicion',
+                  label: 'Fecha de desaparición',
                   child: ReportingDateField(
                     isDarkMode: widget.isDarkMode,
                     valueText: _formatDate(_disappearanceDate),

@@ -416,9 +416,9 @@ class ReportingDateField extends StatelessWidget {
       child: OutlinedButton.icon(
         onPressed: onTap,
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppPalette.white,
-          side: const BorderSide(color: AppPalette.primaryBlue),
-          backgroundColor: AppPalette.primaryBlue,
+          foregroundColor: AppPalette.textMutedDark,
+          side: const BorderSide(color: AppPalette.textMutedDark),
+          backgroundColor: AppPalette.fieldBackground(isDarkMode),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

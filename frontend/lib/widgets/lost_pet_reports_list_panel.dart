@@ -229,7 +229,7 @@ class _LostReportCard extends StatelessWidget {
               Expanded(
                 child: ReportingSecondaryButton(
                   isDarkMode: isDarkMode,
-                  label: 'Ubicacion',
+                  label: 'Ubicación',
                   onPressed: () => onGoToLocation(
                     LatLng(report.lastSeenLatitude, report.lastSeenLongitude),
                   ),

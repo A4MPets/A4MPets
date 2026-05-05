@@ -52,7 +52,7 @@ class HazardLayersPanelContent extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Indice de visualizacion',
+            'Indice de visualización',
             style: TextStyle(
               color: textColor,
               fontSize: 15,
@@ -100,7 +100,7 @@ class HazardLayersPanelContent extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'Audio de navegacion y alertas',
+                    'Audio de navegación y alertas',
                     style: TextStyle(
                       color: textColor,
                       fontSize: 13,

@@ -77,7 +77,7 @@ flutter pub get
 flutter run -d chrome
 ```
 
-### 4) Configuracion de backend para GraphHopper local
+### 4) Configuración de backend para GraphHopper local
 
 En backend/.env:
 

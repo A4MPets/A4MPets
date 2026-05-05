@@ -266,7 +266,7 @@ class _FoundPetReportingPanelContentState
               children: [
                 LocationPickerWidget(
                   isDarkMode: widget.isDarkMode,
-                  title: 'Ubicacion encontrada',
+                  title: 'Ubicación encontrada',
                   subtitle: 'Selecciona el lugar donde encontraste la mascota.',
                   hasManualLocation: widget.selectedLocation != null,
                   hasCurrentLocation: widget.currentDeviceLocation != null,

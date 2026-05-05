@@ -395,7 +395,7 @@ class _MapWidgetState extends State<MapWidget>
       _emitUserLocationStatus(
         isLoading: false,
         errorText: permission == LocationPermission.deniedForever
-            ? 'Los permisos de ubicacion estan bloqueados. Debes habilitarlos manualmente.'
+            ? 'Los permisos de ubicación estan bloqueados. Debes habilitarlos manualmente.'
             : 'Debes habilitar los permisos de ubicacion.',
       );
     });

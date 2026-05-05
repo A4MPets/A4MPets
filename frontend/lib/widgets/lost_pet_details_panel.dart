@@ -64,7 +64,7 @@ class LostPetDetailsPanelContent extends StatelessWidget {
                   if (pet!.adoptionDate != null)
                     _DetailsRow(
                       isDarkMode: isDarkMode,
-                      label: 'Fecha de adopcion',
+                      label: 'Fecha de adopción',
                       value: _formatDate(pet!.adoptionDate!),
                     ),
                   if (pet!.birthDate != null)
@@ -79,12 +79,12 @@ class LostPetDetailsPanelContent extends StatelessWidget {
                 const SizedBox(height: 8),
                 _DetailsRow(
                   isDarkMode: isDarkMode,
-                  label: 'Fecha de desaparicion',
+                  label: 'Fecha de desaparición',
                   value: _formatDate(report.disappearanceDate),
                 ),
                 _DetailsRow(
                   isDarkMode: isDarkMode,
-                  label: 'Ultima ubicacion',
+                  label: 'Ultima ubicación',
                   value:
                       '${report.lastSeenLatitude.toStringAsFixed(5)}, ${report.lastSeenLongitude.toStringAsFixed(5)}',
                 ),

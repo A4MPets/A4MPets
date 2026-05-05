@@ -95,7 +95,7 @@ class FoundPetDetailsPanelContent extends StatelessWidget {
                   if (selectedPet.adoptionDate != null) ...[
                     const SizedBox(height: 8),
                     _DetailsRow(
-                      label: 'Fecha de adopcion',
+                      label: 'Fecha de adopción',
                       value: _formatDate(selectedPet.adoptionDate!),
                       isDarkMode: isDarkMode,
                     ),
@@ -139,7 +139,7 @@ class FoundPetDetailsPanelContent extends StatelessWidget {
                     onPressed: onViewMatchedLostReport,
                   ),
                 ],
-                if (showReportImage) ...[
+                if (showReportImage && reportImageSource != petImageSource) ...[
                   const SizedBox(height: 12),
                   _FoundImageSection(
                     title: 'Foto del reporte',

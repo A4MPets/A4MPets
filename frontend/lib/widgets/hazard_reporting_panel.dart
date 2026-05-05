@@ -60,7 +60,7 @@ class _ReportHazardPanelContentState
         ReportingSelectionOption('stagnant_water', 'Aguas estancadas'),
         ReportingSelectionOption(
           'waste_accumulation',
-          'Acumulacion de residuos',
+          'Acumulación de residuos',
         ),
         ReportingSelectionOption('pest_presence', 'Presencia de plagas'),
         ReportingSelectionOption(
@@ -203,7 +203,7 @@ class _ReportHazardPanelContentState
     final String narrativeDescription = _descriptionController.text.trim();
     if (narrativeDescription.isEmpty) {
       setState(() {
-        _descriptionErrorText = 'La descripcion del peligro es obligatoria.';
+        _descriptionErrorText = 'La descripción del peligro es obligatoria.';
         _submitValidationErrorText =
             'Completa los campos obligatorios para reportar.';
       });
@@ -275,7 +275,7 @@ class _ReportHazardPanelContentState
               children: [
                 LocationPickerWidget(
                   isDarkMode: widget.isDarkMode,
-                  title: 'Ubicacion del peligro',
+                  title: 'Ubicación del peligro',
                   subtitle: 'Selecciona el lugar del peligro.',
                   hasManualLocation: widget.selectedHazardLocation != null,
                   hasCurrentLocation: widget.currentDeviceLocation != null,
@@ -319,7 +319,7 @@ class _ReportHazardPanelContentState
                 ),
                 const SizedBox(height: 8),
                 ReportingLabeledField(
-                  label: 'Descripcion del peligro',
+                  label: 'Descripción del peligro',
                   child: ReportingTextField(
                     isDarkMode: widget.isDarkMode,
                     controller: _descriptionController,
@@ -344,7 +344,7 @@ class _ReportHazardPanelContentState
                 ),
                 const SizedBox(height: 8),
                 ReportingLabeledField(
-                  label: 'Duracion aproximada',
+                  label: 'Duración aproximada',
                   child: ReportingDropdownField(
                     isDarkMode: widget.isDarkMode,
                     value: _selectedDurationCode,

@@ -193,7 +193,7 @@ class _LocationStatusChip extends StatelessWidget {
 
     if (hasManualLocation) {
       icon = Icons.edit_location_alt_rounded;
-      label = 'Ubicacion marcada en el mapa';
+      label = 'Ubicación marcada en el mapa';
       color = AppPalette.primaryBlue;
     } else if (hasCurrentLocation) {
       icon = Icons.my_location_rounded;
