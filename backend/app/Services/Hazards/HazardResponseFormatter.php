@@ -22,7 +22,6 @@ class HazardResponseFormatter
             'is_anonymous' => $comment->is_anonymous,
             'comment_text' => $comment->comment_text,
             'created_at' => optional($comment->commented_at ?? $comment->created_at)?->toIso8601String(),
-            'last_modified_at' => optional($comment->last_modified_at)?->toIso8601String(),
         ];
     }
 
@@ -46,10 +45,6 @@ class HazardResponseFormatter
             'reported_by_username' => $hazard->reported_by_username,
             'user_id' => $hazard->user_id,
             'status' => $hazard->status,
-            'local_id' => $hazard->local_id,
-            'remote_id' => $hazard->remote_id,
-            'last_modified_at' => optional($hazard->last_modified_at)?->toIso8601String(),
-            'synced_at' => optional($hazard->synced_at)?->toIso8601String(),
             'comments_json' => $hazard->comments_json,
         ];
     }

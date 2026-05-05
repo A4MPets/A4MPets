@@ -15,14 +15,10 @@ class GenericReportService
 
     public function paginate(bool $includeArchived, int $perPage, int $page): LengthAwarePaginator
     {
-        $query = GenericReport::query()->with(['comments', 'comments.user']);
-
-        if (! $includeArchived) {
-            $query->where('sync_status', '!=', 'deleted');
-        }
+        $query = GenericReport::query()->with(['user', 'comments', 'comments.user']);
 
         return $query
-            ->orderByDesc('last_modified_at')
+            ->orderByDesc('updated_at')
             ->paginate($perPage, ['*'], 'page', $page);
     }
 
@@ -31,31 +27,18 @@ class GenericReportService
      */
     public function store(?int $userId, array $validated): GenericReport
     {
-        $comments = (array) ($validated['comments'] ?? []);
-        $report = GenericReport::updateOrCreate(
-            ['local_id' => $validated['local_id']],
-            [
-                'user_id' => $userId,
-                'latitude' => $validated['latitude'],
-                'longitude' => $validated['longitude'],
-                'description' => $validated['description'],
-                'reported_date' => $validated['reported_date'],
-                'risk_level_code' => $this->normalizeRiskCode($validated['risk_level_code']),
-                'impact_radius_meters' => $this->normalizeImpactRadiusMeters($validated['impact_radius_meters'] ?? 0),
-                'photo_url' => $validated['photo_url'] ?? null,
-                'sync_status' => 'synced',
-                'last_modified_at' => now(),
-                'synced_at' => now(),
-            ]
-        );
+        $report = GenericReport::create([
+            'user_id' => $userId,
+            'latitude' => $validated['latitude'],
+            'longitude' => $validated['longitude'],
+            'description' => $validated['description'],
+            'reported_date' => $validated['reported_date'],
+            'risk_level_code' => $this->normalizeRiskCode($validated['risk_level_code']),
+            'impact_radius_meters' => $this->normalizeImpactRadiusMeters($validated['impact_radius_meters'] ?? 0),
+            'photo_url' => $validated['photo_url'] ?? null,
+        ]);
 
-        $this->ensureRemoteId($report);
-
-        if ($comments !== []) {
-            $this->reportCommentService->syncComments($report, $comments);
-        }
-
-        return $report->refresh()->load(['comments', 'comments.user']);
+        return $report->refresh()->load(['user', 'comments', 'comments.user']);
     }
 
     /**
@@ -63,7 +46,6 @@ class GenericReportService
      */
     public function update(GenericReport $report, array $validated): GenericReport
     {
-        $comments = (array) ($validated['comments'] ?? []);
         $report->update([
             'latitude' => $validated['latitude'],
             'longitude' => $validated['longitude'],
@@ -72,25 +54,20 @@ class GenericReportService
             'risk_level_code' => $this->normalizeRiskCode($validated['risk_level_code']),
             'impact_radius_meters' => $this->normalizeImpactRadiusMeters($validated['impact_radius_meters'] ?? 0),
             'photo_url' => $validated['photo_url'] ?? null,
-            'sync_status' => 'synced',
-            'last_modified_at' => now(),
-            'synced_at' => now(),
         ]);
 
-        if ($comments !== []) {
-            $this->reportCommentService->syncComments($report, $comments);
-        }
-
-        return $report->refresh()->load(['comments', 'comments.user']);
+        return $report->refresh()->load(['user', 'comments', 'comments.user']);
     }
 
     public function delete(GenericReport $report): void
     {
-        $report->update([
-            'sync_status' => 'deleted',
-            'last_modified_at' => now(),
-            'synced_at' => now(),
-        ]);
+        $report->comments()->delete();
+        $report->delete();
+    }
+
+    public function canMutate(?int $userId, GenericReport $report): bool
+    {
+        return $userId !== null && (int) $report->user_id === (int) $userId;
     }
 
     /**

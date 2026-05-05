@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../models/hazard_report_record.dart';
 import '../theme/app_palette.dart';
-import 'shared/panel_scroll_view.dart';
+import 'shared/image_preview_dialog.dart';
 import 'shared/local_image_widget.dart';
+import 'shared/panel_scroll_view.dart';
 
 class HazardDetailsPanelContent extends StatelessWidget {
   final bool isDarkMode;
@@ -235,12 +236,17 @@ class _HazardPhotoPreview extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: photoSource != null && photoSource!.isNotEmpty
-            ? buildLocalImageWidget(
-                source: photoSource,
-                fit: BoxFit.cover,
-                fallback: const _NoPhotoPlaceholder(),
-                errorBuilder: (context, error, stackTrace) =>
-                    const _NoPhotoPlaceholder(),
+            ? ExpandableImage(
+                source: photoSource!,
+                isDarkMode: isDarkMode,
+                title: 'Foto del peligro',
+                child: buildLocalImageWidget(
+                  source: photoSource,
+                  fit: BoxFit.cover,
+                  fallback: const _NoPhotoPlaceholder(),
+                  errorBuilder: (context, error, stackTrace) =>
+                      const _NoPhotoPlaceholder(),
+                ),
               )
             : const _NoPhotoPlaceholder(),
       ),

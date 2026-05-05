@@ -8,11 +8,15 @@ class FoundPetReportRecord {
   final String? remoteId;
   final String syncStatus;
   final DateTime lastModifiedAt;
+  final int? petId;
+  final String? petLocalUuid;
+  final int? matchedLostPetReportId;
   final double latitude;
   final double longitude;
   final String details;
   final DateTime foundDate;
   final String? photoUrl;
+  final String? petPhotoUrl;
   final String? phone;
   final List<ReportCommentRecord> comments;
   final DateTime createdAt;
@@ -25,11 +29,15 @@ class FoundPetReportRecord {
     required this.remoteId,
     required this.syncStatus,
     required this.lastModifiedAt,
+    required this.petId,
+    required this.petLocalUuid,
+    required this.matchedLostPetReportId,
     required this.latitude,
     required this.longitude,
     required this.details,
     required this.foundDate,
     required this.photoUrl,
+    required this.petPhotoUrl,
     required this.phone,
     required this.comments,
     required this.createdAt,
@@ -54,11 +62,16 @@ class FoundPetReportRecord {
       remoteId: map['remote_id']?.toString(),
       syncStatus: map['sync_status'] as String? ?? 'created',
       lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(lastModifiedMs),
+      petId: (map['pet_id'] as num?)?.toInt(),
+      petLocalUuid: map['pet_local_uuid'] as String?,
+      matchedLostPetReportId: (map['matched_lost_pet_report_id'] as num?)
+          ?.toInt(),
       latitude: (map['latitude'] as num).toDouble(),
       longitude: (map['longitude'] as num).toDouble(),
       details: map['details'] as String? ?? '',
       foundDate: DateTime.fromMillisecondsSinceEpoch(foundDateMs),
       photoUrl: map['photo_url'] as String?,
+      petPhotoUrl: map['pet_photo_url'] as String?,
       phone: map['phone'] as String?,
       comments: rawComments
           .map(
@@ -79,11 +92,15 @@ class FoundPetReportRecord {
       'remote_id': remoteId,
       'sync_status': syncStatus,
       'last_modified_at': lastModifiedAt.millisecondsSinceEpoch,
+      'pet_id': petId,
+      'pet_local_uuid': petLocalUuid,
+      'matched_lost_pet_report_id': matchedLostPetReportId,
       'latitude': latitude,
       'longitude': longitude,
       'details': details,
       'found_date': foundDate.millisecondsSinceEpoch,
       'photo_url': photoUrl,
+      'pet_photo_url': petPhotoUrl,
       'phone': phone,
       'comments_json': jsonEncode(
         comments.map((ReportCommentRecord c) => c.toMap()).toList(),

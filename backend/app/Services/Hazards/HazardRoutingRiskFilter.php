@@ -10,12 +10,12 @@ class HazardRoutingRiskFilter
     public function normalizeSelectedFilters(?array $filters): array
     {
         if ($filters === null) {
-            return ['low', 'medium', 'high'];
+            return ['low', 'medium', 'high', 'other'];
         }
 
         $normalized = collect($filters)
             ->map(static fn ($value) => strtolower(trim((string) $value)))
-            ->filter(static fn (string $value) => in_array($value, ['low', 'medium', 'high'], true))
+            ->filter(static fn (string $value) => in_array($value, ['low', 'medium', 'high', 'other'], true))
             ->unique()
             ->values()
             ->all();
@@ -46,5 +46,13 @@ class HazardRoutingRiskFilter
         }
 
         return in_array($this->routingBucketForRiskCode($riskLevelCode), $selectedFilters, true);
+    }
+
+    /**
+     * @param  array<int, string>  $selectedFilters
+     */
+    public function shouldAvoidOtherReports(array $selectedFilters): bool
+    {
+        return in_array('other', $selectedFilters, true);
     }
 }

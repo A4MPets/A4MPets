@@ -22,7 +22,6 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
 
         GenericReport::create([
             'user_id' => $user->id,
-            'local_id' => 'generic-route-1',
             'latitude' => 3.4516,
             'longitude' => -76.5320,
             'description' => 'Sharp debris near the route',
@@ -30,14 +29,10 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
             'risk_level_code' => 'medium',
             'impact_radius_meters' => 60,
             'photo_url' => null,
-            'sync_status' => 'synced',
-            'last_modified_at' => now(),
-            'synced_at' => now(),
         ]);
 
         GenericReport::create([
             'user_id' => $user->id,
-            'local_id' => 'generic-route-2',
             'latitude' => 3.4518,
             'longitude' => -76.5322,
             'description' => 'Informational report only',
@@ -45,9 +40,6 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
             'risk_level_code' => 'low',
             'impact_radius_meters' => 0,
             'photo_url' => null,
-            'sync_status' => 'synced',
-            'last_modified_at' => now(),
-            'synced_at' => now(),
         ]);
 
         Http::fake([
@@ -83,7 +75,7 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
                 ['lat' => 3.4600, 'lng' => -76.5400],
             ],
             'avoid_hazards' => true,
-            'hazard_risk_filters' => ['low', 'medium', 'high'],
+            'hazard_risk_filters' => ['low', 'medium', 'high', 'other'],
             'travel_mode' => 'walking',
         ], $headers);
 
@@ -91,6 +83,7 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.used_hazard_avoidance', true)
             ->assertJsonPath('data.hazards_considered', 1)
+            ->assertJsonPath('meta.hazard_risk_filters.3', 'other')
             ->assertJsonPath('data.navigation_instructions.0.sign', 2)
             ->assertJsonPath('data.navigation_instructions.0.point_start_index', 0)
             ->assertJsonPath('data.navigation_instructions.0.point_end_index', 1);
@@ -105,6 +98,64 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
         });
     }
 
+    public function test_route_planning_ignores_generic_reports_when_other_filter_is_not_selected(): void
+    {
+        $user = User::factory()->create();
+        $headers = $this->authHeaders($user);
+
+        GenericReport::create([
+            'user_id' => $user->id,
+            'latitude' => 3.4516,
+            'longitude' => -76.5320,
+            'description' => 'Other report near the route',
+            'reported_date' => now(),
+            'risk_level_code' => 'high',
+            'impact_radius_meters' => 60,
+            'photo_url' => null,
+        ]);
+
+        Http::fake([
+            '*' => Http::response([
+                'paths' => [
+                    [
+                        'distance' => 1200.0,
+                        'time' => 900000.0,
+                        'points' => [
+                            'coordinates' => [
+                                [-76.5320, 3.4516],
+                                [-76.5400, 3.4600],
+                            ],
+                        ],
+                        'instructions' => [],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $response = $this->postJson('/api/routes/plan', [
+            'points' => [
+                ['lat' => 3.4516, 'lng' => -76.5320],
+                ['lat' => 3.4600, 'lng' => -76.5400],
+            ],
+            'avoid_hazards' => true,
+            'hazard_risk_filters' => ['low', 'medium', 'high'],
+            'travel_mode' => 'walking',
+        ], $headers);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.used_hazard_avoidance', true)
+            ->assertJsonPath('data.hazards_considered', 0);
+
+        Http::assertSent(function ($request): bool {
+            $data = $request->data();
+
+            return ! array_key_exists('custom_model', $data) &&
+                ($data['instructions'] ?? null) === true &&
+                ($data['locale'] ?? null) === 'es';
+        });
+    }
+
     public function test_route_planning_treats_unknown_risk_as_high(): void
     {
         $user = User::factory()->create();
@@ -112,7 +163,6 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
 
         HazardReport::create([
             'user_id' => $user->id,
-            'local_id' => 'hazard-routing-unknown',
             'incident_latitude' => 3.4516,
             'incident_longitude' => -76.5320,
             'impact_radius_meters' => 35,
@@ -124,13 +174,10 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
             'reported_at' => now(),
             'reported_by_username' => 'Tester',
             'status' => 'synced',
-            'last_modified_at' => now(),
-            'synced_at' => now(),
         ]);
 
         HazardReport::create([
             'user_id' => $user->id,
-            'local_id' => 'hazard-routing-medium',
             'incident_latitude' => 3.4517,
             'incident_longitude' => -76.5321,
             'impact_radius_meters' => 35,
@@ -142,8 +189,6 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
             'reported_at' => now(),
             'reported_by_username' => 'Tester',
             'status' => 'synced',
-            'last_modified_at' => now(),
-            'synced_at' => now(),
         ]);
 
         Http::fake([
@@ -197,7 +242,6 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
 
         GenericReport::create([
             'user_id' => $user->id,
-            'local_id' => 'generic-route-empty',
             'latitude' => 3.4516,
             'longitude' => -76.5320,
             'description' => 'Would normally affect routing',
@@ -205,9 +249,6 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
             'risk_level_code' => 'high',
             'impact_radius_meters' => 80,
             'photo_url' => null,
-            'sync_status' => 'synced',
-            'last_modified_at' => now(),
-            'synced_at' => now(),
         ]);
 
         Http::fake([

@@ -23,6 +23,7 @@ class MediaController extends Controller
                 'message' => 'Formato de imagen no valido.',
             ], 422);
         }
+        $binary = $this->normalizeImageOrientation($binary);
 
         $bucket = $validated['bucket'];
         $extension = $this->detectExtension(
@@ -115,5 +116,63 @@ class MediaController extends Controller
         }
 
         return 'png';
+    }
+
+    private function normalizeImageOrientation(string $binary): string
+    {
+        if (! function_exists('exif_read_data') || ! function_exists('imagecreatefromstring')) {
+            return $binary;
+        }
+
+        $info = @getimagesizefromstring($binary);
+        if (! is_array($info) || ($info['mime'] ?? null) !== 'image/jpeg') {
+            return $binary;
+        }
+
+        $tempPath = tempnam(sys_get_temp_dir(), 'a4m_img_');
+        if ($tempPath === false) {
+            return $binary;
+        }
+
+        try {
+            file_put_contents($tempPath, $binary);
+            $exif = @exif_read_data($tempPath);
+            $orientation = is_array($exif) ? (int) ($exif['Orientation'] ?? 1) : 1;
+
+            if (! in_array($orientation, [3, 6, 8], true)) {
+                return $binary;
+            }
+
+            $image = @imagecreatefromstring($binary);
+            if ($image === false) {
+                return $binary;
+            }
+
+            $rotated = match ($orientation) {
+                3 => imagerotate($image, 180, 0),
+                6 => imagerotate($image, -90, 0),
+                8 => imagerotate($image, 90, 0),
+                default => $image,
+            };
+
+            if ($rotated === false) {
+                imagedestroy($image);
+
+                return $binary;
+            }
+
+            ob_start();
+            imagejpeg($rotated, null, 92);
+            $normalized = ob_get_clean();
+
+            imagedestroy($image);
+            if ($rotated !== $image) {
+                imagedestroy($rotated);
+            }
+
+            return is_string($normalized) && $normalized !== '' ? $normalized : $binary;
+        } finally {
+            @unlink($tempPath);
+        }
     }
 }

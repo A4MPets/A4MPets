@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Reports\StoreLostPetReportRequest;
 use App\Http\Requests\Reports\StoreReportCommentRequest;
-use App\Http\Requests\Reports\SyncLostPetReportsRequest;
 use App\Http\Requests\Reports\UpdateLostPetReportRequest;
 use App\Models\LostPetReport;
 use App\Services\Comments\ReportCommentFormatter;
@@ -53,6 +52,13 @@ class LostPetReportController extends Controller
 
     public function store(StoreLostPetReportRequest $request): JsonResponse
     {
+        if (! $request->user()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Debes iniciar sesion para reportar mascotas perdidas.',
+            ], 401);
+        }
+
         $report = $this->lostPetReportService->store(
             $request->user()?->id,
             $request->validated()
@@ -66,6 +72,13 @@ class LostPetReportController extends Controller
 
     public function update(UpdateLostPetReportRequest $request, LostPetReport $lostPetReport): JsonResponse
     {
+        if (! $this->lostPetReportService->canMutate($request->user()?->id, $lostPetReport)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado',
+            ], 403);
+        }
+
         $report = $this->lostPetReportService->update($lostPetReport, $request->validated());
 
         return response()->json([
@@ -76,24 +89,18 @@ class LostPetReportController extends Controller
 
     public function destroy(LostPetReport $lostPetReport): JsonResponse
     {
+        if (! $this->lostPetReportService->canMutate(request()->user()?->id, $lostPetReport)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado',
+            ], 403);
+        }
+
         $this->lostPetReportService->delete($lostPetReport);
 
         return response()->json([
             'success' => true,
-            'message' => 'Reporte marcado para eliminacion',
-        ]);
-    }
-
-    public function sync(SyncLostPetReportsRequest $request): JsonResponse
-    {
-        $results = $this->lostPetReportService->sync(
-            $request->user()?->id,
-            $request->validated('lost_pet_reports')
-        );
-
-        return response()->json([
-            'success' => true,
-            'sync_results' => $results,
+            'message' => 'Reporte eliminado',
         ]);
     }
 

@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Plan de Pruebas - A4MPets</title>
+  <style>
+    @page { size: A4; margin: 15mm 12mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #162335; font-family: Arial, Helvetica, sans-serif; font-size: 10px; line-height: 1.38; background: #fff; }
+    h1, h2, h3 { margin: 0 0 8px; line-height: 1.15; color: #0f3d5e; }
+    h1 { font-size: 30px; }
+    h2 { font-size: 17px; margin-top: 22px; border-bottom: 1.5px solid #b8d2e6; padding-bottom: 4px; }
+    h3 { font-size: 12.5px; margin-top: 15px; color: #195778; }
+    p { margin: 0 0 8px; }
+    ul { margin: 0 0 8px 18px; padding: 0; }
+    li { margin: 0 0 3px; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; page-break-inside: auto; }
+    tr { page-break-inside: avoid; page-break-after: auto; }
+    th, td { border: 1px solid #c8d6e1; padding: 5px 6px; vertical-align: top; }
+    th { background: #eaf4fb; color: #0d3855; font-weight: 700; }
+    code { font-family: Consolas, "Courier New", monospace; font-size: 9.3px; }
+    .cover { height: 760px; display: flex; flex-direction: column; justify-content: center; border: 2px solid #0f3d5e; padding: 34px; }
+    .subtitle { font-size: 15px; color: #36546a; margin-top: 10px; }
+    .meta { margin-top: 34px; font-size: 12px; }
+    .badge { display: inline-block; padding: 2px 7px; border-radius: 999px; background: #edf4fb; color: #174b6a; font-weight: 700; white-space: nowrap; }
+    .pending { background: #fff6dd; color: #7a5400; }
+    .critical { background: #fdecec; color: #842029; }
+    .auto { background: #e8f7ed; color: #176337; }
+    .note { background: #f5f7fa; border-left: 4px solid #4f8bb7; padding: 8px 10px; margin: 8px 0 12px; }
+    .small { font-size: 9.2px; color: #45576a; }
+    .break { page-break-before: always; }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <h1>Plan de Pruebas<br>A4MPets</h1>
+    <p class="subtitle">Frontend Flutter + Backend Laravel + GraphHopper</p>
+    <div class="meta">
+      <p><strong>Fecha:</strong> 02 de mayo de 2026</p>
+      <p><strong>Rol:</strong> Ingenieria QA</p>
+      <p><strong>Repositorio analizado:</strong> <code>c:\projects\Web\A4MPets</code></p>
+      <p><strong>Version:</strong> 2.0 - plan de pruebas sin ejecucion</p>
+      <p><strong>Objetivo:</strong> definir las pruebas que se deben ejecutar, sus casos de prueba, datos, criterios de aceptacion, herramientas sugeridas y evidencia requerida. Este documento no certifica pruebas completadas.</p>
+    </div>
+  </section>
+
+  <h2>1. Control del Documento</h2>
+  <table>
+    <thead><tr><th>Elemento</th><th>Definicion</th></tr></thead>
+    <tbody>
+      <tr><td>Enfoque</td><td>Planificacion QA. No se ejecutan pruebas como parte de este documento.</td></tr>
+      <tr><td>Estado inicial de casos</td><td><span class="badge pending">Pendiente de ejecucion</span> o <span class="badge auto">Automatizable</span>.</td></tr>
+      <tr><td>Evidencia futura</td><td>Logs de comandos, reportes HTML/JUnit, capturas de navegador, respuestas JSON, colecciones Postman, reportes de carga y defectos registrados.</td></tr>
+      <tr><td>Regla de cierre</td><td>Un caso solo se marca Aprobado/Fallido cuando sea ejecutado por QA o CI y exista evidencia adjunta.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>2. Resumen del Sistema</h2>
+  <p>A4MPets gestiona usuarios, mascotas, reportes de mascotas perdidas/encontradas, reportes de riesgos, reportes genericos, comentarios, carga de imagenes, mapas y planeacion de rutas. El backend expone API JSON en Laravel 12. El frontend esta construido en Flutter con Riverpod y consumo HTTP. La planeacion de rutas depende de GraphHopper.</p>
+  <div class="note">
+    <strong>Importante:</strong> las pruebas automatizadas existentes en el repositorio se incluyen como parte del plan porque son ejecutables y verificables, pero aqui se registran como pruebas a ejecutar en una fase posterior, no como pruebas ya completadas.
+  </div>
+
+  <h2>3. Alcance</h2>
+  <table>
+    <thead><tr><th>Area</th><th>Incluye</th><th>Fuentes del proyecto</th></tr></thead>
+    <tbody>
+      <tr><td>Autenticacion</td><td>Registro, login por email/usuario, perfil, logout, token Bearer, persistencia local.</td><td><code>AuthController</code>, <code>AuthTokenService</code>, <code>UserLocalRepository</code>, <code>SessionStore</code>.</td></tr>
+      <tr><td>Mascotas</td><td>CRUD, mascotas propias, ownerless, estados normal/perdida, paseos.</td><td><code>PetController</code>, <code>PetService</code>, paneles Flutter de mascotas.</td></tr>
+      <tr><td>Reportes</td><td>Riesgos, perdidos, encontrados, genericos, comentarios, radios, fotos, permisos.</td><td>Controladores y servicios de reportes, widgets de detalle/lista/formulario.</td></tr>
+      <tr><td>Mapas y rutas</td><td>Mapa, capas, rutas guardadas, calculo de ruta, evitacion de peligros, instrucciones y audio.</td><td><code>TravelRouteController</code>, <code>RoutePlanningController</code>, <code>GraphHopperRoutingService</code>, <code>OsmRoutingService</code>.</td></tr>
+      <tr><td>Medios</td><td>Upload base64, buckets permitidos, render de imagenes, cache, errores.</td><td><code>MediaController</code>, <code>LocalMediaStorageService</code>, widgets de imagen.</td></tr>
+      <tr><td>No funcional</td><td>Carga, resiliencia, seguridad basica, compatibilidad web/movil, despliegue Docker.</td><td><code>docker-compose.yml</code>, scripts npm, README.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>4. Fuera de Alcance</h2>
+  <ul>
+    <li>Pruebas de penetracion profundas o auditoria formal OWASP completa.</li>
+    <li>Validacion cartografica exhaustiva de todas las calles del mapa OSM.</li>
+    <li>Pruebas en tiendas de aplicaciones o firma de builds de produccion.</li>
+    <li>Pruebas de accesibilidad certificadas WCAG; se incluye solo una verificacion funcional minima.</li>
+  </ul>
+
+  <h2>5. Ambientes Requeridos</h2>
+  <table>
+    <thead><tr><th>Ambiente</th><th>Preparacion</th><th>Uso</th><th>Evidencia esperada</th></tr></thead>
+    <tbody>
+      <tr><td>Backend test</td><td><code>cd backend</code>, dependencias Composer, SQLite en memoria por <code>phpunit.xml</code>.</td><td>Pruebas unitarias y Feature API.</td><td>Reporte PHPUnit/JUnit.</td></tr>
+      <tr><td>Frontend test</td><td><code>cd frontend</code>, Flutter SDK y dependencias.</td><td>Unit tests y widget tests.</td><td>Salida Flutter test o reporte machine/JUnit.</td></tr>
+      <tr><td>Local integrado</td><td>Backend en <code>127.0.0.1:8000</code>, GraphHopper en <code>127.0.0.1:8989</code>, Flutter Chrome.</td><td>Manual, navegador automatizado y Postman.</td><td>Capturas, Network logs, respuestas API.</td></tr>
+      <tr><td>Docker completo</td><td><code>docker compose up -d --build</code>.</td><td>Validacion de despliegue y smoke E2E.</td><td><code>docker compose ps</code>, health check, capturas.</td></tr>
+      <tr><td>Android</td><td>Emulador o dispositivo con permisos de ubicacion/audio.</td><td>Geolocalizacion, audio foreground, navegacion.</td><td>Capturas, logs <code>adb logcat</code>.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6. Datos Base</h2>
+  <table>
+    <thead><tr><th>ID</th><th>Dato</th><th>Valor propuesto</th><th>Uso</th></tr></thead>
+    <tbody>
+      <tr><td>D-001</td><td>Usuario principal</td><td><code>qa_a4m_01@example.com</code>, usuario <code>qa_a4m_01</code>, password <code>QAtest1234</code>.</td><td>Flujos propios.</td></tr>
+      <tr><td>D-002</td><td>Usuario secundario</td><td><code>qa_a4m_02@example.com</code>, usuario <code>qa_a4m_02</code>, password <code>QAtest1234</code>.</td><td>Permisos cruzados.</td></tr>
+      <tr><td>D-003</td><td>Mascota</td><td><code>Luna QA</code>, nacimiento <code>2024-01-15</code>, adopcion <code>2024-05-20</code>.</td><td>Mascotas y reportes.</td></tr>
+      <tr><td>D-004</td><td>Coordenadas</td><td><code>3.4516,-76.5320</code>, <code>3.4570,-76.5280</code>, <code>3.4620,-76.5240</code>.</td><td>Mapa, reportes y rutas.</td></tr>
+      <tr><td>D-005</td><td>Imagen valida</td><td>PNG/JPG pequeno en base64 o archivo local.</td><td>Upload y render.</td></tr>
+      <tr><td>D-006</td><td>Imagen invalida</td><td><code>no-es-base64</code>.</td><td>Validacion negativa.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>7. Criterios de Entrada y Salida</h2>
+  <table>
+    <thead><tr><th>Tipo</th><th>Criterio verificable</th><th>Evidencia</th></tr></thead>
+    <tbody>
+      <tr><td>Entrada</td><td>Ambiente definido y URLs activas para backend/frontend/GraphHopper segun el tipo de prueba.</td><td>Captura o log de health check.</td></tr>
+      <tr><td>Entrada</td><td>Datos D-001 a D-006 creados o disponibles para la suite correspondiente.</td><td>Archivo de fixtures, variables Postman o script seed.</td></tr>
+      <tr><td>Entrada</td><td>Cada caso tiene resultado esperado, evidencia y responsable.</td><td>Matriz de ejecucion QA.</td></tr>
+      <tr><td>Salida</td><td>Todos los casos P0 y P1 ejecutados con estado Aprobado o defecto asociado.</td><td>Reporte de ejecucion y defectos.</td></tr>
+      <tr><td>Salida</td><td>No quedan defectos Criticos/Altos abiertos sin aceptacion formal.</td><td>Registro de defectos y retest.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="break">8. Pruebas Automatizadas de Codigo a Ejecutar</h2>
+  <p class="small">Estas pruebas ya existen como archivos en el repositorio o son candidatas directas. Su estado en este plan es pendiente hasta ejecutarlas en CI o por QA.</p>
+  <h3>8.1 Backend Laravel/PHPUnit</h3>
+  <table>
+    <thead><tr><th>ID</th><th>Archivo/Suite</th><th>Objetivo</th><th>Comando sugerido</th><th>Estado</th></tr></thead>
+    <tbody>
+      <tr><td>AUT-BE-001</td><td><code>AuthApiTest.php</code></td><td>Registro, login, perfil y logout.</td><td><code>cd backend && php artisan test --filter=AuthApiTest</code></td><td><span class="badge auto">Automatizable existente</span></td></tr>
+      <tr><td>AUT-BE-002</td><td><code>PetApiTest.php</code></td><td>CRUD de mascotas y scope de mascotas propias.</td><td><code>php artisan test --filter=PetApiTest</code></td><td><span class="badge auto">Automatizable existente</span></td></tr>
+      <tr><td>AUT-BE-003</td><td><code>PetUsageApiTest.php</code></td><td>Estados de mascotas perdidas/encontradas y duplicados.</td><td><code>php artisan test --filter=PetUsageApiTest</code></td><td><span class="badge auto">Automatizable existente</span></td></tr>
+      <tr><td>AUT-BE-004</td><td><code>HazardApiTest.php</code></td><td>CRUD y comentarios de riesgos.</td><td><code>php artisan test --filter=HazardApiTest</code></td><td><span class="badge auto">Automatizable existente</span></td></tr>
+      <tr><td>AUT-BE-005</td><td><code>GenericReportApiTest.php</code></td><td>Reportes genericos y radio de impacto.</td><td><code>php artisan test --filter=GenericReportApiTest</code></td><td><span class="badge auto">Automatizable existente</span></td></tr>
+      <tr><td>AUT-BE-006</td><td><code>ReportCommentsApiTest.php</code></td><td>Comentarios en perdidos/encontrados.</td><td><code>php artisan test --filter=ReportCommentsApiTest</code></td><td><span class="badge auto">Automatizable existente</span></td></tr>
+      <tr><td>AUT-BE-007</td><td><code>RoutePlanningHazardAvoidanceApiTest.php</code></td><td>Planeacion con evitacion de peligros y filtros.</td><td><code>php artisan test --filter=RoutePlanningHazardAvoidanceApiTest</code></td><td><span class="badge auto">Automatizable existente</span></td></tr>
+      <tr><td>AUT-BE-008</td><td><code>TravelRouteApiTest.php</code></td><td>CRUD de rutas guardadas.</td><td><code>php artisan test --filter=TravelRouteApiTest</code></td><td><span class="badge auto">Automatizable existente</span></td></tr>
+      <tr><td>AUT-BE-009</td><td>Nuevos tests sugeridos</td><td>Medios, endpoints protegidos sin token, permisos cruzados 403.</td><td>Agregar Feature tests dedicados.</td><td><span class="badge pending">Pendiente de crear</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>8.2 Frontend Flutter</h3>
+  <table>
+    <thead><tr><th>ID</th><th>Archivo/Suite</th><th>Objetivo</th><th>Comando sugerido</th><th>Estado</th></tr></thead>
+    <tbody>
+      <tr><td>AUT-FE-001</td><td><code>session_store_test.dart</code></td><td>Persistencia y parseo de sesion.</td><td><code>cd frontend && flutter test test/session_store_test.dart</code></td><td><span class="badge auto">Automatizable existente</span></td></tr>
+      <tr><td>AUT-FE-002</td><td><code>route_hazard_visualizer_service_test.dart</code></td><td>Segmentos peligrosos, radios y filtros.</td><td><code>flutter test test/route_hazard_visualizer_service_test.dart</code></td><td><span class="badge auto">Automatizable existente</span></td></tr>
+      <tr><td>AUT-FE-003</td><td><code>navigation_audio_*_test.dart</code></td><td>Mensajes y progresion de avisos de navegacion.</td><td><code>flutter test test/navigation_audio_*</code></td><td><span class="badge auto">Automatizable existente</span></td></tr>
+      <tr><td>AUT-FE-004</td><td><code>found_pet_details_panel_test.dart</code></td><td>Detalle de mascota encontrada vinculada a reporte perdido.</td><td><code>flutter test test/found_pet_details_panel_test.dart</code></td><td><span class="badge auto">Automatizable existente</span></td></tr>
+      <tr><td>AUT-FE-005</td><td>Nuevos widget tests sugeridos</td><td>Formularios de login, registro, mascotas, reportes y validaciones visibles.</td><td>Agregar tests con <code>testWidgets</code>.</td><td><span class="badge pending">Pendiente de crear</span></td></tr>
+      <tr><td>AUT-FE-006</td><td>Nuevos repository tests sugeridos</td><td>Mapeo de errores del backend, subida de imagenes y token requerido.</td><td>Agregar tests con cliente HTTP fake.</td><td><span class="badge pending">Pendiente de crear</span></td></tr>
+    </tbody>
+  </table>
+
+  <h2>9. Casos Backend API</h2>
+  <table>
+    <thead><tr><th>ID</th><th>Modulo</th><th>Precondicion</th><th>Pasos</th><th>Resultado esperado</th><th>Tipo</th></tr></thead>
+    <tbody>
+      <tr><td>BE-AUTH-001</td><td>Registro</td><td>Correo inexistente.</td><td>POST <code>/api/auth/register</code> con D-001.</td><td>HTTP 201, <code>success=true</code>, usuario y token en <code>data</code>.</td><td>API/Postman/PHPUnit</td></tr>
+      <tr><td>BE-AUTH-002</td><td>Registro</td><td>D-001 registrado.</td><td>Repetir registro con mismo email.</td><td>HTTP 422, error de email unico, no se crea duplicado.</td><td>API/Postman</td></tr>
+      <tr><td>BE-AUTH-003</td><td>Registro</td><td>Ninguna.</td><td>Enviar password menor a 8 o confirmacion distinta.</td><td>HTTP 422, errores en <code>password</code>, sin token.</td><td>API/Postman</td></tr>
+      <tr><td>BE-AUTH-004</td><td>Login</td><td>D-001 registrado.</td><td>POST <code>/api/auth/login</code> con email y password.</td><td>HTTP 200, token Bearer no vacio.</td><td>API/Postman/PHPUnit</td></tr>
+      <tr><td>BE-AUTH-005</td><td>Login</td><td>D-001 registrado.</td><td>POST login usando nombre de usuario.</td><td>HTTP 200, token valido para el mismo usuario.</td><td>API/Postman</td></tr>
+      <tr><td>BE-AUTH-006</td><td>Login</td><td>D-001 registrado.</td><td>POST login con password incorrecto.</td><td>HTTP 422 o 401 controlado, no se emite token.</td><td>API/Postman</td></tr>
+      <tr><td>BE-AUTH-007</td><td>Perfil</td><td>Token D-001.</td><td>GET <code>/api/auth/me</code>.</td><td>HTTP 200 y datos del usuario autenticado.</td><td>API/Postman/PHPUnit</td></tr>
+      <tr><td>BE-AUTH-008</td><td>Perfil</td><td>Token D-001.</td><td>PUT <code>/api/auth/profile</code> con nombre y foto.</td><td>HTTP 200, cambios persistidos.</td><td>API/Postman/PHPUnit</td></tr>
+      <tr><td>BE-AUTH-009</td><td>Logout</td><td>Token D-001.</td><td>POST logout y luego GET me con el mismo token.</td><td>Token revocado; la siguiente consulta no autentica.</td><td>API/Postman/PHPUnit</td></tr>
+
+      <tr><td>BE-SEC-001</td><td>Seguridad</td><td>Sin token.</td><td>Intentar POST/PUT/DELETE en mascotas, reportes, rutas y medios.</td><td>HTTP 401; no se crean ni modifican datos.</td><td>API/Postman <span class="badge critical">P0</span></td></tr>
+      <tr><td>BE-SEC-002</td><td>Seguridad</td><td>Token invalido.</td><td>Repetir operaciones protegidas con Bearer aleatorio.</td><td>HTTP 401; ninguna mutacion.</td><td>API/Postman <span class="badge critical">P0</span></td></tr>
+      <tr><td>BE-SEC-003</td><td>Seguridad</td><td>D-001 y D-002.</td><td>D-002 intenta editar/eliminar recursos creados por D-001.</td><td>HTTP 403; datos originales intactos.</td><td>API/Postman/PHPUnit <span class="badge critical">P0</span></td></tr>
+
+      <tr><td>BE-PET-001</td><td>Mascotas</td><td>Token D-001.</td><td>POST <code>/api/pets</code> con D-003.</td><td>HTTP 201, mascota creada con estado normal.</td><td>API/Postman/PHPUnit</td></tr>
+      <tr><td>BE-PET-002</td><td>Mascotas</td><td>Mascota creada.</td><td>GET <code>/api/pets</code> y GET detalle.</td><td>Listado pagina y detalle coinciden con datos creados.</td><td>API/Postman</td></tr>
+      <tr><td>BE-PET-003</td><td>Mascotas</td><td>Mascota propia.</td><td>PUT nombre, fechas, total_walks.</td><td>HTTP 200 y datos actualizados.</td><td>API/Postman/PHPUnit</td></tr>
+      <tr><td>BE-PET-004</td><td>Mascotas</td><td>D-001 con mascota y D-002.</td><td>D-002 modifica mascota de D-001.</td><td>HTTP 403, sin cambios.</td><td>API/Postman</td></tr>
+      <tr><td>BE-PET-005</td><td>Mascotas</td><td>Sin token.</td><td>GET <code>/api/pets?scope=mine</code>.</td><td>HTTP 401.</td><td>API/Postman/PHPUnit</td></tr>
+      <tr><td>BE-PET-006</td><td>Mascotas</td><td>Mascota perdida activa.</td><td>POST <code>/api/pets/{id}/mark-found</code>.</td><td>Mascota vuelve a normal y se elimina reporte perdido activo.</td><td>API/Postman/PHPUnit</td></tr>
+      <tr><td>BE-PET-007</td><td>Mascotas</td><td>Mascota propia.</td><td>DELETE mascota.</td><td>HTTP 200 y no aparece en listado.</td><td>API/Postman</td></tr>
+
+      <tr><td>BE-LOST-001</td><td>Perdidos</td><td>Mascota propia normal.</td><td>POST <code>/api/lost-pet-reports</code>.</td><td>HTTP 201, reporte creado y mascota en estado perdida.</td><td>API/Postman/PHPUnit</td></tr>
+      <tr><td>BE-LOST-002</td><td>Perdidos</td><td>Reporte perdido activo.</td><td>Crear otro reporte para la misma mascota.</td><td>HTTP 422, no hay duplicado activo.</td><td>API/Postman/PHPUnit</td></tr>
+      <tr><td>BE-LOST-003</td><td>Perdidos</td><td>Reporte existente.</td><td>GET listado/detalle/comentarios.</td><td>Incluye mascota y comentarios.</td><td>API/Postman</td></tr>
+      <tr><td>BE-LOST-004</td><td>Perdidos</td><td>Reporte propio.</td><td>PUT cambios de ubicacion, detalle, fecha, telefono.</td><td>HTTP 200, cambios persistidos.</td><td>API/Postman</td></tr>
+      <tr><td>BE-LOST-005</td><td>Perdidos</td><td>Reporte propio.</td><td>DELETE reporte.</td><td>HTTP 200, comentarios eliminados y mascota normal.</td><td>API/Postman</td></tr>
+
+      <tr><td>BE-FOUND-001</td><td>Encontrados</td><td>Token D-001.</td><td>POST encontrado sin <code>pet_id</code>.</td><td>Reporte creado y mascota ownerless asociada.</td><td>API/Postman/PHPUnit</td></tr>
+      <tr><td>BE-FOUND-002</td><td>Encontrados</td><td>Reporte perdido existente.</td><td>POST encontrado con <code>matched_lost_pet_report_id</code>.</td><td>Encontrado queda vinculado a la mascota del perdido.</td><td>API/Postman/PHPUnit</td></tr>
+      <tr><td>BE-FOUND-003</td><td>Encontrados</td><td>Reporte propio.</td><td>GET detalle y comentarios.</td><td>Incluye mascota, reporte perdido vinculado si aplica y comentarios.</td><td>API/Postman</td></tr>
+      <tr><td>BE-FOUND-004</td><td>Encontrados</td><td>Reporte propio.</td><td>PUT y DELETE.</td><td>Cambios se aplican; delete remueve comentarios asociados.</td><td>API/Postman</td></tr>
+
+      <tr><td>BE-HAZ-001</td><td>Riesgos</td><td>Token D-001.</td><td>POST <code>/api/hazards</code> con lat/lng/radio/riesgo.</td><td>HTTP 201, riesgo formateado.</td><td>API/Postman/PHPUnit</td></tr>
+      <tr><td>BE-HAZ-002</td><td>Riesgos</td><td>Token D-001.</td><td>Enviar latitud 91, longitud -181, radio 9 o 10001.</td><td>HTTP 422 por rangos invalidos.</td><td>API/Postman</td></tr>
+      <tr><td>BE-HAZ-003</td><td>Riesgos</td><td>Riesgo existente.</td><td>GET listado/detalle, PUT, comentario, DELETE.</td><td>CRUD y comentarios funcionan, permisos respetados.</td><td>API/Postman/PHPUnit</td></tr>
+
+      <tr><td>BE-GEN-001</td><td>Genericos</td><td>Token D-001.</td><td>POST generico con riesgo y radio.</td><td>HTTP 201 y radio persistido.</td><td>API/Postman/PHPUnit</td></tr>
+      <tr><td>BE-GEN-002</td><td>Genericos</td><td>Token D-001.</td><td>Enviar radio -1 o 10001.</td><td>HTTP 422.</td><td>API/Postman</td></tr>
+      <tr><td>BE-GEN-003</td><td>Genericos</td><td>Reporte propio.</td><td>PUT/GET/DELETE y comentario.</td><td>Datos y comentarios consistentes.</td><td>API/Postman/PHPUnit</td></tr>
+
+      <tr><td>BE-ROUTE-001</td><td>Rutas guardadas</td><td>Token D-001.</td><td>POST ruta con <code>points_json</code>.</td><td>HTTP 201, ruta y puntos creados.</td><td>API/Postman/PHPUnit</td></tr>
+      <tr><td>BE-ROUTE-002</td><td>Rutas guardadas</td><td>Ruta propia.</td><td>GET listado/detalle, PUT, DELETE.</td><td>CRUD consistente y permisos 403 para otro usuario.</td><td>API/Postman/PHPUnit</td></tr>
+      <tr><td>BE-PLAN-001</td><td>Planeacion</td><td>GraphHopper activo.</td><td>POST <code>/api/routes/plan</code> con 2 puntos.</td><td>HTTP 200, coordenadas no vacias, distancia/duracion &gt; 0.</td><td>API/Postman/E2E</td></tr>
+      <tr><td>BE-PLAN-002</td><td>Planeacion</td><td>Riesgo/generico sobre ruta.</td><td>Planear con <code>avoid_hazards=true</code> y filtros.</td><td><code>hazards_considered</code> &gt; 0 si existe zona aplicable.</td><td>API/Postman/PHPUnit</td></tr>
+      <tr><td>BE-PLAN-003</td><td>Planeacion</td><td>Ninguna.</td><td>Enviar un solo punto o lat/lng fuera de rango.</td><td>HTTP 422.</td><td>API/Postman</td></tr>
+
+      <tr><td>BE-MED-001</td><td>Medios</td><td>Token D-001 e imagen D-005.</td><td>POST <code>/api/media/upload</code>.</td><td>HTTP 200, URL, bucket y file_name; archivo recuperable.</td><td>API/Postman</td></tr>
+      <tr><td>BE-MED-002</td><td>Medios</td><td>URL creada.</td><td>GET <code>/api/media/{bucket}/{file}</code>.</td><td>HTTP 200, Content-Type imagen, Cache-Control publico.</td><td>API/Postman</td></tr>
+      <tr><td>BE-MED-003</td><td>Medios</td><td>Token D-001.</td><td>Upload con bucket invalido o base64 invalido.</td><td>HTTP 422, no guarda archivo.</td><td>API/Postman</td></tr>
+      <tr><td>BE-HEALTH-001</td><td>Health</td><td>Backend activo.</td><td>GET <code>/api/health</code>.</td><td>HTTP 200, <code>status=ok</code>, timestamp presente.</td><td>API/Postman/Smoke</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="break">10. Casos Frontend Manuales y Widget/E2E</h2>
+  <table>
+    <thead><tr><th>ID</th><th>Modulo</th><th>Precondicion</th><th>Pasos</th><th>Resultado esperado</th><th>Tipo</th></tr></thead>
+    <tbody>
+      <tr><td>FE-AUTH-001</td><td>Registro UI</td><td>Backend activo.</td><td>Abrir registro, enviar D-001.</td><td>Sesion iniciada, perfil muestra usuario, token guardado.</td><td>Manual/Navegador</td></tr>
+      <tr><td>FE-AUTH-002</td><td>Registro UI</td><td>Email existente.</td><td>Registrar mismo email.</td><td>Mensaje visible de email ya registrado.</td><td>Manual/Navegador</td></tr>
+      <tr><td>FE-AUTH-003</td><td>Login UI</td><td>D-001 registrado.</td><td>Login correcto e incorrecto.</td><td>Correcto autentica; incorrecto muestra error y no guarda token.</td><td>Manual/Navegador</td></tr>
+      <tr><td>FE-AUTH-004</td><td>Logout UI</td><td>Sesion iniciada.</td><td>Cerrar sesion y recargar.</td><td>Perfil invitado y paneles privados bloqueados.</td><td>Manual/Navegador</td></tr>
+
+      <tr><td>FE-PET-001</td><td>Mascotas UI</td><td>Sesion iniciada.</td><td>Crear mascota D-003.</td><td>Lista muestra mascota con estado normal.</td><td>Manual/Navegador</td></tr>
+      <tr><td>FE-PET-002</td><td>Mascotas UI</td><td>Mascota creada.</td><td>Editar datos y foto.</td><td>Detalle/lista reflejan cambios tras refresh.</td><td>Manual/Navegador</td></tr>
+      <tr><td>FE-PET-003</td><td>Mascotas UI</td><td>Mascota creada.</td><td>Eliminar mascota.</td><td>Desaparece de lista y backend confirma delete.</td><td>Manual/Navegador</td></tr>
+
+      <tr><td>FE-MAP-001</td><td>Mapa</td><td>App abierta.</td><td>Visualizar mapa principal.</td><td>Tiles, controles y paneles cargan sin overflow ni excepciones.</td><td>Manual/Navegador</td></tr>
+      <tr><td>FE-MAP-002</td><td>Ubicacion</td><td>Permisos disponibles.</td><td>Aceptar y denegar geolocalizacion.</td><td>Con permiso centra mapa; sin permiso muestra estado controlado.</td><td>Manual/Dispositivo</td></tr>
+      <tr><td>FE-MAP-003</td><td>Capas</td><td>Reportes existentes.</td><td>Alternar capas de riesgos y reportes.</td><td>Marcadores aparecen/desaparecen segun seleccion.</td><td>Manual/Navegador</td></tr>
+
+      <tr><td>FE-HAZ-001</td><td>Riesgos UI</td><td>Sesion iniciada.</td><td>Crear riesgo desde mapa.</td><td>Marcador visible, detalle completo y registro API creado.</td><td>Manual/Navegador</td></tr>
+      <tr><td>FE-HAZ-002</td><td>Riesgos UI</td><td>Formulario abierto.</td><td>Intentar guardar sin campos obligatorios.</td><td>Validacion visible, no hay POST exitoso.</td><td>Manual/Widget</td></tr>
+      <tr><td>FE-HAZ-003</td><td>Comentarios UI</td><td>Riesgo existente.</td><td>Enviar comentario.</td><td>Comentario aparece con autor/anonimato correcto y sin duplicarse.</td><td>Manual/Navegador</td></tr>
+
+      <tr><td>FE-LOST-001</td><td>Perdidos UI</td><td>Mascota normal.</td><td>Crear reporte perdido.</td><td>Reporte visible y mascota cambia a perdida.</td><td>Manual/Navegador</td></tr>
+      <tr><td>FE-LOST-002</td><td>Perdidos UI</td><td>Reporte activo.</td><td>Intentar duplicar reporte perdido.</td><td>Mensaje de error; no se crea duplicado.</td><td>Manual/Navegador</td></tr>
+      <tr><td>FE-FOUND-001</td><td>Encontrados UI</td><td>Sesion iniciada.</td><td>Crear reporte encontrado sin mascota.</td><td>Reporte y mascota ownerless visibles.</td><td>Manual/Navegador</td></tr>
+      <tr><td>FE-FOUND-002</td><td>Encontrados UI</td><td>Reporte perdido existente.</td><td>Crear encontrado vinculado y abrir detalle.</td><td>Detalle muestra tarjeta navegable al reporte perdido.</td><td>Manual/Widget/Navegador</td></tr>
+      <tr><td>FE-GEN-001</td><td>Genericos UI</td><td>Sesion iniciada.</td><td>Crear reporte generico alto con radio 250m.</td><td>Visible en mapa/lista y considerado por filtros.</td><td>Manual/Navegador</td></tr>
+
+      <tr><td>FE-ROUTE-001</td><td>Rutas UI</td><td>Mapa visible.</td><td>Crear, guardar, editar y eliminar ruta.</td><td>Polilinea y listado reflejan cada cambio.</td><td>Manual/Navegador</td></tr>
+      <tr><td>FE-ROUTE-002</td><td>Planeacion UI</td><td>GraphHopper activo.</td><td>Planear ruta caminando con 2 puntos.</td><td>Polilinea no vacia, sin error en UI.</td><td>Manual/Navegador</td></tr>
+      <tr><td>FE-ROUTE-003</td><td>Filtros de riesgo</td><td>Riesgo en ruta.</td><td>Activar/desactivar filtros high/medium/low.</td><td>Peticion contiene filtros; segmentos rojos respetan seleccion.</td><td>Manual/Navegador/Unit</td></tr>
+      <tr><td>FE-NAV-001</td><td>Navegacion</td><td>Ruta con instrucciones.</td><td>Simular avance a 100m, 30m e inmediato.</td><td>Mensajes correctos y no repetidos.</td><td>Unit/Dispositivo</td></tr>
+      <tr><td>FE-AUD-001</td><td>Audio</td><td>Dispositivo Android.</td><td>Iniciar navegacion con audio.</td><td>TTS/sonidos y servicio foreground funcionan y se detienen al terminar.</td><td>Dispositivo</td></tr>
+      <tr><td>FE-MED-001</td><td>Imagenes</td><td>Sesion iniciada.</td><td>Subir foto en perfil, mascota y reporte.</td><td>Imagen se renderiza y persiste al recargar.</td><td>Manual/Navegador</td></tr>
+      <tr><td>FE-COMP-001</td><td>Responsive</td><td>Chrome.</td><td>Ejecutar flujos criticos en 1366x768 y 390x844.</td><td>Sin overflow, botones accesibles, paneles desplazables.</td><td>Manual/Navegador</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="break">11. Pruebas Automatizadas con Navegador</h2>
+  <p>Se recomienda Playwright para pruebas E2E web porque permite controlar Chromium, Firefox/WebKit si aplica, capturas, videos, trazas y validaciones de red. El proyecto ya contiene Puppeteer como dependencia, por lo que tambien puede usarse para smoke visual basico; para suites completas, Playwright es mas conveniente.</p>
+  <table>
+    <thead><tr><th>ID</th><th>Flujo navegador</th><th>Pasos automatizables</th><th>Aserciones</th><th>Evidencia</th></tr></thead>
+    <tbody>
+      <tr><td>WEB-001</td><td>Smoke app</td><td>Abrir <code>http://127.0.0.1:8080</code> o URL Flutter local.</td><td>No errores JS/Flutter en consola, mapa/pantalla principal visible.</td><td>Screenshot + trace.</td></tr>
+      <tr><td>WEB-002</td><td>Registro/login/logout</td><td>Completar formularios, guardar token, cerrar sesion.</td><td>Texto de usuario visible tras login; perfil invitado tras logout; respuestas API 2xx.</td><td>Trace + network HAR.</td></tr>
+      <tr><td>WEB-003</td><td>Mascota CRUD</td><td>Crear, editar y eliminar mascota desde UI.</td><td>Elemento aparece, cambia y desaparece; API POST/PUT/DELETE responde esperado.</td><td>Capturas por paso.</td></tr>
+      <tr><td>WEB-004</td><td>Perdida/encontrada</td><td>Crear mascota, reporte perdido, reporte encontrado vinculado.</td><td>Detalle de encontrado muestra vinculo al perdido; mascota perdida cambia estado.</td><td>Video/trace.</td></tr>
+      <tr><td>WEB-005</td><td>Riesgo y capas</td><td>Crear riesgo, abrir capas, alternar visualizacion.</td><td>Marcadores cambian segun capas; detalle muestra radio y riesgo.</td><td>Screenshot comparativo.</td></tr>
+      <tr><td>WEB-006</td><td>Ruta con GraphHopper</td><td>Seleccionar dos puntos y planear ruta.</td><td>Polilinea visible; request <code>/routes/plan</code> responde 200.</td><td>Trace + captura de mapa.</td></tr>
+      <tr><td>WEB-007</td><td>Filtros de peligro</td><td>Con riesgo sobre ruta, activar filtros y recalcular.</td><td>Request contiene <code>hazard_risk_filters</code>; segmentos peligrosos visibles.</td><td>HAR + captura.</td></tr>
+      <tr><td>WEB-008</td><td>Responsive</td><td>Repetir smoke en viewport desktop y movil.</td><td>No overflow ni elementos inaccesibles.</td><td>Screenshots por viewport.</td></tr>
+    </tbody>
+  </table>
+  <table>
+    <thead><tr><th>Configuracion sugerida</th><th>Detalle</th></tr></thead>
+    <tbody>
+      <tr><td>Carpeta</td><td><code>e2e/playwright</code> o <code>frontend/e2e</code>.</td></tr>
+      <tr><td>Comando</td><td><code>npx playwright test --reporter=html,junit</code>.</td></tr>
+      <tr><td>Precondicion</td><td>Backend y frontend levantados; base URL por variable <code>BASE_URL</code> y API URL por <code>API_BASE_URL</code>.</td></tr>
+      <tr><td>Datos</td><td>Crear usuarios por API antes de cada test o usar fixtures aislados con timestamp.</td></tr>
+      <tr><td>Artefactos</td><td>HTML report, JUnit XML, screenshots en fallos, video en retry, trace zip.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>12. Pruebas Postman / Newman</h2>
+  <p>La API es muy adecuada para Postman porque todos los endpoints responden JSON y usan Bearer token. La coleccion debe separar requests por modulo y usar scripts para guardar IDs y tokens en variables de entorno.</p>
+  <table>
+    <thead><tr><th>Variable</th><th>Ejemplo</th><th>Uso</th></tr></thead>
+    <tbody>
+      <tr><td><code>base_url</code></td><td><code>http://127.0.0.1:8000/api</code></td><td>Prefijo de todos los endpoints.</td></tr>
+      <tr><td><code>token_user_1</code></td><td>Asignado por login/registro.</td><td>Authorization Bearer para D-001.</td></tr>
+      <tr><td><code>token_user_2</code></td><td>Asignado por login/registro.</td><td>Pruebas de permisos cruzados.</td></tr>
+      <tr><td><code>pet_id</code>, <code>lost_report_id</code>, <code>found_report_id</code>, <code>hazard_id</code>, <code>route_id</code></td><td>IDs devueltos por POST.</td><td>Encadenar CRUD y limpieza.</td></tr>
+    </tbody>
+  </table>
+  <table>
+    <thead><tr><th>ID</th><th>Coleccion/Folder</th><th>Requests</th><th>Tests Postman esperados</th></tr></thead>
+    <tbody>
+      <tr><td>PM-001</td><td>Auth</td><td>Register, duplicate register, login, me, profile, logout.</td><td>Status codes, existencia de token, schema basico, token revocado.</td></tr>
+      <tr><td>PM-002</td><td>Pets</td><td>Create, list, show, update, mark-found, delete.</td><td>IDs guardados, campos coinciden, status esperado.</td></tr>
+      <tr><td>PM-003</td><td>Lost/Found</td><td>Create lost, duplicate lost, create found ownerless, create found matched, comments, delete.</td><td>Estados de mascota y vinculos correctos.</td></tr>
+      <tr><td>PM-004</td><td>Hazards/Generic</td><td>Create, validation errors, update, comments, list, delete.</td><td>Rangos, radio de impacto y comentarios.</td></tr>
+      <tr><td>PM-005</td><td>Routes</td><td>CRUD route, plan route, plan invalid.</td><td>Coordenadas no vacias, errores 422, hazards_considered.</td></tr>
+      <tr><td>PM-006</td><td>Media</td><td>Upload valid, GET media, upload invalid.</td><td>URL generada, content-type imagen, 422 invalidos.</td></tr>
+      <tr><td>PM-007</td><td>Security</td><td>Protected endpoints without token, invalid token, cross-user mutation.</td><td>401/403 y no mutacion de datos.</td></tr>
+    </tbody>
+  </table>
+  <div class="note">
+    <strong>Comando Newman sugerido:</strong> <code>newman run A4MPets.postman_collection.json -e local.postman_environment.json --reporters cli,html,junit</code>.
+    <br><strong>Evidencia:</strong> reporte HTML, JUnit para CI y archivo de environment sin secretos reales.
+  </div>
+
+  <h2 class="break">13. Pruebas de Carga, Estres y Resiliencia</h2>
+  <p>Herramientas sugeridas: k6 para scripts versionables y CI; JMeter si el equipo prefiere interfaz visual; Artillery como alternativa Node. Los escenarios deben ejecutarse contra un ambiente dedicado, nunca contra datos productivos.</p>
+  <table>
+    <thead><tr><th>ID</th><th>Escenario</th><th>Carga propuesta</th><th>Criterio verificable</th><th>Herramienta</th></tr></thead>
+    <tbody>
+      <tr><td>LOAD-001</td><td>Health y listados publicos</td><td>20 VUs, 5 min: <code>/health</code>, listados de riesgos/reportes.</td><td>p95 &lt; 500 ms health, p95 &lt; 1000 ms listados, error rate &lt; 1%.</td><td>k6/Newman/JMeter</td></tr>
+      <tr><td>LOAD-002</td><td>Login y perfil</td><td>10 VUs, 3 min con usuarios semilla.</td><td>p95 &lt; 800 ms, 0 tokens vacios, error rate &lt; 1%.</td><td>k6</td></tr>
+      <tr><td>LOAD-003</td><td>CRUD mascotas/reportes</td><td>10 VUs, 5 min, crear y listar datos con timestamp.</td><td>p95 &lt; 1200 ms, no hay 5xx, no hay IDs duplicados inesperados.</td><td>k6/JMeter</td></tr>
+      <tr><td>LOAD-004</td><td>Comentarios</td><td>25 VUs, 5 min comentando reportes existentes.</td><td>p95 &lt; 1000 ms, comentarios persistidos, error rate &lt; 1%.</td><td>k6</td></tr>
+      <tr><td>LOAD-005</td><td>Planeacion de rutas</td><td>5 VUs, 3 min con GraphHopper activo.</td><td>p95 &lt; 10 s, 0 caidas del backend; errores 502 solo si GraphHopper no responde.</td><td>k6/JMeter</td></tr>
+      <tr><td>LOAD-006</td><td>Upload de imagenes</td><td>5 VUs, 3 min con imagenes pequenas.</td><td>p95 &lt; 3 s, archivos recuperables, error rate &lt; 1%.</td><td>k6/JMeter</td></tr>
+      <tr><td>STRESS-001</td><td>Estres progresivo API</td><td>Ramp 10 -> 100 VUs en 10 min.</td><td>Identificar punto de degradacion; backend no debe terminar proceso abruptamente.</td><td>k6</td></tr>
+      <tr><td>RES-001</td><td>GraphHopper caido</td><td>Apagar GraphHopper y llamar <code>/routes/plan</code>.</td><td>HTTP 502 controlado, mensaje claro, backend sigue respondiendo health.</td><td>Postman/k6</td></tr>
+      <tr><td>RES-002</td><td>Reinicio Docker backend</td><td>Crear datos, reiniciar contenedor backend.</td><td>Datos persisten si volumen SQLite esta activo.</td><td>Manual/Postman</td></tr>
+    </tbody>
+  </table>
+  <table>
+    <thead><tr><th>Metrica</th><th>Umbral inicial propuesto</th></tr></thead>
+    <tbody>
+      <tr><td>Disponibilidad durante prueba</td><td>&gt;= 99% de requests sin 5xx no esperado.</td></tr>
+      <tr><td>Latencia p95 endpoints CRUD</td><td>&lt;= 1200 ms en ambiente local/integrado.</td></tr>
+      <tr><td>Latencia p95 planeacion</td><td>&lt;= 10000 ms con GraphHopper activo y mapa cargado.</td></tr>
+      <tr><td>Error rate</td><td>&lt; 1% excluyendo validaciones negativas esperadas.</td></tr>
+      <tr><td>Recuperacion</td><td>Health vuelve a 200 dentro de 60 s tras reinicio de servicio.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>14. Pruebas E2E de Negocio</h2>
+  <table>
+    <thead><tr><th>ID</th><th>Flujo</th><th>Pasos</th><th>Resultado esperado</th><th>Automatizacion sugerida</th></tr></thead>
+    <tbody>
+      <tr><td>E2E-001</td><td>Onboarding</td><td>Registrar usuario, cerrar sesion, iniciar sesion, editar perfil.</td><td>Sesion y perfil consistentes entre UI y API.</td><td>Playwright + Postman setup.</td></tr>
+      <tr><td>E2E-002</td><td>Mascota perdida/encontrada</td><td>Crear mascota, reportarla perdida, crear encontrada vinculada, comentar ambos reportes.</td><td>Estados, vinculos y comentarios correctos.</td><td>Playwright.</td></tr>
+      <tr><td>E2E-003</td><td>Riesgo afecta ruta</td><td>Crear riesgo alto sobre ruta, planear con y sin filtro.</td><td>Ruta considera peligro solo con filtro aplicable; UI pinta segmentos.</td><td>Playwright + API seed.</td></tr>
+      <tr><td>E2E-004</td><td>Reporte generico con radio</td><td>Crear generico alto radio 250m, planear ruta cercana.</td><td><code>hazards_considered</code> aumenta y visualizacion refleja zona.</td><td>Playwright/Postman.</td></tr>
+      <tr><td>E2E-005</td><td>Medios extremo a extremo</td><td>Subir foto de perfil, mascota y reporte; recargar app.</td><td>Imagenes persisten y se sirven desde <code>/api/media</code>.</td><td>Playwright.</td></tr>
+      <tr><td>E2E-006</td><td>Permisos cruzados</td><td>D-001 crea recursos; D-002 intenta modificarlos.</td><td>403 y datos intactos.</td><td>Postman/Newman.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="break">15. Pruebas No Funcionales Adicionales</h2>
+  <table>
+    <thead><tr><th>ID</th><th>Categoria</th><th>Prueba</th><th>Criterio de aceptacion</th><th>Evidencia</th></tr></thead>
+    <tbody>
+      <tr><td>NF-SEC-001</td><td>Seguridad basica</td><td>Enviar HTML/script en descripciones y comentarios.</td><td>Frontend no ejecuta scripts; texto se muestra como contenido seguro.</td><td>Captura + consola.</td></tr>
+      <tr><td>NF-SEC-002</td><td>Seguridad basica</td><td>Intentar file names invalidos en GET media.</td><td>HTTP 404 para rutas fuera del patron permitido.</td><td>Respuesta API.</td></tr>
+      <tr><td>NF-CORS-001</td><td>Configuracion</td><td>Consumir API desde frontend local y Docker.</td><td>Sin bloqueo CORS y base URL correcta en DevTools.</td><td>HAR/Network.</td></tr>
+      <tr><td>NF-ACC-001</td><td>Accesibilidad minima</td><td>Navegar formularios criticos con teclado.</td><td>Orden logico, foco visible, errores legibles.</td><td>Checklist + capturas.</td></tr>
+      <tr><td>NF-COMP-001</td><td>Compatibilidad</td><td>Chrome desktop, Chrome movil responsive, Android.</td><td>Flujos P0/P1 sin cierres, overflow ni bloqueos.</td><td>Capturas y logs.</td></tr>
+      <tr><td>NF-LOG-001</td><td>Observabilidad</td><td>Ejecutar flujos E2E y revisar logs.</td><td>Sin stack traces no controlados en Laravel ni errores Flutter severos.</td><td>Logs backend/consola.</td></tr>
+    </tbody>
+  </table>
+
+
+  <h2>16. Priorizacion</h2>
+  <table>
+    <thead><tr><th>Prioridad</th><th>Casos</th><th>Motivo</th></tr></thead>
+    <tbody>
+      <tr><td>P0 Critico</td><td>BE-SEC-001, BE-SEC-002, BE-SEC-003, E2E-001, E2E-006, PM-007.</td><td>Control de acceso, autenticacion y proteccion de datos.</td></tr>
+      <tr><td>P1 Alto</td><td>Auth, Mascotas, Perdidos/Encontrados, Riesgos, Genericos, Comentarios, Medios.</td><td>Flujos centrales de negocio.</td></tr>
+      <tr><td>P2 Medio</td><td>Rutas, GraphHopper, audio, ubicacion, carga moderada.</td><td>Funcionalidades dependientes de servicios o dispositivo.</td></tr>
+      <tr><td>P3 Bajo</td><td>Compatibilidad extendida, accesibilidad minima, pruebas de estres prolongadas.</td><td>Madurez y robustez antes de releases amplios.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>17. Plantilla de Ejecucion</h2>
+  <table>
+    <thead><tr><th>Campo</th><th>Dato requerido</th></tr></thead>
+    <tbody>
+      <tr><td>ID caso</td><td>ID exacto del plan.</td></tr>
+      <tr><td>Fecha/hora</td><td>Fecha y hora local de ejecucion.</td></tr>
+      <tr><td>Ambiente</td><td>Backend test, frontend test, local integrado, Docker, Android, carga.</td></tr>
+      <tr><td>Version</td><td>Commit/branch/build probado.</td></tr>
+      <tr><td>Datos usados</td><td>D-001 a D-006 o datos especificos.</td></tr>
+      <tr><td>Resultado</td><td>Aprobado, Fallido, Bloqueado, No aplica.</td></tr>
+      <tr><td>Evidencia</td><td>Log, captura, trace, reporte HTML/JUnit, respuesta JSON, ID de defecto.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>18. Recomendacion de Entregables QA</h2>
+  <table>
+    <thead><tr><th>Entregable</th><th>Contenido esperado</th></tr></thead>
+    <tbody>
+      <tr><td>Reporte de ejecucion manual</td><td>Matriz con ID, resultado, evidencia y defectos.</td></tr>
+      <tr><td>Reporte PHPUnit/Flutter</td><td>Salida de CI o archivos JUnit.</td></tr>
+      <tr><td>Reporte Playwright</td><td>HTML report, traces, capturas y videos en fallos.</td></tr>
+      <tr><td>Coleccion Postman</td><td>Collection JSON, environment local, report Newman HTML/JUnit.</td></tr>
+      <tr><td>Reporte de carga</td><td>k6/JMeter con metricas p95, throughput, error rate y observaciones.</td></tr>
+      <tr><td>Registro de defectos</td><td>Severidad, pasos, resultado actual, esperado, evidencia y retest.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>19. Cierre</h2>
+  <p>Este plan deja definidos los casos verificables que deben ejecutarse para validar A4MPets en backend, frontend, navegador, Postman/Newman, carga, resiliencia y compatibilidad. Ningun caso debe considerarse completado hasta que exista evidencia de ejecucion. La primera fase recomendada es ejecutar P0, luego P1 funcional, y finalmente navegador automatizado, carga y compatibilidad por plataforma.</p>
+</body>
+</html>

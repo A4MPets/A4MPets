@@ -2,6 +2,7 @@ part of 'map_page.dart';
 
 void _invalidateUserScopedData(WidgetRef ref) {
   ref.invalidate(localUserProfileProvider);
+  ref.invalidate(myPetsControllerProvider);
   ref.invalidate(petsControllerProvider);
   ref.invalidate(routesControllerProvider);
   ref.invalidate(hazardReportsControllerProvider);
@@ -16,6 +17,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       return;
     }
 
+    ref.invalidate(localUserProfileProvider);
     _pushPanel(_buildProfileRoute(isDarkMode));
   }
 
@@ -87,6 +89,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
             password: password,
             passwordConfirmation: passwordConfirmation,
           );
+      await ref.read(localMediaStorageServiceProvider).clearStoredMedia();
 
       _invalidateUserScopedData(ref);
 
@@ -158,6 +161,11 @@ extension _MapPageAuthAndProfileState on _MapPageState {
     _pushPanel(_buildEditPetRoute(isDarkMode, pet));
   }
 
+  void _openPetDetailsPanel(bool isDarkMode, PetRecord pet) {
+    ref.read(myPetsControllerProvider.notifier).reload();
+    _pushPanel(_buildPetDetailsRoute(isDarkMode, pet));
+  }
+
   Future<void> _closeAddPetPanelAfterSave(int petId) async {
     if (!_hasOpenPanels) {
       return;
@@ -166,25 +174,47 @@ extension _MapPageAuthAndProfileState on _MapPageState {
     final bool returningToTripPetSelection =
         _panelStack.length > 1 &&
         _panelStack[_panelStack.length - 2].isTripPetSelectionPanel;
+    final bool returningToLostPetSelection =
+        _panelStack.length > 1 &&
+        _panelStack[_panelStack.length - 2].isLostPetPetSelectionPanel;
 
     _updatePageState(() {
       _panelStack.removeLast();
     });
 
-    if (!returningToTripPetSelection) {
+    if (!returningToTripPetSelection && !returningToLostPetSelection) {
       return;
     }
 
-    await ref.read(petsControllerProvider.notifier).reload();
+    await ref.read(myPetsControllerProvider.notifier).reload();
     if (!mounted) {
       return;
     }
 
-    final bool isDarkMode = ref.read(themeModeProvider);
-    _updatePageState(() {
-      _selectedTripPetIds.add(petId);
-    });
-    _returnToTripStartPanel(isDarkMode);
+    final List<PetRecord> pets =
+        ref.read(myPetsControllerProvider).asData?.value ?? const <PetRecord>[];
+    PetRecord? savedPet;
+    for (final PetRecord pet in pets) {
+      if (pet.id == petId) {
+        savedPet = pet;
+        break;
+      }
+    }
+
+    if (returningToTripPetSelection) {
+      final bool isDarkMode = ref.read(themeModeProvider);
+      _updatePageState(() {
+        _selectedTripPetIds.add(petId);
+      });
+      _returnToTripStartPanel(isDarkMode);
+      return;
+    }
+
+    if (savedPet == null) {
+      return;
+    }
+
+    _selectLostPetForReport(savedPet);
   }
 
   _PanelRoute _buildProfileRoute(bool isDarkMode) {
@@ -193,9 +223,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       title: null,
       anchor: PanelAnchor.topLeft,
       width: 360,
-      height: 370,
-      maxHeight: 400,
-      adaptHeightToContent: false,
+      adaptHeightToContent: true,
       expandHorizontal: false,
       expandVertical: false,
       scrollContent: false,
@@ -220,11 +248,10 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       title: 'Iniciar Sesión',
       anchor: PanelAnchor.topLeft,
       width: 360,
-      height: 430,
-      maxHeight: 520,
       adaptHeightToContent: true,
       expandHorizontal: false,
       expandVertical: false,
+      scrollContent: false,
       isLoginPanel: true,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
@@ -243,11 +270,10 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       title: 'Registrarse',
       anchor: PanelAnchor.topLeft,
       width: 360,
-      height: 520,
-      maxHeight: 620,
       adaptHeightToContent: true,
       expandHorizontal: false,
       expandVertical: false,
+      scrollContent: false,
       isRegisterPanel: true,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
@@ -278,6 +304,8 @@ extension _MapPageAuthAndProfileState on _MapPageState {
         return ManagePetsPanelContent(
           isDarkMode: isDarkMode,
           onAddPetPressed: () => _openAddPetPanel(isDarkMode),
+          onViewPetPressed: (PetRecord pet) =>
+              _openPetDetailsPanel(isDarkMode, pet),
           onEditPetPressed: (PetRecord pet) =>
               _openEditPetPanel(isDarkMode, pet),
         );
@@ -328,6 +356,30 @@ extension _MapPageAuthAndProfileState on _MapPageState {
           pet: pet,
           isDarkMode: isDarkMode,
           onSaved: _closeCurrentPanel,
+        );
+      },
+    );
+  }
+
+  _PanelRoute _buildPetDetailsRoute(bool isDarkMode, PetRecord pet) {
+    return _PanelRoute(
+      transitionKey: ++_panelTransitionSeed,
+      title: 'Detalle mascota',
+      anchor: PanelAnchor.topLeft,
+      width: 380,
+      height: 620,
+      maxHeight: 620,
+      adaptHeightToContent: false,
+      expandHorizontal: false,
+      expandVertical: true,
+      scrollContent: false,
+      borderRadius: BorderRadius.circular(22),
+      contentBuilder: (BuildContext context) {
+        return PetDetailsPanelContent(
+          pet: pet,
+          isDarkMode: isDarkMode,
+          onEditPressed: () => _openEditPetPanel(isDarkMode, pet),
+          onMarkedFound: _closeCurrentPanel,
         );
       },
     );

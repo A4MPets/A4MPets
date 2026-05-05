@@ -31,6 +31,7 @@ extension _MapPageHazardsState on _MapPageState {
         !_panelStack.last.isReportSelectorPanel) {
       return;
     }
+    ref.read(hazardReportsControllerProvider.notifier).reload();
     _updatePageState(() {
       _isSelectingHazardLocationOnMap = false;
       _activeReportSelectionContext = null;
@@ -51,6 +52,7 @@ extension _MapPageHazardsState on _MapPageState {
       return;
     }
 
+    _reloadReportData();
     _pushPanel(_buildHazardLayersSettingsRoute());
   }
 
@@ -58,6 +60,7 @@ extension _MapPageHazardsState on _MapPageState {
     bool isDarkMode,
     HazardReportRecord hazard,
   ) async {
+    ref.read(hazardReportsControllerProvider.notifier).reload();
     if (_hasOpenPanels && !_panelStack.last.isHazardDetailsPanel) {
       final _PanelRoute currentPanel = _panelStack.last;
 

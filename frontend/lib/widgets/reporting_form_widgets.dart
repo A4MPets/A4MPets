@@ -21,6 +21,7 @@ Future<DateTime?> showReportingDatePicker({
   final ThemeData baseTheme = Theme.of(context);
   final Color dialogBackground = AppPalette.dialogBackground(isDarkMode);
   final Color foregroundColor = AppPalette.textPrimary(isDarkMode);
+  const Color selectedForegroundColor = AppPalette.white;
 
   return showDatePicker(
     context: context,
@@ -32,9 +33,39 @@ Future<DateTime?> showReportingDatePicker({
         data: baseTheme.copyWith(
           colorScheme: baseTheme.colorScheme.copyWith(
             primary: AppPalette.primaryBlue,
-            onPrimary: AppPalette.white,
+            onPrimary: selectedForegroundColor,
             surface: dialogBackground,
             onSurface: foregroundColor,
+          ),
+          datePickerTheme: DatePickerThemeData(
+            backgroundColor: dialogBackground,
+            headerBackgroundColor: AppPalette.primaryBlue,
+            headerForegroundColor: selectedForegroundColor,
+            dayForegroundColor: WidgetStateProperty.resolveWith<Color?>((
+              Set<WidgetState> states,
+            ) {
+              if (states.contains(WidgetState.selected)) {
+                return selectedForegroundColor;
+              }
+              return foregroundColor;
+            }),
+            yearForegroundColor: WidgetStateProperty.resolveWith<Color?>((
+              Set<WidgetState> states,
+            ) {
+              if (states.contains(WidgetState.selected)) {
+                return selectedForegroundColor;
+              }
+              return foregroundColor;
+            }),
+            todayForegroundColor: WidgetStateProperty.resolveWith<Color?>((
+              Set<WidgetState> states,
+            ) {
+              if (states.contains(WidgetState.selected)) {
+                return selectedForegroundColor;
+              }
+              return AppPalette.primaryBlue;
+            }),
+            todayBorder: const BorderSide(color: AppPalette.primaryBlue),
           ),
           dialogTheme: baseTheme.dialogTheme.copyWith(
             backgroundColor: dialogBackground,
@@ -267,7 +298,7 @@ class ReportingPhotoField extends StatelessWidget {
                   child: photoSource != null && photoSource!.isNotEmpty
                       ? buildLocalImageWidget(
                           source: photoSource,
-                          fit: BoxFit.cover,
+                          fit: BoxFit.contain,
                           fallback: const _PhotoPlaceholder(),
                           errorBuilder: (_, _, _) => const _PhotoPlaceholder(),
                         )
@@ -385,9 +416,9 @@ class ReportingDateField extends StatelessWidget {
       child: OutlinedButton.icon(
         onPressed: onTap,
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppPalette.textPrimary(isDarkMode),
-          side: BorderSide(color: AppPalette.border(isDarkMode)),
-          backgroundColor: AppPalette.fieldBackground(isDarkMode),
+          foregroundColor: AppPalette.white,
+          side: const BorderSide(color: AppPalette.primaryBlue),
+          backgroundColor: AppPalette.primaryBlue,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -401,6 +432,103 @@ class ReportingDateField extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class ReportingSecondaryButton extends StatelessWidget {
+  final bool isDarkMode;
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+
+  const ReportingSecondaryButton({
+    super.key,
+    required this.isDarkMode,
+    required this.label,
+    required this.onPressed,
+    this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget child = icon == null
+        ? Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          )
+        : Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 16),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          );
+
+    return SizedBox(
+      height: 46,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppPalette.textPrimary(isDarkMode),
+          side: BorderSide(color: AppPalette.border(isDarkMode)),
+          backgroundColor: AppPalette.fieldBackground(isDarkMode),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+class ReportingSelectionButton extends StatelessWidget {
+  final bool isDarkMode;
+  final String label;
+  final VoidCallback? onPressed;
+
+  const ReportingSelectionButton({
+    super.key,
+    required this.isDarkMode,
+    required this.label,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 46,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppPalette.textPrimary(isDarkMode),
+          side: BorderSide.none,
+          backgroundColor: AppPalette.fieldBackground(isDarkMode),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
     );

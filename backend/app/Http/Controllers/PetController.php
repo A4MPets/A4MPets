@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Pets\StorePetRequest;
-use App\Http\Requests\Pets\SyncPetsRequest;
 use App\Http\Requests\Pets\UpdatePetRequest;
 use App\Models\Pet;
 use App\Services\Pets\PetService;
@@ -18,12 +17,26 @@ class PetController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $pets = $this->petService->paginateForUser(
-            $request->user()?->id,
-            (bool) $request->query('include_archived'),
-            min((int) $request->query('per_page', 50), 100),
-            (int) $request->query('page', 1)
-        );
+        $scope = $request->query('scope');
+        if ($scope === 'mine' && ! $request->user()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autenticado',
+            ], 401);
+        }
+
+        $pets = $scope === 'mine'
+            ? $this->petService->paginateOwnedForUser(
+                (int) $request->user()->id,
+                min((int) $request->query('per_page', 50), 100),
+                (int) $request->query('page', 1)
+            )
+            : $this->petService->paginateForUser(
+                $request->user()?->id,
+                (bool) $request->query('include_archived'),
+                min((int) $request->query('per_page', 50), 100),
+                (int) $request->query('page', 1)
+            );
 
         return response()->json([
             'success' => true,
@@ -37,16 +50,11 @@ class PetController extends Controller
         ]);
     }
 
-    public function sync(SyncPetsRequest $request): JsonResponse
+    public function show(Pet $pet): JsonResponse
     {
-        $results = $this->petService->sync(
-            $request->user()?->id,
-            $request->validated('pets')
-        );
-
         return response()->json([
             'success' => true,
-            'sync_results' => $results,
+            'data' => $pet,
         ]);
     }
 
@@ -65,6 +73,13 @@ class PetController extends Controller
 
     public function update(UpdatePetRequest $request, Pet $pet): JsonResponse
     {
+        if (! $this->petService->canMutate($request->user()?->id, $pet)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado',
+            ], 403);
+        }
+
         $pet = $this->petService->update($pet, $request->validated());
 
         return response()->json([
@@ -75,11 +90,35 @@ class PetController extends Controller
 
     public function destroy(Pet $pet): JsonResponse
     {
+        if (! $this->petService->canMutate(request()->user()?->id, $pet)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado',
+            ], 403);
+        }
+
         $this->petService->delete($pet);
 
         return response()->json([
             'success' => true,
-            'message' => 'Mascota marcada para eliminacion',
+            'message' => 'Mascota eliminada',
+        ]);
+    }
+
+    public function markFound(Pet $pet): JsonResponse
+    {
+        if (! $this->petService->canMutate(request()->user()?->id, $pet)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado',
+            ], 403);
+        }
+
+        $pet = $this->petService->markFound($pet);
+
+        return response()->json([
+            'success' => true,
+            'data' => $pet,
         ]);
     }
 }

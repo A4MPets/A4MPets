@@ -44,8 +44,7 @@ class RouteHazardVisualizerService {
       ...genericReports
           .where((GenericReportRecord report) {
             return report.impactRadiusMeters > 0 &&
-                HazardRiskFiltering.shouldConsiderRisk(
-                  riskLevelCode: report.riskLevelCode,
+                HazardRiskFiltering.shouldConsiderOtherReports(
                   selectedFilters: selectedRiskFilters,
                 );
           })
@@ -112,16 +111,20 @@ class RouteHazardVisualizerService {
     final List<int> breakIndices = <int>[0];
     int searchStartIndex = 0;
 
-    for (int waypointIndex = 1;
-        waypointIndex < routeWaypoints.length - 1;
-        waypointIndex++) {
+    for (
+      int waypointIndex = 1;
+      waypointIndex < routeWaypoints.length - 1;
+      waypointIndex++
+    ) {
       final LatLng waypoint = routeWaypoints[waypointIndex];
       int bestPolylineIndex = searchStartIndex;
       double bestDistance = double.infinity;
 
-      for (int polylineIndex = searchStartIndex;
-          polylineIndex < routePolyline.length;
-          polylineIndex++) {
+      for (
+        int polylineIndex = searchStartIndex;
+        polylineIndex < routePolyline.length;
+        polylineIndex++
+      ) {
         final double candidateDistance = distanceCalculator.distance(
           waypoint,
           routePolyline[polylineIndex],
@@ -148,7 +151,11 @@ class RouteHazardVisualizerService {
       return 0;
     }
 
-    for (int legIndex = 0; legIndex < waypointBreakIndices.length - 1; legIndex++) {
+    for (
+      int legIndex = 0;
+      legIndex < waypointBreakIndices.length - 1;
+      legIndex++
+    ) {
       final int start = waypointBreakIndices[legIndex];
       final int end = waypointBreakIndices[legIndex + 1];
       if (polylineIndex >= start && polylineIndex < end) {

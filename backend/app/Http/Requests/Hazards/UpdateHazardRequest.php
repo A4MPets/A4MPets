@@ -28,8 +28,6 @@ class UpdateHazardRequest extends FormRequest
             'reported_at' => ['nullable', 'date'],
             'evidence_photo_url' => ['nullable', 'string', 'max:500'],
             'reported_by_username' => ['nullable', 'string', 'max:100'],
-            'last_modified_at' => ['date_format:Y-m-d H:i:s'],
-            'comments' => ['sometimes', 'array'],
         ];
     }
 }

@@ -10,6 +10,9 @@ class FoundPetReport extends Model
 {
     protected $fillable = [
         'user_id',
+        'pet_id',
+        'matched_lost_pet_report_id',
+        'pet_local_uuid',
         'local_id',
         'remote_id',
         'latitude',
@@ -33,16 +36,33 @@ class FoundPetReport extends Model
         'updated_at' => 'datetime',
     ];
 
-    protected $appends = ['comments_json'];
+    protected $appends = ['comments_json', 'pet_photo_url'];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    public function pet(): BelongsTo
+    {
+        return $this->belongsTo(Pet::class);
+    }
+
+    public function matchedLostPetReport(): BelongsTo
+    {
+        return $this->belongsTo(LostPetReport::class, 'matched_lost_pet_report_id');
+    }
+
     public function comments(): MorphMany
     {
         return $this->morphMany(ReportComment::class, 'commentable')->orderBy('commented_at')->orderBy('id');
+    }
+
+    public function getPetPhotoUrlAttribute(): ?string
+    {
+        $pet = $this->relationLoaded('pet') ? $this->pet : $this->pet()->first();
+
+        return $this->photo_url ?? $pet?->photo_path;
     }
 
     public function getCommentsJsonAttribute(): string

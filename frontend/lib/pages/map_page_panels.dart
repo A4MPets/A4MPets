@@ -22,6 +22,13 @@ extension _MapPagePanelsState on _MapPageState {
     }
 
     final _PanelRoute currentPanel = _panelStack.last;
+    final bool returningToReportSelector =
+        _panelStack.length > 1 &&
+        _panelStack[_panelStack.length - 2].isReportSelectorPanel &&
+        (currentPanel.isReportHazardPanel ||
+            currentPanel.isLostPetReportPanel ||
+            currentPanel.isFoundPetReportPanel ||
+            currentPanel.isGenericReportPanel);
     final bool returningToTripRouteSelection =
         currentPanel.isAddRoutePanel &&
         _panelStack.length > 1 &&
@@ -89,6 +96,7 @@ extension _MapPagePanelsState on _MapPageState {
       if (currentPanel.isLostPetReportPanel) {
         _activeReportSelectionContext = null;
         _manualLostPetLocation = null;
+        _selectedLostPetForReport = null;
       }
       if (currentPanel.isFoundPetReportPanel) {
         _activeReportSelectionContext = null;
@@ -112,6 +120,9 @@ extension _MapPagePanelsState on _MapPageState {
         _selectedGenericReport = null;
       }
       _panelStack.removeLast();
+      if (returningToReportSelector) {
+        _reloadReportData();
+      }
     });
 
     if (returningToTripRouteSelection) {
@@ -204,9 +215,11 @@ extension _MapPagePanelsState on _MapPageState {
       loading = loading || _isAuthRequestLoading;
     }
 
-    if (panel.isManagePetsPanel || panel.isTripPetSelectionPanel) {
+    if (panel.isManagePetsPanel ||
+        panel.isLostPetPetSelectionPanel ||
+        panel.isTripPetSelectionPanel) {
       final AsyncValue<List<PetRecord>> petsValue = ref.watch(
-        petsControllerProvider,
+        myPetsControllerProvider,
       );
       final AsyncValue<LocalUserProfile> profileValue = ref.watch(
         localUserProfileProvider,

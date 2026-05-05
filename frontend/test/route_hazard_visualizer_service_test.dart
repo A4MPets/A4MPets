@@ -35,6 +35,38 @@ void main() {
     expect(segments.any((segment) => segment.hasHazard), isTrue);
   });
 
+  test('generic reports are ignored when other filter is not selected', () {
+    final List<LatLng> route = <LatLng>[
+      const LatLng(4.6500, -74.1000),
+      const LatLng(4.6500, -74.0990),
+    ];
+
+    final segments = RouteHazardVisualizerService.analyzeRouteHazards(
+      routePolyline: route,
+      hazards: const [],
+      genericReports: <GenericReportRecord>[_buildGenericReport(40)],
+      hazardRiskFilters: const <String>['low', 'medium', 'high'],
+    );
+
+    expect(segments.every((segment) => segment.hasHazard == false), isTrue);
+  });
+
+  test('generic reports are considered when other filter is selected', () {
+    final List<LatLng> route = <LatLng>[
+      const LatLng(4.6500, -74.1000),
+      const LatLng(4.6500, -74.0990),
+    ];
+
+    final segments = RouteHazardVisualizerService.analyzeRouteHazards(
+      routePolyline: route,
+      hazards: const [],
+      genericReports: <GenericReportRecord>[_buildGenericReport(40)],
+      hazardRiskFilters: const <String>['other'],
+    );
+
+    expect(segments.any((segment) => segment.hasHazard), isTrue);
+  });
+
   test('selected risk filters limit which hazards affect the route', () {
     final List<LatLng> route = <LatLng>[
       const LatLng(4.6500, -74.1000),
@@ -82,6 +114,7 @@ GenericReportRecord _buildGenericReport(int impactRadiusMeters) {
     riskLevelCode: 'medium',
     impactRadiusMeters: impactRadiusMeters,
     photoUrl: null,
+    reportedByUsername: 'Anonimo',
     comments: const [],
     createdAt: now,
     updatedAt: now,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'image_preview_dialog.dart';
 import 'local_image_widget.dart';
 
 class UserIdentityHeader extends StatelessWidget {
@@ -31,6 +32,7 @@ class UserIdentityHeader extends StatelessWidget {
     return Column(
       children: [
         _UserAvatar(
+          isDarkMode: isDarkMode,
           borderColor: avatarBorderColor,
           avatarPath: avatarPath,
           onEditPressed: onEditAvatarPressed,
@@ -52,12 +54,14 @@ class UserIdentityHeader extends StatelessWidget {
 }
 
 class _UserAvatar extends StatelessWidget {
+  final bool isDarkMode;
   final Color borderColor;
   final String? avatarPath;
   final VoidCallback? onEditPressed;
   final bool isBusy;
 
   const _UserAvatar({
+    required this.isDarkMode,
     required this.borderColor,
     this.avatarPath,
     this.onEditPressed,
@@ -66,6 +70,16 @@ class _UserAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String? imageSource = avatarPath?.trim();
+    final Widget avatarImage = buildLocalImageWidget(
+      source: avatarPath,
+      fit: BoxFit.cover,
+      fallback: _buildFallbackAvatar(),
+      errorBuilder: (context, error, stackTrace) {
+        return _buildFallbackAvatar();
+      },
+    );
+
     return SizedBox(
       width: 106,
       height: 106,
@@ -81,14 +95,14 @@ class _UserAvatar extends StatelessWidget {
               border: Border.all(color: borderColor, width: 2),
             ),
             child: ClipOval(
-              child: buildLocalImageWidget(
-                source: avatarPath,
-                fit: BoxFit.cover,
-                fallback: _buildFallbackAvatar(),
-                errorBuilder: (context, error, stackTrace) {
-                  return _buildFallbackAvatar();
-                },
-              ),
+              child: imageSource != null && imageSource.isNotEmpty
+                  ? ExpandableImage(
+                      source: imageSource,
+                      isDarkMode: isDarkMode,
+                      title: 'Foto de perfil',
+                      child: avatarImage,
+                    )
+                  : avatarImage,
             ),
           ),
           if (onEditPressed != null)

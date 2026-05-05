@@ -17,8 +17,14 @@ class UpdatePetRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['nullable', 'string', 'max:255'],
             'photo_path' => ['nullable', 'string', 'max:500'],
+            'total_walks' => ['nullable', 'integer', 'min:0'],
+            'registered_at' => ['nullable', 'date'],
+            'adoption_date' => ['nullable', 'date'],
+            'birth_date' => ['nullable', 'date'],
+            'status' => ['nullable', 'in:normal,lost,perdida'],
+            'is_ownerless' => ['nullable', 'boolean'],
         ];
     }
 }

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Routes\StoreTravelRouteRequest;
-use App\Http\Requests\Routes\SyncTravelRoutesRequest;
 use App\Http\Requests\Routes\UpdateTravelRouteRequest;
 use App\Models\TravelRoute;
 use App\Services\Routes\TravelRouteService;
@@ -37,16 +36,13 @@ class TravelRouteController extends Controller
         ]);
     }
 
-    public function sync(SyncTravelRoutesRequest $request): JsonResponse
+    public function show(TravelRoute $route): JsonResponse
     {
-        $results = $this->travelRouteService->sync(
-            $request->user()?->id,
-            $request->validated('routes')
-        );
+        $route->load('routePoints');
 
         return response()->json([
             'success' => true,
-            'sync_results' => $results,
+            'data' => $route,
         ]);
     }
 
@@ -65,6 +61,13 @@ class TravelRouteController extends Controller
 
     public function update(UpdateTravelRouteRequest $request, TravelRoute $route): JsonResponse
     {
+        if (! $this->travelRouteService->canMutate($request->user()?->id, $route)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado',
+            ], 403);
+        }
+
         $route = $this->travelRouteService->update($route, $request->validated());
 
         return response()->json([
@@ -75,11 +78,18 @@ class TravelRouteController extends Controller
 
     public function destroy(TravelRoute $route): JsonResponse
     {
+        if (! $this->travelRouteService->canMutate(request()->user()?->id, $route)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado',
+            ], 403);
+        }
+
         $this->travelRouteService->delete($route);
 
         return response()->json([
             'success' => true,
-            'message' => 'Ruta marcada para eliminacion',
+            'message' => 'Ruta eliminada',
         ]);
     }
 }

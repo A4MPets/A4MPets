@@ -16,6 +16,7 @@ void main() {
     riskLevelCode: 'low',
     impactRadiusMeters: 10,
     photoUrl: null,
+    reportedByUsername: 'Anonimo',
     comments: [],
     createdAt: DateTime.now(),
     updatedAt: DateTime.now(),
@@ -27,7 +28,9 @@ void main() {
   final dynamic decoded = jsonDecode(jsonStr);
 
   try {
-    final GenericReportRecord newRecord = GenericReportRecord.fromMap(decoded as Map<String, Object?>);
+    final GenericReportRecord newRecord = GenericReportRecord.fromMap(
+      decoded as Map<String, Object?>,
+    );
     print('Success! $newRecord');
   } catch (e, stack) {
     print('Error: $e');

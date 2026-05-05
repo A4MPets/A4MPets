@@ -54,4 +54,57 @@ void main() {
       'Mantente sobre la via de servicio',
     );
   });
+
+  test('announces roundabout exit number when GraphHopper provides it', () {
+    const RouteNavigationInstruction roundaboutInstruction =
+        RouteNavigationInstruction(
+          sequence: 3,
+          sign: 6,
+          text: 'Entra a la rotonda',
+          streetName: '',
+          exitNumber: 2,
+          distanceMeters: 55,
+          durationSeconds: 16,
+          pointStartIndex: 5,
+          pointEndIndex: 8,
+        );
+
+    expect(
+      NavigationAudioMessageBuilder.buildFarApproachMessage(
+        roundaboutInstruction,
+      ),
+      'En 100 metros, entra a la rotonda y toma la segunda salida',
+    );
+    expect(
+      NavigationAudioMessageBuilder.buildApproachMessage(roundaboutInstruction),
+      'En 30 metros, entra a la rotonda y toma la segunda salida',
+    );
+    expect(
+      NavigationAudioMessageBuilder.buildImmediateMessage(
+        roundaboutInstruction,
+      ),
+      'Entra ahora a la rotonda y toma la segunda salida',
+    );
+  });
+
+  test('extracts roundabout exit number from backend instruction text', () {
+    const RouteNavigationInstruction roundaboutInstruction =
+        RouteNavigationInstruction(
+          sequence: 4,
+          sign: 6,
+          text: 'En la rotonda toma la 3 salida hacia Avenida Central',
+          streetName: 'Avenida Central',
+          distanceMeters: 40,
+          durationSeconds: 12,
+          pointStartIndex: 7,
+          pointEndIndex: 9,
+        );
+
+    expect(
+      NavigationAudioMessageBuilder.buildImmediateMessage(
+        roundaboutInstruction,
+      ),
+      'Entra ahora a la rotonda y toma la tercera salida',
+    );
+  });
 }

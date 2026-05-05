@@ -22,7 +22,7 @@ class RoutePlanningController extends Controller
             'points.*.lng' => 'required|numeric|between:-180,180',
             'avoid_hazards' => 'sometimes|boolean',
             'hazard_risk_filters' => 'sometimes|array',
-            'hazard_risk_filters.*' => 'string|in:low,medium,high',
+            'hazard_risk_filters.*' => 'string|in:low,medium,high,other',
             'travel_mode' => 'sometimes|string|max:32',
             'trip_config' => 'sometimes|array',
         ]);

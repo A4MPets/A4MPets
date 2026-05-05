@@ -46,7 +46,7 @@ class HazardReportService
         }
 
         return $query
-            ->orderByDesc('last_modified_at')
+            ->orderByDesc('updated_at')
             ->paginate(
                 min((int) ($filters['per_page'] ?? 50), 100),
                 ['*'],
@@ -65,7 +65,6 @@ class HazardReportService
         unset($payload['comments']);
 
         $hazard = HazardReport::create($payload);
-        $this->ensureRemoteId($hazard);
 
         if ($comments !== []) {
             $this->commentSyncService->syncComments($hazard, $comments);
@@ -76,7 +75,7 @@ class HazardReportService
 
     public function canMutate(?int $userId, HazardReport $hazardReport): bool
     {
-        return ! ($userId && $hazardReport->user_id !== null && (int) $hazardReport->user_id !== (int) $userId);
+        return $userId !== null && (int) $hazardReport->user_id === (int) $userId;
     }
 
     /**
@@ -88,21 +87,6 @@ class HazardReportService
         $comments = (array) ($validated['comments'] ?? []);
         $payload = $this->normalizeUpdatePayload($validated);
         unset($payload['comments']);
-
-        if (isset($payload['last_modified_at'])) {
-            $remoteTimestamp = Carbon::parse($payload['last_modified_at']);
-
-            if ($remoteTimestamp->lessThan($hazardReport->last_modified_at)) {
-                return [
-                    'conflict' => true,
-                    'hazard' => $hazardReport,
-                ];
-            }
-
-            $payload['last_modified_at'] = $remoteTimestamp;
-        } else {
-            $payload['last_modified_at'] = now();
-        }
 
         $hazardReport->update($payload);
 
@@ -240,7 +224,6 @@ class HazardReportService
         $validated['description'] = $validated['description'] ?? $validated['narrative_description'];
         $validated['reported_by_username'] = $validated['reported_by_username'] ?? $fallbackUsername ?? 'Anonimo';
         $validated['status'] = 'created';
-        $validated['last_modified_at'] = now();
         $validated['user_id'] = $userId;
 
         return $validated;

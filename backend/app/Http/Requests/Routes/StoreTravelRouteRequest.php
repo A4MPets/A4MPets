@@ -17,7 +17,6 @@ class StoreTravelRouteRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'local_id' => ['required', 'string'],
             'name' => ['required', 'string', 'max:255'],
             'points_json' => ['required', 'string'],
         ];

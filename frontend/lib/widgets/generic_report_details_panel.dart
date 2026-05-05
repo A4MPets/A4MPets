@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../models/generic_report_record.dart';
 import '../theme/app_palette.dart';
-import 'shared/panel_scroll_view.dart';
+import 'shared/image_preview_dialog.dart';
 import 'shared/local_image_widget.dart';
+import 'shared/panel_scroll_view.dart';
 
 class GenericReportDetailsPanelContent extends StatelessWidget {
   final bool isDarkMode;
@@ -38,11 +39,16 @@ class GenericReportDetailsPanelContent extends StatelessWidget {
                     height: 180,
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(14),
-                      child: buildLocalImageWidget(
-                        source: report.photoUrl,
-                        fit: BoxFit.cover,
-                        fallback: const _ImageFallback(),
-                        errorBuilder: (_, _, _) => const _ImageFallback(),
+                      child: ExpandableImage(
+                        source: report.photoUrl!,
+                        isDarkMode: isDarkMode,
+                        title: 'Foto del reporte',
+                        child: buildLocalImageWidget(
+                          source: report.photoUrl,
+                          fit: BoxFit.cover,
+                          fallback: const _ImageFallback(),
+                          errorBuilder: (_, _, _) => const _ImageFallback(),
+                        ),
                       ),
                     ),
                   ),
@@ -123,6 +129,16 @@ class GenericReportDetailsPanelContent extends StatelessWidget {
             ),
           ),
         ],
+        const SizedBox(height: 8),
+        Text(
+          'Reportado por: ${report.reportedByUsername}',
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: AppPalette.textMutedDark,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ],
     );
   }

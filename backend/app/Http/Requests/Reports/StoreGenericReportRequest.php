@@ -17,7 +17,6 @@ class StoreGenericReportRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'local_id' => ['required', 'string'],
             'latitude' => ['required', 'numeric'],
             'longitude' => ['required', 'numeric'],
             'description' => ['required', 'string'],

@@ -31,6 +31,8 @@ extension _MapPageTripState on _MapPageState {
     _spokenFarApproachInstructionIds.clear();
     _spokenApproachInstructionIds.clear();
     _spokenImmediateInstructionIds.clear();
+    _pendingImmediateNavigationCueKey = null;
+    _pendingImmediateNavigationCueCount = 0;
     if (stopSpeech) {
       _stopNavigationSpeech();
     }
@@ -54,7 +56,25 @@ extension _MapPageTripState on _MapPageState {
       distanceCalculator: _distanceCalculator,
     );
     if (cue == null) {
+      _pendingImmediateNavigationCueKey = null;
+      _pendingImmediateNavigationCueCount = 0;
       return;
+    }
+
+    if (cue.type == NavigationAudioCueType.immediate &&
+        !_spokenApproachInstructionIds.contains(cue.maneuverKey)) {
+      if (_pendingImmediateNavigationCueKey == cue.maneuverKey) {
+        _pendingImmediateNavigationCueCount += 1;
+      } else {
+        _pendingImmediateNavigationCueKey = cue.maneuverKey;
+        _pendingImmediateNavigationCueCount = 1;
+      }
+      if (_pendingImmediateNavigationCueCount < 2) {
+        return;
+      }
+    } else {
+      _pendingImmediateNavigationCueKey = null;
+      _pendingImmediateNavigationCueCount = 0;
     }
 
     final String message = switch (cue.type) {
@@ -78,6 +98,8 @@ extension _MapPageTripState on _MapPageState {
       _spokenFarApproachInstructionIds.add(cue.maneuverKey);
       _spokenApproachInstructionIds.add(cue.maneuverKey);
       _spokenImmediateInstructionIds.add(cue.maneuverKey);
+      _pendingImmediateNavigationCueKey = null;
+      _pendingImmediateNavigationCueCount = 0;
     }
 
     await ref.read(audioFeedbackServiceProvider).speakNavigation(message);
@@ -88,9 +110,9 @@ extension _MapPageTripState on _MapPageState {
       return;
     }
 
-    await ref.read(audioFeedbackServiceProvider).playArrivalCue(
-      NavigationAudioMessageBuilder.buildArrivalMessage(),
-    );
+    await ref
+        .read(audioFeedbackServiceProvider)
+        .playArrivalCue(NavigationAudioMessageBuilder.buildArrivalMessage());
   }
 
   Future<void> _playWaypointAudioCue() async {
@@ -127,6 +149,8 @@ extension _MapPageTripState on _MapPageState {
     if (_hasOpenPanels) {
       return;
     }
+    ref.read(myPetsControllerProvider.notifier).reload();
+    ref.read(routesControllerProvider.notifier).reload();
     _updatePageState(() {
       _isTripStartPanelMinimized = false;
     });
@@ -134,7 +158,7 @@ extension _MapPageTripState on _MapPageState {
   }
 
   void _openTripPetSelectorPanel(bool isDarkMode) {
-    ref.read(petsControllerProvider.notifier).reload();
+    ref.read(myPetsControllerProvider.notifier).reload();
     _syncAndReloadData();
     _pushPanel(_buildTripPetSelectorRoute(isDarkMode));
   }
@@ -195,7 +219,7 @@ extension _MapPageTripState on _MapPageState {
 
   void _startTrip(bool isDarkMode) {
     final RouteRecord? selectedRoute = _selectedTripRoute;
-    if (selectedRoute == null || selectedRoute.points.length < 2) {
+    if (selectedRoute == null || selectedRoute.points.isEmpty) {
       _updatePageState(() {
         _tripStartErrorText =
             'Selecciona una ruta válida para iniciar el viaje.';
@@ -316,7 +340,15 @@ extension _MapPageTripState on _MapPageState {
     }
 
     final bool isDarkMode = ref.read(themeModeProvider);
+    final Set<int> completedPetIds = Set<int>.from(_selectedTripPetIds);
     unawaited(_playArrivalAudioCue());
+    if (completedPetIds.isNotEmpty) {
+      unawaited(
+        ref
+            .read(myPetsControllerProvider.notifier)
+            .incrementPetWalks(petIds: completedPetIds),
+      );
+    }
     _updatePageState(() {
       _tripRerouteController.reset();
       _resetTripAudioNavigationState(stopSpeech: false);
@@ -483,7 +515,7 @@ extension _MapPageTripState on _MapPageState {
     final bool returningToTripStartOrSelection =
         _panelStack.length > 1 &&
         (_panelStack[_panelStack.length - 2].isTripRouteSelectionPanel ||
-         _panelStack[_panelStack.length - 2].isTripStartPanel);
+            _panelStack[_panelStack.length - 2].isTripStartPanel);
 
     _updatePageState(() {
       _clearDraftRouteVisuals();
@@ -748,7 +780,7 @@ extension _MapPageTripState on _MapPageState {
         return Consumer(
           builder: (BuildContext context, WidgetRef ref, Widget? child) {
             final AsyncValue<List<PetRecord>> petsValue = ref.watch(
-              petsControllerProvider,
+              myPetsControllerProvider,
             );
             return _TripPetSelectionPanelContent(
               isDarkMode: isDarkMode,

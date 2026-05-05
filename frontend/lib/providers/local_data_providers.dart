@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/found_pet_report_record.dart';
@@ -11,13 +9,13 @@ import '../models/pet_record.dart';
 import '../models/report_comment_record.dart';
 import '../models/route_record.dart';
 import '../repositories/user_local_repository.dart';
-import '../services/local_database_manager.dart';
+import '../services/guest_data_store.dart';
 import '../services/local_media_storage_service.dart';
-import '../services/user_data_sync_coordinator.dart';
+import '../services/session_store.dart';
 import 'async_list_controller.dart';
 
-final localDatabaseManagerProvider = Provider<LocalDatabaseManager>((ref) {
-  return LocalDatabaseManager();
+final sessionStoreProvider = Provider<SessionStore>((ref) {
+  return SessionStore();
 });
 
 final localMediaStorageServiceProvider = Provider<LocalMediaStorageService>((
@@ -26,23 +24,14 @@ final localMediaStorageServiceProvider = Provider<LocalMediaStorageService>((
   return LocalMediaStorageService();
 });
 
-final userDataSyncCoordinatorProvider = Provider<UserDataSyncCoordinator>((
-  ref,
-) {
-  final UserDataSyncCoordinator coordinator = UserDataSyncCoordinator(
-    databaseManager: ref.watch(localDatabaseManagerProvider),
-  );
-
-  coordinator.startAutoSync();
-  ref.onDispose(coordinator.stopAutoSync);
-
-  return coordinator;
+final guestDataStoreProvider = Provider<GuestDataStore>((ref) {
+  return GuestDataStore();
 });
 
 final userLocalRepositoryProvider = Provider<UserLocalRepository>((ref) {
   return UserLocalRepository(
-    databaseManager: ref.watch(localDatabaseManagerProvider),
-    syncCoordinator: ref.watch(userDataSyncCoordinatorProvider),
+    sessionStore: ref.watch(sessionStoreProvider),
+    guestDataStore: ref.watch(guestDataStoreProvider),
   );
 });
 
@@ -51,7 +40,7 @@ final localUserProfileProvider = FutureProvider<LocalUserProfile>((ref) async {
   return repository.getUserProfile();
 });
 
-/// Exposes CRUD helpers for locally stored pets.
+/// Exposes CRUD helpers for pets stored in the backend.
 final petsControllerProvider =
     AsyncNotifierProvider<PetsController, List<PetRecord>>(PetsController.new);
 
@@ -68,10 +57,19 @@ class PetsController extends AsyncListController<PetRecord> {
     return count + 1;
   }
 
-  Future<int> addPet({required String name, String? photoPath}) async {
+  Future<int> addPet({
+    String? name,
+    String? photoPath,
+    DateTime? adoptionDate,
+    DateTime? birthDate,
+    bool isOwnerless = false,
+  }) async {
     final int petId = await _repository.addPet(
       name: name,
       photoPath: photoPath,
+      adoptionDate: adoptionDate,
+      birthDate: birthDate,
+      isOwnerless: isOwnerless,
     );
     await reload();
     return petId;
@@ -79,10 +77,18 @@ class PetsController extends AsyncListController<PetRecord> {
 
   Future<void> updatePet({
     required int petId,
-    required String name,
+    required String? name,
     String? photoPath,
+    DateTime? adoptionDate,
+    DateTime? birthDate,
   }) async {
-    await _repository.updatePet(petId: petId, name: name, photoPath: photoPath);
+    await _repository.updatePet(
+      petId: petId,
+      name: name,
+      photoPath: photoPath,
+      adoptionDate: adoptionDate,
+      birthDate: birthDate,
+    );
     await reload();
   }
 
@@ -90,9 +96,93 @@ class PetsController extends AsyncListController<PetRecord> {
     await _repository.deletePet(petId: petId);
     await reload();
   }
+
+  Future<void> incrementPetWalks({required Iterable<int> petIds}) async {
+    await _repository.incrementPetWalks(petIds: petIds);
+    await reload();
+  }
+
+  Future<void> markPetFound({required int petId}) async {
+    await _repository.markPetFound(petId: petId);
+    await reload();
+  }
 }
 
-/// Exposes CRUD helpers for locally stored travel routes.
+final myPetsControllerProvider =
+    AsyncNotifierProvider<MyPetsController, List<PetRecord>>(
+      MyPetsController.new,
+    );
+
+class MyPetsController extends AsyncListController<PetRecord> {
+  UserLocalRepository get _repository => ref.read(userLocalRepositoryProvider);
+
+  @override
+  Future<List<PetRecord>> loadItems() {
+    return _repository.getMyPets();
+  }
+
+  Future<int> getNextDefaultPetNumber() async {
+    final int count = await _repository.getMyPetsCount();
+    return count + 1;
+  }
+
+  Future<int> addPet({
+    String? name,
+    String? photoPath,
+    DateTime? adoptionDate,
+    DateTime? birthDate,
+    bool isOwnerless = false,
+  }) async {
+    final int petId = await _repository.addPet(
+      name: name,
+      photoPath: photoPath,
+      adoptionDate: adoptionDate,
+      birthDate: birthDate,
+      isOwnerless: isOwnerless,
+    );
+    await reload();
+    await ref.read(petsControllerProvider.notifier).reload();
+    return petId;
+  }
+
+  Future<void> updatePet({
+    required int petId,
+    required String? name,
+    String? photoPath,
+    DateTime? adoptionDate,
+    DateTime? birthDate,
+  }) async {
+    await _repository.updatePet(
+      petId: petId,
+      name: name,
+      photoPath: photoPath,
+      adoptionDate: adoptionDate,
+      birthDate: birthDate,
+    );
+    await reload();
+    await ref.read(petsControllerProvider.notifier).reload();
+  }
+
+  Future<void> deletePet({required int petId}) async {
+    await _repository.deletePet(petId: petId);
+    await reload();
+    await ref.read(petsControllerProvider.notifier).reload();
+  }
+
+  Future<void> incrementPetWalks({required Iterable<int> petIds}) async {
+    await _repository.incrementPetWalks(petIds: petIds);
+    await reload();
+    await ref.read(petsControllerProvider.notifier).reload();
+  }
+
+  Future<void> markPetFound({required int petId}) async {
+    await _repository.markPetFound(petId: petId);
+    await reload();
+    await ref.read(petsControllerProvider.notifier).reload();
+  }
+}
+
+/// Exposes CRUD helpers for travel routes stored in the backend.
 final routesControllerProvider =
     AsyncNotifierProvider<RoutesController, List<RouteRecord>>(
       RoutesController.new,
@@ -135,7 +225,7 @@ class RoutesController extends AsyncListController<RouteRecord> {
   }
 }
 
-/// Manages hazard lists with periodic refresh and background sync.
+/// Manages hazard lists with periodic backend refresh.
 final hazardReportsControllerProvider =
     AsyncNotifierProvider<HazardReportsController, List<HazardReportRecord>>(
       HazardReportsController.new,
@@ -146,11 +236,6 @@ class HazardReportsController extends AsyncListController<HazardReportRecord> {
 
   @override
   Duration get refreshInterval => const Duration(seconds: 3);
-
-  @override
-  Future<void> runInitialSync() async {
-    unawaited(_repository.syncHazardsNow());
-  }
 
   @override
   Future<List<HazardReportRecord>> loadItems() {
@@ -181,7 +266,7 @@ class HazardReportsController extends AsyncListController<HazardReportRecord> {
       evidencePhotoUrl: evidencePhotoUrl,
       reportedByUsername: reportedByUsername,
     );
-    unawaited(_refreshAfterOptimisticSave());
+    await reload();
   }
 
   Future<void> addCommentToHazard({
@@ -203,21 +288,10 @@ class HazardReportsController extends AsyncListController<HazardReportRecord> {
     await reload();
   }
 
-  Future<void> syncWithBackend() async {
-    await _repository.syncHazardsNow();
-    await reload();
-  }
-
-  Future<void> _refreshAfterOptimisticSave() async {
-    try {
-      await reload();
-    } catch (_) {
-      // The local save already succeeded; avoid blocking the UI on refresh.
-    }
-  }
+  Future<void> syncWithBackend() => reload();
 }
 
-/// Manages lost-pet reports with periodic refresh and background sync.
+/// Manages lost-pet reports with periodic backend refresh.
 final lostPetReportsControllerProvider =
     AsyncNotifierProvider<LostPetReportsController, List<LostPetReportRecord>>(
       LostPetReportsController.new,
@@ -231,40 +305,34 @@ class LostPetReportsController
   Duration get refreshInterval => const Duration(seconds: 3);
 
   @override
-  Future<void> runInitialSync() async {
-    unawaited(_repository.syncLostPetReportsNow());
-  }
-
-  @override
   Future<List<LostPetReportRecord>> loadItems() {
     return _repository.getLostPetReports();
   }
 
   Future<void> addLostPetReport({
+    required int petId,
+    required String petLocalUuid,
     required double lastSeenLatitude,
     required double lastSeenLongitude,
-    required String name,
     required String details,
     required DateTime disappearanceDate,
-    required String photoUrl,
+    String? photoUrl,
     required String phone,
   }) async {
     await _repository.addLostPetReport(
+      petId: petId,
+      petLocalUuid: petLocalUuid,
       lastSeenLatitude: lastSeenLatitude,
       lastSeenLongitude: lastSeenLongitude,
-      name: name,
       details: details,
       disappearanceDate: disappearanceDate,
       photoUrl: photoUrl,
       phone: phone,
     );
-    unawaited(_refreshAfterOptimisticSave());
-  }
-
-  Future<void> syncWithBackend() async {
-    await _repository.syncLostPetReportsNow();
     await reload();
   }
+
+  Future<void> syncWithBackend() => reload();
 
   Future<void> addCommentToLostPetReport({
     required int reportId,
@@ -287,17 +355,9 @@ class LostPetReportsController
     );
     await reload();
   }
-
-  Future<void> _refreshAfterOptimisticSave() async {
-    try {
-      await reload();
-    } catch (_) {
-      // The local save already succeeded; avoid blocking the UI on refresh.
-    }
-  }
 }
 
-/// Manages found-pet reports with periodic refresh and background sync.
+/// Manages found-pet reports with periodic backend refresh.
 final foundPetReportsControllerProvider =
     AsyncNotifierProvider<
       FoundPetReportsController,
@@ -312,16 +372,14 @@ class FoundPetReportsController
   Duration get refreshInterval => const Duration(seconds: 3);
 
   @override
-  Future<void> runInitialSync() async {
-    unawaited(_repository.syncFoundPetReportsNow());
-  }
-
-  @override
   Future<List<FoundPetReportRecord>> loadItems() {
     return _repository.getFoundPetReports();
   }
 
   Future<void> addFoundPetReport({
+    int? petId,
+    String? petLocalUuid,
+    int? matchedLostPetReportId,
     required double latitude,
     required double longitude,
     required String details,
@@ -330,6 +388,9 @@ class FoundPetReportsController
     String? phone,
   }) async {
     await _repository.addFoundPetReport(
+      petId: petId,
+      petLocalUuid: petLocalUuid,
+      matchedLostPetReportId: matchedLostPetReportId,
       latitude: latitude,
       longitude: longitude,
       details: details,
@@ -337,13 +398,10 @@ class FoundPetReportsController
       photoUrl: photoUrl,
       phone: phone,
     );
-    unawaited(_refreshAfterOptimisticSave());
-  }
-
-  Future<void> syncWithBackend() async {
-    await _repository.syncFoundPetReportsNow();
     await reload();
   }
+
+  Future<void> syncWithBackend() => reload();
 
   Future<void> addCommentToFoundPetReport({
     required int reportId,
@@ -366,17 +424,9 @@ class FoundPetReportsController
     );
     await reload();
   }
-
-  Future<void> _refreshAfterOptimisticSave() async {
-    try {
-      await reload();
-    } catch (_) {
-      // The local save already succeeded; avoid blocking the UI on refresh.
-    }
-  }
 }
 
-/// Manages generic reports with periodic refresh and background sync.
+/// Manages generic reports with periodic backend refresh.
 final genericReportsControllerProvider =
     AsyncNotifierProvider<GenericReportsController, List<GenericReportRecord>>(
       GenericReportsController.new,
@@ -388,11 +438,6 @@ class GenericReportsController
 
   @override
   Duration get refreshInterval => const Duration(seconds: 3);
-
-  @override
-  Future<void> runInitialSync() async {
-    unawaited(_repository.syncGenericReportsNow());
-  }
 
   @override
   Future<List<GenericReportRecord>> loadItems() {
@@ -417,13 +462,10 @@ class GenericReportsController
       impactRadiusMeters: impactRadiusMeters,
       photoUrl: photoUrl,
     );
-    unawaited(_refreshAfterOptimisticSave());
-  }
-
-  Future<void> syncWithBackend() async {
-    await _repository.syncGenericReportsNow();
     await reload();
   }
+
+  Future<void> syncWithBackend() => reload();
 
   Future<void> addCommentToGenericReport({
     required int reportId,
@@ -445,13 +487,5 @@ class GenericReportsController
       remoteId: remoteId,
     );
     await reload();
-  }
-
-  Future<void> _refreshAfterOptimisticSave() async {
-    try {
-      await reload();
-    } catch (_) {
-      // The local save already succeeded; avoid blocking the UI on refresh.
-    }
   }
 }

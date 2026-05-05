@@ -16,17 +16,22 @@ class ReportCommentsApiTest extends TestCase
     {
         $user = User::factory()->create();
         $headers = $this->authHeaders($user);
+        $pet = $this->postJson('/api/pets', [
+            'name' => 'Milo',
+            'photo_path' => 'https://example.com/lost.jpg',
+        ], $headers)->assertCreated()->json('data');
 
-        $lostReportId = $this->postJson('/api/lost-pet-reports', [
-            'local_id' => 'lost-comment-1',
+        $lostReportResponse = $this->postJson('/api/lost-pet-reports', [
+            'pet_id' => $pet['id'],
             'last_seen_latitude' => 3.4516,
             'last_seen_longitude' => -76.5320,
-            'name' => 'Milo',
             'details' => 'Brown dog with blue collar',
             'disappearance_date' => now()->subDay()->toIso8601String(),
-            'photo_url' => 'https://example.com/lost.jpg',
             'phone' => '5551234',
-        ], $headers)->json('data.id');
+        ], $headers)
+            ->assertCreated()
+            ->assertJsonPath('data.pet_photo_url', 'https://example.com/lost.jpg');
+        $lostReportId = $lostReportResponse->json('data.id');
 
         $this->postJson('/api/lost-pet-reports/'.$lostReportId.'/comments', [
             'comment_text' => 'I saw this pet near the park.',
@@ -39,7 +44,6 @@ class ReportCommentsApiTest extends TestCase
             ->assertJsonPath('data.0.comment_text', 'I saw this pet near the park.');
 
         $foundReportId = $this->postJson('/api/found-pet-reports', [
-            'local_id' => 'found-comment-1',
             'latitude' => 3.4520,
             'longitude' => -76.5330,
             'details' => 'Small white dog waiting by the corner',

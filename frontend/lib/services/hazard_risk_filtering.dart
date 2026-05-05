@@ -2,8 +2,14 @@ class HazardRiskFiltering {
   static const String low = 'low';
   static const String medium = 'medium';
   static const String high = 'high';
+  static const String other = 'other';
 
-  static const List<String> allRoutingFilters = <String>[low, medium, high];
+  static const List<String> allRoutingFilters = <String>[
+    low,
+    medium,
+    high,
+    other,
+  ];
 
   static Set<String> normalizeSelectedFilters(Iterable<String>? filters) {
     if (filters == null) {
@@ -42,5 +48,11 @@ class HazardRiskFiltering {
     }
 
     return normalizedFilters.contains(routingBucketForRiskCode(riskLevelCode));
+  }
+
+  static bool shouldConsiderOtherReports({
+    required Iterable<String> selectedFilters,
+  }) {
+    return normalizeSelectedFilters(selectedFilters).contains(other);
   }
 }
