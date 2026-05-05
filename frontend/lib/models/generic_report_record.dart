@@ -15,6 +15,7 @@ class GenericReportRecord {
   final String riskLevelCode;
   final int impactRadiusMeters;
   final String? photoUrl;
+  final String reportedByUsername;
   final List<ReportCommentRecord> comments;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -33,6 +34,7 @@ class GenericReportRecord {
     required this.riskLevelCode,
     required this.impactRadiusMeters,
     required this.photoUrl,
+    required this.reportedByUsername,
     required this.comments,
     required this.createdAt,
     required this.updatedAt,
@@ -64,6 +66,7 @@ class GenericReportRecord {
       riskLevelCode: map['risk_level_code'] as String? ?? 'undefined',
       impactRadiusMeters: (map['impact_radius_meters'] as num?)?.round() ?? 0,
       photoUrl: map['photo_url'] as String?,
+      reportedByUsername: map['reported_by_username'] as String? ?? 'Anonimo',
       comments: rawComments
           .map(
             (dynamic item) =>
@@ -90,6 +93,7 @@ class GenericReportRecord {
       'risk_level_code': riskLevelCode,
       'impact_radius_meters': impactRadiusMeters,
       'photo_url': photoUrl,
+      'reported_by_username': reportedByUsername,
       'comments_json': jsonEncode(
         comments.map((ReportCommentRecord c) => c.toMap()).toList(),
       ),

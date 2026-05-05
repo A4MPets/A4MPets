@@ -256,7 +256,7 @@ extension _MapPageReportsState on _MapPageState {
 
   void _replaceOrPushReportPanel(_PanelRoute route) {
     if (_hasOpenPanels && _panelStack.last.isReportSelectorPanel) {
-      _replaceTopPanel(route);
+      _pushPanel(route);
       return;
     }
     _pushPanel(route);
@@ -408,14 +408,21 @@ extension _MapPageReportsState on _MapPageState {
       anchor: PanelAnchor.bottomLeft,
       width: 290,
       adaptHeightToContent: true,
-      expandHorizontal: false,
+      expandHorizontal: true,
       expandVertical: false,
       scrollContent: false,
       isReportSelectorPanel: true,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
+        final bool isAuthenticated = ref
+            .watch(localUserProfileProvider)
+            .maybeWhen(
+              data: (LocalUserProfile profile) => profile.isAuthenticated,
+              orElse: () => false,
+            );
         return ReportTypeSelectorPanelContent(
           isDarkMode: isDarkMode,
+          isAuthenticated: isAuthenticated,
           onHazardPressed: () => _openReportHazardPanel(isDarkMode),
           onLostPetPressed: () => _openLostPetReportPanel(isDarkMode),
           onFoundPetPressed: () => _openFoundPetReportPanel(isDarkMode),
@@ -440,6 +447,21 @@ extension _MapPageReportsState on _MapPageState {
       isLostPetReportPanel: true,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
+        final bool isAuthenticated = ref
+            .watch(localUserProfileProvider)
+            .maybeWhen(
+              data: (LocalUserProfile profile) => profile.isAuthenticated,
+              orElse: () => false,
+            );
+        if (!isAuthenticated) {
+          return ReportAuthRequiredPanelContent(
+            isDarkMode: isDarkMode,
+            message: 'Inicia sesion para reportar una mascota perdida.',
+            onLoginPressed: () =>
+                _replaceTopPanel(_buildLoginRoute(isDarkMode)),
+          );
+        }
+
         return LostPetReportingPanelContent(
           isDarkMode: isDarkMode,
           currentDeviceLocation: _latestUserLocation,
@@ -504,6 +526,21 @@ extension _MapPageReportsState on _MapPageState {
       isFoundPetReportPanel: true,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
+        final bool isAuthenticated = ref
+            .watch(localUserProfileProvider)
+            .maybeWhen(
+              data: (LocalUserProfile profile) => profile.isAuthenticated,
+              orElse: () => false,
+            );
+        if (!isAuthenticated) {
+          return ReportAuthRequiredPanelContent(
+            isDarkMode: isDarkMode,
+            message: 'Inicia sesion para reportar una mascota encontrada.',
+            onLoginPressed: () =>
+                _replaceTopPanel(_buildLoginRoute(isDarkMode)),
+          );
+        }
+
         final List<PetRecord> pets =
             ref.watch(petsControllerProvider).asData?.value ??
             const <PetRecord>[];
@@ -623,8 +660,7 @@ extension _MapPageReportsState on _MapPageState {
       title: 'Reporte',
       anchor: PanelAnchor.bottomLeft,
       width: 340,
-      mobileMaxHeightFactor: 0.5,
-      desktopMaxHeightFactor: 0.5,
+      height: 340,
       adaptHeightToContent: false,
       expandHorizontal: false,
       expandVertical: false,

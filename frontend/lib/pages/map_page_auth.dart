@@ -89,6 +89,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
             password: password,
             passwordConfirmation: passwordConfirmation,
           );
+      await ref.read(localMediaStorageServiceProvider).clearStoredMedia();
 
       _invalidateUserScopedData(ref);
 
@@ -222,9 +223,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       title: null,
       anchor: PanelAnchor.topLeft,
       width: 360,
-      height: 370,
-      maxHeight: 400,
-      adaptHeightToContent: false,
+      adaptHeightToContent: true,
       expandHorizontal: false,
       expandVertical: false,
       scrollContent: false,
@@ -249,9 +248,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       title: 'Iniciar Sesión',
       anchor: PanelAnchor.topLeft,
       width: 360,
-      height: 430,
-      maxHeight: 520,
-      adaptHeightToContent: false,
+      adaptHeightToContent: true,
       expandHorizontal: false,
       expandVertical: false,
       scrollContent: false,
@@ -273,9 +270,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       title: 'Registrarse',
       anchor: PanelAnchor.topLeft,
       width: 360,
-      height: 520,
-      maxHeight: 620,
-      adaptHeightToContent: false,
+      adaptHeightToContent: true,
       expandHorizontal: false,
       expandVertical: false,
       scrollContent: false,

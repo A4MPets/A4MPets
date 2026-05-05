@@ -42,7 +42,7 @@ class GenericReportController extends Controller
 
     public function show(GenericReport $genericReport): JsonResponse
     {
-        $genericReport->load(['comments', 'comments.user']);
+        $genericReport->load(['user', 'comments', 'comments.user']);
 
         return response()->json([
             'success' => true,
@@ -99,7 +99,7 @@ class GenericReportController extends Controller
 
     public function comments(GenericReport $genericReport): JsonResponse
     {
-        $genericReport->load(['comments', 'comments.user']);
+        $genericReport->load(['user', 'comments', 'comments.user']);
 
         return response()->json([
             'success' => true,

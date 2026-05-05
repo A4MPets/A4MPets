@@ -52,6 +52,13 @@ class LostPetReportController extends Controller
 
     public function store(StoreLostPetReportRequest $request): JsonResponse
     {
+        if (! $request->user()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Debes iniciar sesion para reportar mascotas perdidas.',
+            ], 401);
+        }
+
         $report = $this->lostPetReportService->store(
             $request->user()?->id,
             $request->validated()

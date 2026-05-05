@@ -35,7 +35,7 @@ class GenericReport extends Model
         'updated_at' => 'datetime',
     ];
 
-    protected $appends = ['comments_json'];
+    protected $appends = ['comments_json', 'reported_by_username'];
 
     public function user(): BelongsTo
     {
@@ -45,6 +45,13 @@ class GenericReport extends Model
     public function comments(): MorphMany
     {
         return $this->morphMany(ReportComment::class, 'commentable')->orderBy('commented_at')->orderBy('id');
+    }
+
+    public function getReportedByUsernameAttribute(): string
+    {
+        $user = $this->relationLoaded('user') ? $this->user : $this->user()->first();
+
+        return $user?->name ?? 'Anonimo';
     }
 
     public function getCommentsJsonAttribute(): string

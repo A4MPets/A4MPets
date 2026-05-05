@@ -15,7 +15,7 @@ class GenericReportService
 
     public function paginate(bool $includeArchived, int $perPage, int $page): LengthAwarePaginator
     {
-        $query = GenericReport::query()->with(['comments', 'comments.user']);
+        $query = GenericReport::query()->with(['user', 'comments', 'comments.user']);
 
         return $query
             ->orderByDesc('updated_at')
@@ -38,7 +38,7 @@ class GenericReportService
             'photo_url' => $validated['photo_url'] ?? null,
         ]);
 
-        return $report->refresh()->load(['comments', 'comments.user']);
+        return $report->refresh()->load(['user', 'comments', 'comments.user']);
     }
 
     /**
@@ -56,7 +56,7 @@ class GenericReportService
             'photo_url' => $validated['photo_url'] ?? null,
         ]);
 
-        return $report->refresh()->load(['comments', 'comments.user']);
+        return $report->refresh()->load(['user', 'comments', 'comments.user']);
     }
 
     public function delete(GenericReport $report): void

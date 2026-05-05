@@ -145,7 +145,7 @@ class _FoundReportCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color textColor = AppPalette.textPrimary(isDarkMode);
     final Color borderColor = AppPalette.border(isDarkMode);
-    final String? petPhoto = pet?.photoPath;
+    final String? petPhoto = pet?.photoPath ?? report.petPhotoUrl;
     final String? reportPhoto = report.photoUrl;
     final bool showPetPhoto = petPhoto != null && petPhoto.trim().isNotEmpty;
     final bool showReportPhoto =

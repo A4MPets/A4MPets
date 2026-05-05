@@ -11,14 +11,19 @@ import '../models/pet_record.dart';
 import '../models/report_comment_record.dart';
 import '../models/route_record.dart';
 import '../services/backend_api_client.dart';
+import '../services/guest_data_store.dart';
 import '../services/media_source_encoder.dart';
 import '../services/session_store.dart';
 
 class UserLocalRepository {
   final SessionStore sessionStore;
+  final GuestDataStore guestDataStore;
   final BackendApiClient _apiClient = BackendApiClient();
 
-  UserLocalRepository({required this.sessionStore});
+  UserLocalRepository({
+    required this.sessionStore,
+    required this.guestDataStore,
+  });
 
   Future<LocalUserProfile> getUserProfile() async {
     final LocalUserProfile cached = await sessionStore.getLocalUserProfile();
@@ -49,6 +54,9 @@ class UserLocalRepository {
     required String password,
     required String passwordConfirmation,
   }) async {
+    final List<PetRecord> guestPets = await guestDataStore.getPets();
+    final List<RouteRecord> guestRoutes = await guestDataStore.getRoutes();
+
     final http.Response response = await _send(
       () => _apiClient.postWithFallback(
         '/auth/register',
@@ -64,6 +72,12 @@ class UserLocalRepository {
 
     final LocalUserProfile profile = _profileFromAuthResponse(response);
     await sessionStore.saveLocalUserProfile(profile);
+    await _migrateGuestDataToAccount(
+      accessToken: profile.accessToken,
+      pets: guestPets,
+      routes: guestRoutes,
+    );
+    await guestDataStore.clear();
     return profile;
   }
 
@@ -80,6 +94,7 @@ class UserLocalRepository {
     );
 
     final LocalUserProfile profile = _profileFromAuthResponse(response);
+    await guestDataStore.clear();
     await sessionStore.clearUserSessionData();
     await sessionStore.saveLocalUserProfile(profile);
     return profile;
@@ -97,6 +112,7 @@ class UserLocalRepository {
       );
     }
 
+    await guestDataStore.clear();
     await sessionStore.clearUserSessionData();
     await sessionStore.saveLocalUserProfile(LocalUserProfile.guest());
   }
@@ -132,10 +148,16 @@ class UserLocalRepository {
   }
 
   Future<List<PetRecord>> getPets() async {
+    if (!await _isAuthenticated()) {
+      return guestDataStore.getPets();
+    }
     return _getList('/pets?include_archived=1&per_page=100', PetRecord.fromMap);
   }
 
   Future<List<PetRecord>> getMyPets() async {
+    if (!await _isAuthenticated()) {
+      return guestDataStore.getPets();
+    }
     final String token = await _requireToken();
     final List<PetRecord> pets = await _getList(
       '/pets?scope=mine&per_page=100',
@@ -158,6 +180,15 @@ class UserLocalRepository {
     DateTime? birthDate,
     bool isOwnerless = false,
   }) async {
+    if (!await _isAuthenticated()) {
+      return guestDataStore.addPet(
+        name: name,
+        photoPath: photoPath,
+        adoptionDate: adoptionDate,
+        birthDate: birthDate,
+        isOwnerless: isOwnerless,
+      );
+    }
     final String token = await _requireToken();
     final String? remotePhoto = await _uploadImageIfNeeded(
       photoPath,
@@ -187,6 +218,16 @@ class UserLocalRepository {
     DateTime? adoptionDate,
     DateTime? birthDate,
   }) async {
+    if (!await _isAuthenticated()) {
+      await guestDataStore.updatePet(
+        petId: petId,
+        name: name,
+        photoPath: photoPath,
+        adoptionDate: adoptionDate,
+        birthDate: birthDate,
+      );
+      return;
+    }
     final String token = await _requireToken();
     final String? remotePhoto = await _uploadImageIfNeeded(
       photoPath,
@@ -208,10 +249,18 @@ class UserLocalRepository {
   }
 
   Future<void> deletePet({required int petId}) async {
+    if (!await _isAuthenticated()) {
+      await guestDataStore.deletePet(petId: petId);
+      return;
+    }
     await _delete('/pets/$petId');
   }
 
   Future<void> incrementPetWalks({required Iterable<int> petIds}) async {
+    if (!await _isAuthenticated()) {
+      await guestDataStore.incrementPetWalks(petIds: petIds);
+      return;
+    }
     final List<PetRecord> pets = await getPets();
     final Map<int, PetRecord> byId = <int, PetRecord>{
       for (final PetRecord pet in pets) pet.id: pet,
@@ -227,6 +276,10 @@ class UserLocalRepository {
   }
 
   Future<void> markPetFound({required int petId}) async {
+    if (!await _isAuthenticated()) {
+      await guestDataStore.markPetFound(petId: petId);
+      return;
+    }
     final String token = await _requireToken();
     await _send(
       () => _apiClient.postWithFallback(
@@ -238,6 +291,9 @@ class UserLocalRepository {
   }
 
   Future<List<RouteRecord>> getRoutes() async {
+    if (!await _isAuthenticated()) {
+      return guestDataStore.getRoutes();
+    }
     return _getList(
       '/routes?include_archived=1&per_page=100',
       RouteRecord.fromMap,
@@ -250,6 +306,9 @@ class UserLocalRepository {
     required String name,
     required List<RoutePoint> points,
   }) async {
+    if (!await _isAuthenticated()) {
+      return guestDataStore.addRoute(name: name, points: points);
+    }
     final String token = await _requireToken();
     final http.Response response = await _send(
       () => _apiClient.postWithFallback(
@@ -265,6 +324,10 @@ class UserLocalRepository {
   }
 
   Future<void> deleteRoute({required int routeId}) async {
+    if (!await _isAuthenticated()) {
+      await guestDataStore.deleteRoute(routeId: routeId);
+      return;
+    }
     await _delete('/routes/$routeId');
   }
 
@@ -273,6 +336,14 @@ class UserLocalRepository {
     required String name,
     required List<RoutePoint> points,
   }) async {
+    if (!await _isAuthenticated()) {
+      await guestDataStore.updateRoute(
+        routeId: routeId,
+        name: name,
+        points: points,
+      );
+      return;
+    }
     final String token = await _requireToken();
     await _send(
       () => _apiClient.putWithFallback(
@@ -305,7 +376,13 @@ class UserLocalRepository {
     String? evidencePhotoUrl,
     required String reportedByUsername,
   }) async {
-    final String token = await _requireToken();
+    final LocalUserProfile profile = await sessionStore.getLocalUserProfile();
+    final String? token =
+        profile.isAuthenticated &&
+            profile.accessToken != null &&
+            profile.accessToken!.isNotEmpty
+        ? profile.accessToken
+        : null;
     final String? remotePhoto = await _uploadImageIfNeeded(
       evidencePhotoUrl,
       bucket: 'hazards',
@@ -466,7 +543,13 @@ class UserLocalRepository {
     required int impactRadiusMeters,
     String? photoUrl,
   }) async {
-    final String token = await _requireToken();
+    final LocalUserProfile profile = await sessionStore.getLocalUserProfile();
+    final String? token =
+        profile.isAuthenticated &&
+            profile.accessToken != null &&
+            profile.accessToken!.isNotEmpty
+        ? profile.accessToken
+        : null;
     final String? remotePhoto = await _uploadImageIfNeeded(
       photoUrl,
       bucket: 'generic_reports',
@@ -544,6 +627,64 @@ class UserLocalRepository {
     await _send(() => _apiClient.deleteWithFallback(path, bearerToken: token));
   }
 
+  Future<bool> _isAuthenticated() async {
+    final LocalUserProfile profile = await sessionStore.getLocalUserProfile();
+    final String? token = profile.accessToken;
+    return profile.isAuthenticated && token != null && token.isNotEmpty;
+  }
+
+  Future<void> _migrateGuestDataToAccount({
+    required String? accessToken,
+    required List<PetRecord> pets,
+    required List<RouteRecord> routes,
+  }) async {
+    final String? token = accessToken;
+    if (token == null || token.isEmpty || (pets.isEmpty && routes.isEmpty)) {
+      return;
+    }
+
+    for (final PetRecord pet in pets.where(
+      (PetRecord item) => !item.isOwnerless,
+    )) {
+      final String? remotePhoto = await _uploadImageIfNeeded(
+        pet.photoPath,
+        bucket: 'pets',
+        bearerToken: token,
+      );
+      await _send(
+        () => _apiClient.postWithFallback(
+          '/pets',
+          body: <String, Object?>{
+            'name': pet.name,
+            'photo_path': remotePhoto,
+            'total_walks': pet.totalWalks,
+            'registered_at': _dateTime(pet.registeredAt),
+            'adoption_date': _date(pet.adoptionDate),
+            'birth_date': _date(pet.birthDate),
+            'status': pet.status,
+            'is_ownerless': false,
+          },
+          bearerToken: token,
+        ),
+      );
+    }
+
+    for (final RouteRecord route in routes) {
+      await _send(
+        () => _apiClient.postWithFallback(
+          '/routes',
+          body: <String, Object?>{
+            'name': route.name,
+            'points_json': jsonEncode(
+              route.points.map((RoutePoint p) => p.toMap()).toList(),
+            ),
+          },
+          bearerToken: token,
+        ),
+      );
+    }
+  }
+
   Future<List<T>> _getList<T>(
     String path,
     T Function(Map<String, Object?> map) parser, {
@@ -573,7 +714,7 @@ class UserLocalRepository {
   Future<String?> _uploadImageIfNeeded(
     String? source, {
     required String bucket,
-    required String bearerToken,
+    required String? bearerToken,
   }) async {
     final String? value = source?.trim();
     if (value == null || value.isEmpty) {

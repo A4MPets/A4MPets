@@ -159,7 +159,8 @@ class _LostReportCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color textColor = AppPalette.textPrimary(isDarkMode);
     final Color borderColor = AppPalette.border(isDarkMode);
-    final String? photo = pet?.photoPath ?? report.photoUrl;
+    final String? photo =
+        pet?.photoPath ?? report.petPhotoUrl ?? report.photoUrl;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

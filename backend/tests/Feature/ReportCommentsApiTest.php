@@ -21,15 +21,17 @@ class ReportCommentsApiTest extends TestCase
             'photo_path' => 'https://example.com/lost.jpg',
         ], $headers)->assertCreated()->json('data');
 
-        $lostReportId = $this->postJson('/api/lost-pet-reports', [
+        $lostReportResponse = $this->postJson('/api/lost-pet-reports', [
             'pet_id' => $pet['id'],
             'last_seen_latitude' => 3.4516,
             'last_seen_longitude' => -76.5320,
             'details' => 'Brown dog with blue collar',
             'disappearance_date' => now()->subDay()->toIso8601String(),
-            'photo_url' => 'https://example.com/lost.jpg',
             'phone' => '5551234',
-        ], $headers)->json('data.id');
+        ], $headers)
+            ->assertCreated()
+            ->assertJsonPath('data.pet_photo_url', 'https://example.com/lost.jpg');
+        $lostReportId = $lostReportResponse->json('data.id');
 
         $this->postJson('/api/lost-pet-reports/'.$lostReportId.'/comments', [
             'comment_text' => 'I saw this pet near the park.',

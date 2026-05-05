@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\GenericReport;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesApiToken;
@@ -31,7 +32,8 @@ class GenericReportApiTest extends TestCase
 
         $storeResponse
             ->assertCreated()
-            ->assertJsonPath('data.impact_radius_meters', 45);
+            ->assertJsonPath('data.impact_radius_meters', 45)
+            ->assertJsonPath('data.reported_by_username', $user->name);
 
         $this->getJson('/api/generic-reports', $headers)
             ->assertOk()
@@ -67,5 +69,24 @@ class GenericReportApiTest extends TestCase
         $this->getJson('/api/generic-reports', $headers)
             ->assertOk()
             ->assertJsonCount(0, 'data');
+    }
+
+    public function test_generic_report_can_be_created_anonymously(): void
+    {
+        $this->postJson('/api/generic-reports', [
+            'latitude' => 3.4516,
+            'longitude' => -76.5320,
+            'description' => 'Loose cable near the sidewalk',
+            'reported_date' => now()->toIso8601String(),
+            'risk_level_code' => 'medium',
+            'impact_radius_meters' => 45,
+            'photo_url' => 'https://example.com/generic-1.jpg',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.user_id', null)
+            ->assertJsonPath('data.reported_by_username', 'Anonimo');
+
+        $genericReport = GenericReport::query()->firstOrFail();
+        $this->assertNull($genericReport->user_id);
     }
 }

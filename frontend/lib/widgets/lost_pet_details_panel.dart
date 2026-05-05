@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/lost_pet_report_record.dart';
 import '../models/pet_record.dart';
 import '../theme/app_palette.dart';
+import 'shared/image_preview_dialog.dart';
 import 'shared/local_image_widget.dart';
 import 'shared/panel_scroll_view.dart';
 
@@ -48,7 +49,8 @@ class LostPetDetailsPanelContent extends StatelessWidget {
                 _PhotoBlock(
                   isDarkMode: isDarkMode,
                   label: 'Foto de la mascota',
-                  source: pet?.photoPath,
+                  source:
+                      pet?.photoPath ?? report.petPhotoUrl ?? report.photoUrl,
                   placeholderIcon: Icons.pets,
                 ),
                 const SizedBox(height: 12),
@@ -190,12 +192,17 @@ class _PhotoBlock extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(14),
             child: imageSource != null && imageSource.isNotEmpty
-                ? buildLocalImageWidget(
+                ? ExpandableImage(
                     source: imageSource,
-                    fit: BoxFit.cover,
-                    fallback: _ImageFallback(icon: placeholderIcon),
-                    errorBuilder: (_, _, _) =>
-                        _ImageFallback(icon: placeholderIcon),
+                    isDarkMode: isDarkMode,
+                    title: label,
+                    child: buildLocalImageWidget(
+                      source: imageSource,
+                      fit: BoxFit.cover,
+                      fallback: _ImageFallback(icon: placeholderIcon),
+                      errorBuilder: (_, _, _) =>
+                          _ImageFallback(icon: placeholderIcon),
+                    ),
                   )
                 : _ImageFallback(icon: placeholderIcon),
           ),

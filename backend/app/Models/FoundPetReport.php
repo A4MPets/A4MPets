@@ -36,7 +36,7 @@ class FoundPetReport extends Model
         'updated_at' => 'datetime',
     ];
 
-    protected $appends = ['comments_json'];
+    protected $appends = ['comments_json', 'pet_photo_url'];
 
     public function user(): BelongsTo
     {
@@ -56,6 +56,13 @@ class FoundPetReport extends Model
     public function comments(): MorphMany
     {
         return $this->morphMany(ReportComment::class, 'commentable')->orderBy('commented_at')->orderBy('id');
+    }
+
+    public function getPetPhotoUrlAttribute(): ?string
+    {
+        $pet = $this->relationLoaded('pet') ? $this->pet : $this->pet()->first();
+
+        return $this->photo_url ?? $pet?->photo_path;
     }
 
     public function getCommentsJsonAttribute(): string

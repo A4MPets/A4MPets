@@ -9,6 +9,7 @@ import '../models/pet_record.dart';
 import '../models/report_comment_record.dart';
 import '../models/route_record.dart';
 import '../repositories/user_local_repository.dart';
+import '../services/guest_data_store.dart';
 import '../services/local_media_storage_service.dart';
 import '../services/session_store.dart';
 import 'async_list_controller.dart';
@@ -23,8 +24,15 @@ final localMediaStorageServiceProvider = Provider<LocalMediaStorageService>((
   return LocalMediaStorageService();
 });
 
+final guestDataStoreProvider = Provider<GuestDataStore>((ref) {
+  return GuestDataStore();
+});
+
 final userLocalRepositoryProvider = Provider<UserLocalRepository>((ref) {
-  return UserLocalRepository(sessionStore: ref.watch(sessionStoreProvider));
+  return UserLocalRepository(
+    sessionStore: ref.watch(sessionStoreProvider),
+    guestDataStore: ref.watch(guestDataStoreProvider),
+  );
 });
 
 final localUserProfileProvider = FutureProvider<LocalUserProfile>((ref) async {

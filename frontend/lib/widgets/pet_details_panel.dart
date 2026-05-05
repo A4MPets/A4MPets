@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/pet_record.dart';
 import '../providers/local_data_providers.dart';
 import '../theme/app_palette.dart';
+import 'shared/image_preview_dialog.dart';
 import 'shared/local_image_widget.dart';
 import 'shared/panel_scroll_view.dart';
 
@@ -39,11 +40,16 @@ class PetDetailsPanelContent extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(14),
                     child: pet.photoPath == null || pet.photoPath!.isEmpty
                         ? const _PetFallback()
-                        : buildLocalImageWidget(
-                            source: pet.photoPath,
-                            fit: BoxFit.cover,
-                            fallback: const _PetFallback(),
-                            errorBuilder: (_, _, _) => const _PetFallback(),
+                        : ExpandableImage(
+                            source: pet.photoPath!,
+                            isDarkMode: isDarkMode,
+                            title: pet.displayName,
+                            child: buildLocalImageWidget(
+                              source: pet.photoPath,
+                              fit: BoxFit.cover,
+                              fallback: const _PetFallback(),
+                              errorBuilder: (_, _, _) => const _PetFallback(),
+                            ),
                           ),
                   ),
                 ),

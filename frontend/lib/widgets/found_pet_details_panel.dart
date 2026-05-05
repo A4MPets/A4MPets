@@ -4,8 +4,9 @@ import '../models/found_pet_report_record.dart';
 import '../models/lost_pet_report_record.dart';
 import '../models/pet_record.dart';
 import '../theme/app_palette.dart';
-import 'shared/panel_scroll_view.dart';
+import 'shared/image_preview_dialog.dart';
 import 'shared/local_image_widget.dart';
+import 'shared/panel_scroll_view.dart';
 
 class FoundPetDetailsPanelContent extends StatelessWidget {
   final bool isDarkMode;
@@ -34,7 +35,8 @@ class FoundPetDetailsPanelContent extends StatelessWidget {
     final Color textColor = AppPalette.textPrimary(isDarkMode);
     final PetRecord? selectedPet = pet;
     final LostPetReportRecord? linkedLostPetReport = matchedLostPetReport;
-    final String? petImageSource = selectedPet?.photoPath;
+    final String? petImageSource =
+        selectedPet?.photoPath ?? report.petPhotoUrl ?? report.photoUrl;
     final String? reportImageSource = report.photoUrl;
     final bool showPetImage =
         petImageSource != null && petImageSource.trim().isNotEmpty;
@@ -55,11 +57,16 @@ class FoundPetDetailsPanelContent extends StatelessWidget {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(14),
                     child: showPetImage
-                        ? buildLocalImageWidget(
+                        ? ExpandableImage(
                             source: petImageSource,
-                            fit: BoxFit.cover,
-                            fallback: const _ImageFallback(),
-                            errorBuilder: (_, _, _) => const _ImageFallback(),
+                            isDarkMode: isDarkMode,
+                            title: petName,
+                            child: buildLocalImageWidget(
+                              source: petImageSource,
+                              fit: BoxFit.cover,
+                              fallback: const _ImageFallback(),
+                              errorBuilder: (_, _, _) => const _ImageFallback(),
+                            ),
                           )
                         : const _ImageFallback(),
                   ),
@@ -137,6 +144,7 @@ class FoundPetDetailsPanelContent extends StatelessWidget {
                   _FoundImageSection(
                     title: 'Foto del reporte',
                     source: reportImageSource,
+                    isDarkMode: isDarkMode,
                   ),
                 ],
               ],
@@ -212,7 +220,8 @@ class _LinkedLostPetReportCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color textColor = AppPalette.textPrimary(isDarkMode);
-    final String? photoSource = pet?.photoPath;
+    final String? photoSource =
+        pet?.photoPath ?? report.petPhotoUrl ?? report.photoUrl;
     final bool hasPhoto = photoSource != null && photoSource.trim().isNotEmpty;
 
     return Material(
@@ -313,8 +322,13 @@ class _ImageFallback extends StatelessWidget {
 class _FoundImageSection extends StatelessWidget {
   final String title;
   final String source;
+  final bool isDarkMode;
 
-  const _FoundImageSection({required this.title, required this.source});
+  const _FoundImageSection({
+    required this.title,
+    required this.source,
+    required this.isDarkMode,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -334,11 +348,16 @@ class _FoundImageSection extends StatelessWidget {
           height: 180,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(14),
-            child: buildLocalImageWidget(
+            child: ExpandableImage(
               source: source,
-              fit: BoxFit.cover,
-              fallback: const _ImageFallback(),
-              errorBuilder: (_, _, _) => const _ImageFallback(),
+              isDarkMode: isDarkMode,
+              title: title,
+              child: buildLocalImageWidget(
+                source: source,
+                fit: BoxFit.cover,
+                fallback: const _ImageFallback(),
+                errorBuilder: (_, _, _) => const _ImageFallback(),
+              ),
             ),
           ),
         ),

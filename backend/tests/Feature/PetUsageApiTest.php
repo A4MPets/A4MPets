@@ -84,7 +84,9 @@ class PetUsageApiTest extends TestCase
             'details' => 'Small white cat',
             'found_date' => now()->format('Y-m-d H:i:s'),
             'photo_url' => 'https://example.com/found.jpg',
-        ], $headers)->assertCreated();
+        ], $headers)
+            ->assertCreated()
+            ->assertJsonPath('data.pet_photo_url', 'https://example.com/found.jpg');
 
         $pet = Pet::query()->firstOrFail();
         $this->assertTrue($pet->is_ownerless);
@@ -159,11 +161,39 @@ class PetUsageApiTest extends TestCase
             'found_date' => now()->format('Y-m-d H:i:s'),
             'photo_url' => 'https://example.com/found-nala.jpg',
             'phone' => '3001234567',
-        ], $headers)->assertCreated();
+        ], $headers)
+            ->assertCreated()
+            ->assertJsonPath('data.pet_photo_url', 'https://example.com/found-nala.jpg');
 
         $foundReport = FoundPetReport::query()->firstOrFail();
         $this->assertSame($pet->id, $foundReport->pet_id);
         $this->assertSame($lostReport->id, $foundReport->matched_lost_pet_report_id);
         $this->assertSame('Nala', $foundReport->pet->name);
+    }
+
+    public function test_lost_and_found_reports_require_authenticated_user(): void
+    {
+        $user = User::factory()->create();
+        $pet = Pet::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Luna',
+        ]);
+
+        $this->postJson('/api/lost-pet-reports', [
+            'pet_id' => $pet->id,
+            'last_seen_latitude' => 3.4516,
+            'last_seen_longitude' => -76.5320,
+            'details' => 'Brown dog with blue collar',
+            'disappearance_date' => now()->format('Y-m-d H:i:s'),
+            'phone' => '5551234',
+        ])->assertUnauthorized();
+
+        $this->postJson('/api/found-pet-reports', [
+            'latitude' => 3.4516,
+            'longitude' => -76.5320,
+            'details' => 'Small white cat',
+            'found_date' => now()->format('Y-m-d H:i:s'),
+            'photo_url' => 'https://example.com/found.jpg',
+        ])->assertUnauthorized();
     }
 }

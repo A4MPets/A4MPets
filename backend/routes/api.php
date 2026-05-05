@@ -19,6 +19,7 @@ Route::prefix('auth')->group(function (): void {
 
 Route::prefix('hazards')->group(function (): void {
     Route::get('/', [HazardReportController::class, 'index']);
+    Route::post('/', [HazardReportController::class, 'store'])->middleware('api.token');
     Route::get('/{hazardReport}', [HazardReportController::class, 'show']);
     Route::get('/{hazardReport}/comments', [HazardReportController::class, 'comments']);
 });
@@ -37,9 +38,12 @@ Route::prefix('found-pet-reports')->group(function (): void {
 
 Route::prefix('generic-reports')->group(function (): void {
     Route::get('/', [GenericReportController::class, 'index']);
+    Route::post('/', [GenericReportController::class, 'store'])->middleware('api.token');
     Route::get('/{genericReport}', [GenericReportController::class, 'show']);
     Route::get('/{genericReport}/comments', [GenericReportController::class, 'comments']);
 });
+
+Route::post('/media/upload', [MediaController::class, 'upload']);
 
 Route::prefix('pets')->group(function (): void {
     Route::get('/', [PetController::class, 'index'])->middleware('api.token');
@@ -59,7 +63,6 @@ Route::middleware('api.token')->group(function (): void {
     });
 
     Route::prefix('hazards')->group(function (): void {
-        Route::post('/', [HazardReportController::class, 'store']);
         Route::put('/{hazardReport}', [HazardReportController::class, 'update']);
         Route::delete('/{hazardReport}', [HazardReportController::class, 'destroy']);
         Route::post('/{hazardReport}/comments', [HazardReportController::class, 'storeComment']);
@@ -80,7 +83,6 @@ Route::middleware('api.token')->group(function (): void {
     });
 
     Route::prefix('generic-reports')->group(function (): void {
-        Route::post('/', [GenericReportController::class, 'store']);
         Route::put('/{genericReport}', [GenericReportController::class, 'update']);
         Route::delete('/{genericReport}', [GenericReportController::class, 'destroy']);
         Route::post('/{genericReport}/comments', [GenericReportController::class, 'storeComment']);
@@ -99,8 +101,6 @@ Route::middleware('api.token')->group(function (): void {
         Route::put('/{route}', [TravelRouteController::class, 'update']);
         Route::delete('/{route}', [TravelRouteController::class, 'destroy']);
     });
-
-    Route::post('/media/upload', [MediaController::class, 'upload']);
 });
 
 Route::get('/media/{bucket}/{fileName}', [MediaController::class, 'show'])

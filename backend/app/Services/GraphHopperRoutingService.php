@@ -262,6 +262,10 @@ class GraphHopperRoutingService
      */
     private function loadGenericReportAvoidanceAreas(array $selectedRiskFilters): array
     {
+        if (! $this->hazardRoutingRiskFilter->shouldAvoidOtherReports($selectedRiskFilters)) {
+            return [];
+        }
+
         $reports = GenericReport::query()
             ->where('impact_radius_meters', '>', 0)
             ->whereNotNull('latitude')
@@ -276,12 +280,6 @@ class GraphHopperRoutingService
             ]);
 
         return $reports
-            ->filter(function (GenericReport $report) use ($selectedRiskFilters): bool {
-                return $this->hazardRoutingRiskFilter->shouldAvoidRisk(
-                    $report->risk_level_code,
-                    $selectedRiskFilters
-                );
-            })
             ->map(static fn (GenericReport $report): array => [
                 'latitude' => (float) $report->latitude,
                 'longitude' => (float) $report->longitude,

@@ -15,6 +15,7 @@ class LostPetReportRecord {
   final String details;
   final DateTime disappearanceDate;
   final String? photoUrl;
+  final String? petPhotoUrl;
   final String? phone;
   final List<ReportCommentRecord> comments;
   final DateTime createdAt;
@@ -34,6 +35,7 @@ class LostPetReportRecord {
     required this.details,
     required this.disappearanceDate,
     required this.photoUrl,
+    required this.petPhotoUrl,
     required this.phone,
     required this.comments,
     required this.createdAt,
@@ -68,6 +70,7 @@ class LostPetReportRecord {
         disappearanceDateMs,
       ),
       photoUrl: map['photo_url'] as String?,
+      petPhotoUrl: map['pet_photo_url'] as String?,
       phone: map['phone'] as String?,
       comments: rawComments
           .map(
@@ -95,6 +98,7 @@ class LostPetReportRecord {
       'details': details,
       'disappearance_date': disappearanceDate.millisecondsSinceEpoch,
       'photo_url': photoUrl,
+      'pet_photo_url': petPhotoUrl,
       'phone': phone,
       'comments_json': jsonEncode(
         comments.map((ReportCommentRecord c) => c.toMap()).toList(),

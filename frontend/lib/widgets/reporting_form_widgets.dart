@@ -21,6 +21,7 @@ Future<DateTime?> showReportingDatePicker({
   final ThemeData baseTheme = Theme.of(context);
   final Color dialogBackground = AppPalette.dialogBackground(isDarkMode);
   final Color foregroundColor = AppPalette.textPrimary(isDarkMode);
+  const Color selectedForegroundColor = AppPalette.white;
 
   return showDatePicker(
     context: context,
@@ -32,9 +33,39 @@ Future<DateTime?> showReportingDatePicker({
         data: baseTheme.copyWith(
           colorScheme: baseTheme.colorScheme.copyWith(
             primary: AppPalette.primaryBlue,
-            onPrimary: AppPalette.white,
+            onPrimary: selectedForegroundColor,
             surface: dialogBackground,
             onSurface: foregroundColor,
+          ),
+          datePickerTheme: DatePickerThemeData(
+            backgroundColor: dialogBackground,
+            headerBackgroundColor: AppPalette.primaryBlue,
+            headerForegroundColor: selectedForegroundColor,
+            dayForegroundColor: WidgetStateProperty.resolveWith<Color?>((
+              Set<WidgetState> states,
+            ) {
+              if (states.contains(WidgetState.selected)) {
+                return selectedForegroundColor;
+              }
+              return foregroundColor;
+            }),
+            yearForegroundColor: WidgetStateProperty.resolveWith<Color?>((
+              Set<WidgetState> states,
+            ) {
+              if (states.contains(WidgetState.selected)) {
+                return selectedForegroundColor;
+              }
+              return foregroundColor;
+            }),
+            todayForegroundColor: WidgetStateProperty.resolveWith<Color?>((
+              Set<WidgetState> states,
+            ) {
+              if (states.contains(WidgetState.selected)) {
+                return selectedForegroundColor;
+              }
+              return AppPalette.primaryBlue;
+            }),
+            todayBorder: const BorderSide(color: AppPalette.primaryBlue),
           ),
           dialogTheme: baseTheme.dialogTheme.copyWith(
             backgroundColor: dialogBackground,
@@ -267,7 +298,7 @@ class ReportingPhotoField extends StatelessWidget {
                   child: photoSource != null && photoSource!.isNotEmpty
                       ? buildLocalImageWidget(
                           source: photoSource,
-                          fit: BoxFit.cover,
+                          fit: BoxFit.contain,
                           fallback: const _PhotoPlaceholder(),
                           errorBuilder: (_, _, _) => const _PhotoPlaceholder(),
                         )
@@ -385,9 +416,9 @@ class ReportingDateField extends StatelessWidget {
       child: OutlinedButton.icon(
         onPressed: onTap,
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppPalette.textPrimary(isDarkMode),
-          side: BorderSide(color: AppPalette.border(isDarkMode)),
-          backgroundColor: AppPalette.fieldBackground(isDarkMode),
+          foregroundColor: AppPalette.white,
+          side: const BorderSide(color: AppPalette.primaryBlue),
+          backgroundColor: AppPalette.primaryBlue,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

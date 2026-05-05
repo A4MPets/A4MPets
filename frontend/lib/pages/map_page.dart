@@ -141,6 +141,8 @@ class _MapPageState extends ConsumerState<MapPage> {
   final Set<String> _spokenFarApproachInstructionIds = <String>{};
   final Set<String> _spokenApproachInstructionIds = <String>{};
   final Set<String> _spokenImmediateInstructionIds = <String>{};
+  String? _pendingImmediateNavigationCueKey;
+  int _pendingImmediateNavigationCueCount = 0;
 
   // Auth panel state.
   bool _isAuthRequestLoading = false;

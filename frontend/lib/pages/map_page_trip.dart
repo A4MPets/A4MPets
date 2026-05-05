@@ -31,6 +31,8 @@ extension _MapPageTripState on _MapPageState {
     _spokenFarApproachInstructionIds.clear();
     _spokenApproachInstructionIds.clear();
     _spokenImmediateInstructionIds.clear();
+    _pendingImmediateNavigationCueKey = null;
+    _pendingImmediateNavigationCueCount = 0;
     if (stopSpeech) {
       _stopNavigationSpeech();
     }
@@ -54,7 +56,25 @@ extension _MapPageTripState on _MapPageState {
       distanceCalculator: _distanceCalculator,
     );
     if (cue == null) {
+      _pendingImmediateNavigationCueKey = null;
+      _pendingImmediateNavigationCueCount = 0;
       return;
+    }
+
+    if (cue.type == NavigationAudioCueType.immediate &&
+        !_spokenApproachInstructionIds.contains(cue.maneuverKey)) {
+      if (_pendingImmediateNavigationCueKey == cue.maneuverKey) {
+        _pendingImmediateNavigationCueCount += 1;
+      } else {
+        _pendingImmediateNavigationCueKey = cue.maneuverKey;
+        _pendingImmediateNavigationCueCount = 1;
+      }
+      if (_pendingImmediateNavigationCueCount < 2) {
+        return;
+      }
+    } else {
+      _pendingImmediateNavigationCueKey = null;
+      _pendingImmediateNavigationCueCount = 0;
     }
 
     final String message = switch (cue.type) {
@@ -78,6 +98,8 @@ extension _MapPageTripState on _MapPageState {
       _spokenFarApproachInstructionIds.add(cue.maneuverKey);
       _spokenApproachInstructionIds.add(cue.maneuverKey);
       _spokenImmediateInstructionIds.add(cue.maneuverKey);
+      _pendingImmediateNavigationCueKey = null;
+      _pendingImmediateNavigationCueCount = 0;
     }
 
     await ref.read(audioFeedbackServiceProvider).speakNavigation(message);
@@ -197,7 +219,7 @@ extension _MapPageTripState on _MapPageState {
 
   void _startTrip(bool isDarkMode) {
     final RouteRecord? selectedRoute = _selectedTripRoute;
-    if (selectedRoute == null || selectedRoute.points.length < 2) {
+    if (selectedRoute == null || selectedRoute.points.isEmpty) {
       _updatePageState(() {
         _tripStartErrorText =
             'Selecciona una ruta válida para iniciar el viaje.';

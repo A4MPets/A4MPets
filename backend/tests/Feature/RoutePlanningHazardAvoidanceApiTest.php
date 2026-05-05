@@ -75,7 +75,7 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
                 ['lat' => 3.4600, 'lng' => -76.5400],
             ],
             'avoid_hazards' => true,
-            'hazard_risk_filters' => ['low', 'medium', 'high'],
+            'hazard_risk_filters' => ['low', 'medium', 'high', 'other'],
             'travel_mode' => 'walking',
         ], $headers);
 
@@ -83,6 +83,7 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.used_hazard_avoidance', true)
             ->assertJsonPath('data.hazards_considered', 1)
+            ->assertJsonPath('meta.hazard_risk_filters.3', 'other')
             ->assertJsonPath('data.navigation_instructions.0.sign', 2)
             ->assertJsonPath('data.navigation_instructions.0.point_start_index', 0)
             ->assertJsonPath('data.navigation_instructions.0.point_end_index', 1);
@@ -92,6 +93,64 @@ class RoutePlanningHazardAvoidanceApiTest extends TestCase
             $areas = $data['custom_model']['areas'] ?? [];
 
             return count($areas) === 1 &&
+                ($data['instructions'] ?? null) === true &&
+                ($data['locale'] ?? null) === 'es';
+        });
+    }
+
+    public function test_route_planning_ignores_generic_reports_when_other_filter_is_not_selected(): void
+    {
+        $user = User::factory()->create();
+        $headers = $this->authHeaders($user);
+
+        GenericReport::create([
+            'user_id' => $user->id,
+            'latitude' => 3.4516,
+            'longitude' => -76.5320,
+            'description' => 'Other report near the route',
+            'reported_date' => now(),
+            'risk_level_code' => 'high',
+            'impact_radius_meters' => 60,
+            'photo_url' => null,
+        ]);
+
+        Http::fake([
+            '*' => Http::response([
+                'paths' => [
+                    [
+                        'distance' => 1200.0,
+                        'time' => 900000.0,
+                        'points' => [
+                            'coordinates' => [
+                                [-76.5320, 3.4516],
+                                [-76.5400, 3.4600],
+                            ],
+                        ],
+                        'instructions' => [],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $response = $this->postJson('/api/routes/plan', [
+            'points' => [
+                ['lat' => 3.4516, 'lng' => -76.5320],
+                ['lat' => 3.4600, 'lng' => -76.5400],
+            ],
+            'avoid_hazards' => true,
+            'hazard_risk_filters' => ['low', 'medium', 'high'],
+            'travel_mode' => 'walking',
+        ], $headers);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.used_hazard_avoidance', true)
+            ->assertJsonPath('data.hazards_considered', 0);
+
+        Http::assertSent(function ($request): bool {
+            $data = $request->data();
+
+            return ! array_key_exists('custom_model', $data) &&
                 ($data['instructions'] ?? null) === true &&
                 ($data['locale'] ?? null) === 'es';
         });

@@ -341,6 +341,17 @@ class _TripStartPanelContent extends StatelessWidget {
                         onChanged: (bool value) =>
                             onToggleHazardRiskFilter('high', value),
                       ),
+                      _TripRiskFilterCheckbox(
+                        label: 'Otro',
+                        value: selectedHazardRiskFilters.contains(
+                          HazardRiskFiltering.other,
+                        ),
+                        textColor: textColor,
+                        onChanged: (bool value) => onToggleHazardRiskFilter(
+                          HazardRiskFiltering.other,
+                          value,
+                        ),
+                      ),
                     ],
                   ),
                 ),

@@ -113,15 +113,7 @@ class _LoginPanelContentState extends State<LoginPanelContent> {
               });
             },
           ),
-          const SizedBox(height: 6),
-          const Text(
-            'Puedes iniciar sesión con tu nombre de usuario o correo.',
-            style: TextStyle(
-              color: Color(0xFF7A7A7A),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+
           const SizedBox(height: 12),
           _AuthTextField(
             isDarkMode: widget.isDarkMode,

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\HazardReport;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesApiToken;
@@ -61,5 +62,25 @@ class HazardApiTest extends TestCase
         $this->getJson('/api/hazards', $headers)
             ->assertOk()
             ->assertJsonCount(0, 'data');
+    }
+
+    public function test_hazard_can_be_created_anonymously(): void
+    {
+        $this->postJson('/api/hazards', [
+            'local_id' => 'hazard-anonymous-1',
+            'incident_latitude' => 3.4516,
+            'incident_longitude' => -76.5320,
+            'impact_radius_meters' => 25,
+            'risk_level_code' => 'medium',
+            'category_code' => 'waste_accumulation',
+            'estimated_duration_code' => '1_week',
+            'description' => 'Overflowing trash bin',
+            'reported_at' => now()->toIso8601String(),
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.reported_by_username', 'Anonimo');
+
+        $hazard = HazardReport::query()->firstOrFail();
+        $this->assertNull($hazard->user_id);
     }
 }

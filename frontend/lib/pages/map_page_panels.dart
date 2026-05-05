@@ -22,6 +22,13 @@ extension _MapPagePanelsState on _MapPageState {
     }
 
     final _PanelRoute currentPanel = _panelStack.last;
+    final bool returningToReportSelector =
+        _panelStack.length > 1 &&
+        _panelStack[_panelStack.length - 2].isReportSelectorPanel &&
+        (currentPanel.isReportHazardPanel ||
+            currentPanel.isLostPetReportPanel ||
+            currentPanel.isFoundPetReportPanel ||
+            currentPanel.isGenericReportPanel);
     final bool returningToTripRouteSelection =
         currentPanel.isAddRoutePanel &&
         _panelStack.length > 1 &&
@@ -113,6 +120,9 @@ extension _MapPagePanelsState on _MapPageState {
         _selectedGenericReport = null;
       }
       _panelStack.removeLast();
+      if (returningToReportSelector) {
+        _reloadReportData();
+      }
     });
 
     if (returningToTripRouteSelection) {

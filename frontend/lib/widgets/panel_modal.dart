@@ -107,17 +107,27 @@ class _AppModalPanelState extends State<AppModalPanel> {
             safeTopInset -
             safeBottomInset;
 
-        final double resolvedWidth = isMobile || widget.expandHorizontal
-            ? availableWidth
-            : math.min(widget.width ?? 380, availableWidth);
+        final double resolvedWidth = widget.adaptHeightToContent
+            ? (isMobile && widget.expandHorizontal
+                  ? availableWidth
+                  : math.min(widget.width ?? 380, availableWidth))
+            : (isMobile || widget.expandHorizontal
+                  ? availableWidth
+                  : math.min(widget.width ?? 380, availableWidth));
 
         final double? responsiveMaxHeightFactor = isMobile
             ? widget.mobileMaxHeightFactor ?? widget.maxHeightFactor
             : widget.desktopMaxHeightFactor ?? widget.maxHeightFactor;
 
-        final double requestedMaxHeight = responsiveMaxHeightFactor != null
-            ? availableHeight * responsiveMaxHeightFactor
-            : (widget.maxHeight ?? widget.height ?? availableHeight * 0.62);
+        final double requestedMaxHeight = widget.adaptHeightToContent
+            ? (responsiveMaxHeightFactor != null
+                  ? availableHeight * responsiveMaxHeightFactor
+                  : (widget.maxHeight ?? availableHeight))
+            : (responsiveMaxHeightFactor != null
+                  ? availableHeight * responsiveMaxHeightFactor
+                  : (widget.maxHeight ??
+                        widget.height ??
+                        availableHeight * 0.62));
 
         final double resolvedMaxHeight = widget.expandVertical
             ? availableHeight
@@ -150,44 +160,50 @@ class _AppModalPanelState extends State<AppModalPanel> {
               duration: const Duration(milliseconds: 220),
               curve: Curves.easeOutCubic,
               alignment: _toAlignment(widget.anchor),
-              child: SizedBox(
-                width: resolvedWidth,
-                height: widget.adaptHeightToContent && !widget.isMinimized
-                    ? null
-                    : targetPanelHeight,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: panelBackground,
-                    borderRadius: widget.borderRadius,
-                  ),
-                  child: Stack(
-                    children: [
-                      if (widget.scrollContent)
-                        if (widget.adaptHeightToContent)
-                          Offstage(
-                            offstage: widget.isMinimized,
-                            child: _PanelScrollableBody(
-                              topPadding: resolvedTopPadding,
-                              adaptHeightToContent: true,
-                              child: widget.child,
-                            ),
-                          )
-                        else
-                          Positioned.fill(
-                            child: Offstage(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: resolvedWidth,
+                  maxHeight: widget.adaptHeightToContent && !widget.isMinimized
+                      ? resolvedMaxHeight
+                      : targetPanelHeight,
+                ),
+                child: SizedBox(
+                  width: resolvedWidth,
+                  height: widget.adaptHeightToContent && !widget.isMinimized
+                      ? null
+                      : targetPanelHeight,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: panelBackground,
+                      borderRadius: widget.borderRadius,
+                    ),
+                    child: Stack(
+                      children: [
+                        if (widget.scrollContent)
+                          if (widget.adaptHeightToContent)
+                            Offstage(
                               offstage: widget.isMinimized,
                               child: _PanelScrollableBody(
                                 topPadding: resolvedTopPadding,
-                                adaptHeightToContent: false,
+                                adaptHeightToContent: true,
                                 child: widget.child,
                               ),
-                            ),
-                          )
-                      else
-                        Positioned.fill(
-                          child: Offstage(
+                            )
+                          else
+                            Positioned.fill(
+                              child: Offstage(
+                                offstage: widget.isMinimized,
+                                child: _PanelScrollableBody(
+                                  topPadding: resolvedTopPadding,
+                                  adaptHeightToContent: false,
+                                  child: widget.child,
+                                ),
+                              ),
+                            )
+                        else if (widget.adaptHeightToContent)
+                          Offstage(
                             offstage: widget.isMinimized,
-                            child: Padding(
+                            child: SingleChildScrollView(
                               padding: EdgeInsets.fromLTRB(
                                 16,
                                 resolvedTopPadding,
@@ -196,91 +212,106 @@ class _AppModalPanelState extends State<AppModalPanel> {
                               ),
                               child: widget.child,
                             ),
-                          ),
-                        ),
-                      if (hasTitle)
-                        Positioned(
-                          top: 14,
-                          left: 56,
-                          right: 56,
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: widget.canMinimize
-                                ? widget.onToggleMinimize
-                                : null,
-                            child: Text(
-                              widget.title!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: titleColor,
-                                fontSize: 17,
-                                fontWeight: FontWeight.w600,
+                          )
+                        else
+                          Positioned.fill(
+                            child: Offstage(
+                              offstage: widget.isMinimized,
+                              child: Padding(
+                                padding: EdgeInsets.fromLTRB(
+                                  16,
+                                  resolvedTopPadding,
+                                  16,
+                                  18,
+                                ),
+                                child: widget.child,
                               ),
                             ),
                           ),
-                        ),
-                      if (widget.canMinimize)
-                        Positioned(
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          child: Center(
+                        if (hasTitle)
+                          Positioned(
+                            top: 14,
+                            left: 56,
+                            right: 56,
                             child: GestureDetector(
                               behavior: HitTestBehavior.opaque,
-                              onTap: widget.onToggleMinimize,
-                              child: Container(
-                                width: 42,
-                                height: 14,
-                                alignment: Alignment.topCenter,
+                              onTap: widget.canMinimize
+                                  ? widget.onToggleMinimize
+                                  : null,
+                              child: Text(
+                                widget.title!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: titleColor,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        if (widget.canMinimize)
+                          Positioned(
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            child: Center(
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: widget.onToggleMinimize,
                                 child: Container(
                                   width: 42,
-                                  height: 5,
-                                  decoration: BoxDecoration(
-                                    color: widget.isDarkMode
-                                        ? const Color(0x66FFFFFF)
-                                        : const Color(0x66404040),
-                                    borderRadius: BorderRadius.circular(999),
+                                  height: 14,
+                                  alignment: Alignment.topCenter,
+                                  child: Container(
+                                    width: 42,
+                                    height: 5,
+                                    decoration: BoxDecoration(
+                                      color: widget.isDarkMode
+                                          ? const Color(0x66FFFFFF)
+                                          : const Color(0x66404040),
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      if (widget.showLoadingIndicator)
-                        Positioned.fill(
-                          child: IgnorePointer(
-                            ignoring: true,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: widget.isDarkMode
-                                    ? const Color(0x55201E1E)
-                                    : const Color(0x55E6E6E6),
-                                borderRadius: widget.borderRadius,
-                              ),
-                              child: const Center(
-                                child: SizedBox(
-                                  width: 28,
-                                  height: 28,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                    color: Color(0xFF5984BC),
+                        if (widget.showLoadingIndicator)
+                          Positioned.fill(
+                            child: IgnorePointer(
+                              ignoring: true,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: widget.isDarkMode
+                                      ? const Color(0x55201E1E)
+                                      : const Color(0x55E6E6E6),
+                                  borderRadius: widget.borderRadius,
+                                ),
+                                child: const Center(
+                                  child: SizedBox(
+                                    width: 28,
+                                    height: 28,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: Color(0xFF5984BC),
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
                           ),
+                        Positioned(
+                          top: AppModalPanel._floatingTopOffset,
+                          left: 12,
+                          child: _PanelBackOrCloseButton(
+                            showBackIcon: widget.showBackButton,
+                            onPressed: widget.onClosePressed,
+                          ),
                         ),
-                      Positioned(
-                        top: AppModalPanel._floatingTopOffset,
-                        left: 12,
-                        child: _PanelBackOrCloseButton(
-                          showBackIcon: widget.showBackButton,
-                          onPressed: widget.onClosePressed,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

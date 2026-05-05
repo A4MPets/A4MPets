@@ -103,15 +103,20 @@ class _ProfileMenuPanelState extends ConsumerState<ProfileMenuPanel> {
       children: [
         userProfile.when(
           data: (LocalUserProfile profile) {
-            return UserIdentityHeader(
-              isDarkMode: widget.isDarkMode,
-              username: profile.username,
-              avatarPath: profile.avatarPath,
-              onEditAvatarPressed: profile.isAuthenticated
-                  ? _handleEditAvatar
-                  : null,
-              isEditingAvatar: _isPickingAvatar,
-            );
+            if (profile.isAuthenticated) {
+              return UserIdentityHeader(
+                isDarkMode: widget.isDarkMode,
+                username: profile.username,
+                avatarPath: profile.avatarPath,
+                onEditAvatarPressed: _handleEditAvatar,
+                isEditingAvatar: _isPickingAvatar,
+              );
+            }else{
+              return UserIdentityHeader(
+                isDarkMode: widget.isDarkMode,
+                username: 'Usuario',
+              );  
+            }
           },
           loading: () => const SizedBox.shrink(),
           error: (Object error, StackTrace stackTrace) {

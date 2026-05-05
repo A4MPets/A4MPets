@@ -16,6 +16,7 @@ class FoundPetReportRecord {
   final String details;
   final DateTime foundDate;
   final String? photoUrl;
+  final String? petPhotoUrl;
   final String? phone;
   final List<ReportCommentRecord> comments;
   final DateTime createdAt;
@@ -36,6 +37,7 @@ class FoundPetReportRecord {
     required this.details,
     required this.foundDate,
     required this.photoUrl,
+    required this.petPhotoUrl,
     required this.phone,
     required this.comments,
     required this.createdAt,
@@ -69,6 +71,7 @@ class FoundPetReportRecord {
       details: map['details'] as String? ?? '',
       foundDate: DateTime.fromMillisecondsSinceEpoch(foundDateMs),
       photoUrl: map['photo_url'] as String?,
+      petPhotoUrl: map['pet_photo_url'] as String?,
       phone: map['phone'] as String?,
       comments: rawComments
           .map(
@@ -97,6 +100,7 @@ class FoundPetReportRecord {
       'details': details,
       'found_date': foundDate.millisecondsSinceEpoch,
       'photo_url': photoUrl,
+      'pet_photo_url': petPhotoUrl,
       'phone': phone,
       'comments_json': jsonEncode(
         comments.map((ReportCommentRecord c) => c.toMap()).toList(),

@@ -7,6 +7,7 @@ import '../models/local_user_profile.dart';
 import '../models/pet_record.dart';
 import '../providers/local_data_providers.dart';
 import '../theme/app_palette.dart';
+import 'reporting_form_widgets.dart';
 import 'shared/local_image_widget.dart';
 import 'shared/user_identity_header.dart';
 
@@ -302,8 +303,9 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
     required ValueChanged<DateTime?> onPicked,
   }) async {
     final DateTime now = DateTime.now();
-    final DateTime? picked = await showDatePicker(
+    final DateTime? picked = await showReportingDatePicker(
       context: context,
+      isDarkMode: widget.isDarkMode,
       initialDate: current ?? now,
       firstDate: DateTime(now.year - 30),
       lastDate: DateTime(now.year, now.month, now.day),
@@ -372,7 +374,12 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
             ),
             const SizedBox(height: 8),
             _OptionalDateButton(
-              label: _formatOptionalDate(_adoptionDate, 'Fecha de adopcion'),
+              isDarkMode: widget.isDarkMode,
+              title: 'Fecha de adopcion',
+              valueText: _formatOptionalDate(
+                _adoptionDate,
+                'Seleccionar fecha',
+              ),
               onPressed: () => _pickOptionalDate(
                 current: _adoptionDate,
                 onPicked: (DateTime? date) =>
@@ -384,7 +391,9 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
             ),
             const SizedBox(height: 8),
             _OptionalDateButton(
-              label: _formatOptionalDate(_birthDate, 'Fecha de nacimiento'),
+              isDarkMode: widget.isDarkMode,
+              title: 'Fecha de nacimiento',
+              valueText: _formatOptionalDate(_birthDate, 'Seleccionar fecha'),
               onPressed: () => _pickOptionalDate(
                 current: _birthDate,
                 onPicked: (DateTime? date) => setState(() => _birthDate = date),
@@ -687,46 +696,83 @@ class _PetNameField extends StatelessWidget {
 }
 
 class _OptionalDateButton extends StatelessWidget {
-  final String label;
+  final bool isDarkMode;
+  final String title;
+  final String valueText;
   final VoidCallback onPressed;
   final VoidCallback? onClear;
 
   const _OptionalDateButton({
-    required this.label,
+    required this.isDarkMode,
+    required this.title,
+    required this.valueText,
     required this.onPressed,
     this.onClear,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          child: SizedBox(
-            height: 42,
-            child: OutlinedButton(
-              onPressed: onPressed,
-              style: OutlinedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
-            ),
+        Text(
+          title,
+          style: const TextStyle(
+            color: AppPalette.textMutedDark,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
           ),
         ),
-        if (onClear != null) ...[
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 42,
-            height: 42,
-            child: IconButton(
-              onPressed: onClear,
-              icon: const Icon(Icons.close, size: 18),
-              tooltip: 'Quitar fecha',
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 42,
+                child: OutlinedButton.icon(
+                  onPressed: onPressed,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppPalette.white,
+                    backgroundColor: AppPalette.primaryBlue,
+                    side: const BorderSide(color: AppPalette.primaryBlue),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: const Icon(Icons.calendar_today_rounded, size: 16),
+                  label: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      valueText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-        ],
+            if (onClear != null) ...[
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 42,
+                height: 42,
+                child: IconButton(
+                  onPressed: onClear,
+                  icon: Icon(
+                    Icons.close,
+                    size: 18,
+                    color: AppPalette.textPrimary(isDarkMode),
+                  ),
+                  tooltip: 'Quitar fecha',
+                ),
+              ),
+            ],
+          ],
+        ),
       ],
     );
   }
@@ -877,8 +923,9 @@ class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
     required ValueChanged<DateTime?> onPicked,
   }) async {
     final DateTime now = DateTime.now();
-    final DateTime? picked = await showDatePicker(
+    final DateTime? picked = await showReportingDatePicker(
       context: context,
+      isDarkMode: widget.isDarkMode,
       initialDate: current ?? now,
       firstDate: DateTime(now.year - 30),
       lastDate: DateTime(now.year, now.month, now.day),
@@ -1035,7 +1082,12 @@ class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
               ),
               const SizedBox(height: 8),
               _OptionalDateButton(
-                label: _formatOptionalDate(_adoptionDate, 'Fecha de adopcion'),
+                isDarkMode: widget.isDarkMode,
+                title: 'Fecha de adopcion',
+                valueText: _formatOptionalDate(
+                  _adoptionDate,
+                  'Seleccionar fecha',
+                ),
                 onPressed: () => _pickOptionalDate(
                   current: _adoptionDate,
                   onPicked: (DateTime? date) =>
@@ -1047,7 +1099,9 @@ class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
               ),
               const SizedBox(height: 8),
               _OptionalDateButton(
-                label: _formatOptionalDate(_birthDate, 'Fecha de nacimiento'),
+                isDarkMode: widget.isDarkMode,
+                title: 'Fecha de nacimiento',
+                valueText: _formatOptionalDate(_birthDate, 'Seleccionar fecha'),
                 onPressed: () => _pickOptionalDate(
                   current: _birthDate,
                   onPicked: (DateTime? date) =>

@@ -157,8 +157,10 @@ class _MapWidgetState extends State<MapWidget>
   LatLng? _customUserLocation;
   StreamSubscription<Position>? _positionStreamSub;
   StreamSubscription<CompassEvent>? _compassStreamSub;
+  Timer? _locationRestartTimer;
   bool _isResolvingLocation = false;
   String? _userLocationErrorText;
+  DateTime? _lastLocationPermissionPromptAt;
 
   // Color cache for hazard rendering (avoid recalculation every frame)
   final Map<String, Color> _borderColorCache = {};
@@ -171,6 +173,8 @@ class _MapWidgetState extends State<MapWidget>
   static const Color contentGray = AppPalette.charcoal;
   static const Color translucentWhite = Color(0xCCFFFFFF);
   static const double _userFocusZoom = 17.5;
+  static const Duration _permissionPromptCooldown = Duration(seconds: 3);
+  static const Duration _locationStreamRetryDelay = Duration(seconds: 2);
   static final LatLngBounds _caliBounds = LatLngBounds(
     const LatLng(3.289, -76.639),
     const LatLng(3.518, -76.445),
@@ -221,8 +225,26 @@ class _MapWidgetState extends State<MapWidget>
         return;
       }
 
-      final LocationPermission permission =
-          await Geolocator.requestPermission();
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        final DateTime now = DateTime.now();
+        final DateTime? lastPrompt = _lastLocationPermissionPromptAt;
+        if (lastPrompt != null &&
+            now.difference(lastPrompt) < _permissionPromptCooldown) {
+          if (mounted) {
+            setState(() => _hasLocationPermission = false);
+          }
+          _emitUserLocationStatus(
+            isLoading: false,
+            errorText: 'Debes habilitar los permisos de ubicacion.',
+          );
+          return;
+        }
+
+        _lastLocationPermissionPromptAt = now;
+        permission = await Geolocator.requestPermission();
+      }
+
       if (permission == LocationPermission.denied) {
         if (mounted) {
           setState(() => _hasLocationPermission = false);
@@ -331,7 +353,7 @@ class _MapWidgetState extends State<MapWidget>
               if (!mounted) {
                 return;
               }
-              _requestLocationPermission();
+              _scheduleLocationTrackingRestart();
             });
           },
           onDone: () {
@@ -343,10 +365,40 @@ class _MapWidgetState extends State<MapWidget>
               if (!mounted) {
                 return;
               }
-              _requestLocationPermission();
+              _scheduleLocationTrackingRestart();
             });
           },
         );
+  }
+
+  void _scheduleLocationTrackingRestart() {
+    if (!mounted || !_hasLocationPermission) {
+      return;
+    }
+
+    _locationRestartTimer?.cancel();
+    _locationRestartTimer = Timer(_locationStreamRetryDelay, () async {
+      if (!mounted || !_hasLocationPermission || _isResolvingLocation) {
+        return;
+      }
+
+      final LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.always ||
+          permission == LocationPermission.whileInUse) {
+        _startLocationTracking();
+        return;
+      }
+
+      if (mounted) {
+        setState(() => _hasLocationPermission = false);
+      }
+      _emitUserLocationStatus(
+        isLoading: false,
+        errorText: permission == LocationPermission.deniedForever
+            ? 'Los permisos de ubicacion estan bloqueados. Debes habilitarlos manualmente.'
+            : 'Debes habilitar los permisos de ubicacion.',
+      );
+    });
   }
 
   void _startCompassTracking() {
@@ -437,6 +489,7 @@ class _MapWidgetState extends State<MapWidget>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _disposeCameraAnimation();
+    _locationRestartTimer?.cancel();
     _positionStreamSub?.cancel();
     _compassStreamSub?.cancel();
     mapController.dispose();

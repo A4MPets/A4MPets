@@ -52,6 +52,13 @@ class FoundPetReportController extends Controller
 
     public function store(StoreFoundPetReportRequest $request): JsonResponse
     {
+        if (! $request->user()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Debes iniciar sesion para reportar mascotas encontradas.',
+            ], 401);
+        }
+
         $report = $this->foundPetReportService->store(
             $request->user()?->id,
             $request->validated()
