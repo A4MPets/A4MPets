@@ -1,0 +1,570 @@
+digraph "G" {
+style="filled"
+bgcolor="#F7F7F7"
+fontsize="12"
+labelloc="t"
+concentrate="1"
+splines="polyline"
+overlap=""
+nodesep="1"
+rankdir="LR"
+pad="0.5"
+ranksep="2"
+esep="1"
+fontname="Helvetica Neue"
+appmodelsapitoken:user_id -> appmodelsuser:id [
+label=" "
+xlabel="BelongsTo
+user"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelsfoundpetreport:user_id -> appmodelsuser:id [
+label=" "
+xlabel="BelongsTo
+user"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelsfoundpetreport:pet_id -> appmodelspet:id [
+label=" "
+xlabel="BelongsTo
+pet"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelsfoundpetreport:matched_lost_pet_report_id -> appmodelslostpetreport:id [
+label=" "
+xlabel="BelongsTo
+matchedLostPetReport"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelsfoundpetreport:id -> appmodelsreportcomment:commentable_id [
+label=" "
+xlabel="MorphMany
+comments"
+color="#003049"
+penwidth="1.8"
+fontname="Helvetica Neue"
+]
+appmodelsgenericreport:user_id -> appmodelsuser:id [
+label=" "
+xlabel="BelongsTo
+user"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelsgenericreport:id -> appmodelsreportcomment:commentable_id [
+label=" "
+xlabel="MorphMany
+comments"
+color="#003049"
+penwidth="1.8"
+fontname="Helvetica Neue"
+]
+appmodelshazardcomment:hazard_report_id -> appmodelshazardreport:id [
+label=" "
+xlabel="BelongsTo
+hazardReport"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelshazardcomment:user_id -> appmodelsuser:id [
+label=" "
+xlabel="BelongsTo
+user"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelshazardreport:user_id -> appmodelsuser:id [
+label=" "
+xlabel="BelongsTo
+user"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelshazardreport:id -> appmodelsreportcomment:commentable_id [
+label=" "
+xlabel="MorphMany
+comments"
+color="#003049"
+penwidth="1.8"
+fontname="Helvetica Neue"
+]
+appmodelshazardreport:risk_level_id -> appmodelshazardrisklevel:id [
+label=" "
+xlabel="BelongsTo
+riskLevel"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelshazardreport:category_id -> appmodelshazardcategory:id [
+label=" "
+xlabel="BelongsTo
+category"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelshazardreport:estimated_duration_id -> appmodelshazardestimatedduration:id [
+label=" "
+xlabel="BelongsTo
+estimatedDuration"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelslostpetreport:user_id -> appmodelsuser:id [
+label=" "
+xlabel="BelongsTo
+user"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelslostpetreport:pet_id -> appmodelspet:id [
+label=" "
+xlabel="BelongsTo
+pet"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelslostpetreport:id -> appmodelsreportcomment:commentable_id [
+label=" "
+xlabel="MorphMany
+comments"
+color="#003049"
+penwidth="1.8"
+fontname="Helvetica Neue"
+]
+appmodelspet:user_id -> appmodelsuser:id [
+label=" "
+xlabel="BelongsTo
+user"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelspet:id -> appmodelslostpetreport:pet_id [
+label=" "
+xlabel="HasMany
+lostPetReports"
+color="#FCBF49"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="crow"
+arrowtail="none"
+]
+appmodelspet:id -> appmodelsfoundpetreport:pet_id [
+label=" "
+xlabel="HasMany
+foundPetReports"
+color="#FCBF49"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="crow"
+arrowtail="none"
+]
+appmodelsreportcomment:commentable_id -> appmodelsreportcomment [
+label=" "
+xlabel="MorphTo
+commentable"
+color="#003049"
+penwidth="1.8"
+fontname="Helvetica Neue"
+]
+appmodelsreportcomment:user_id -> appmodelsuser:id [
+label=" "
+xlabel="BelongsTo
+user"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelsroutepoint:route_id -> appmodelstravelroute:id [
+label=" "
+xlabel="BelongsTo
+route"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelstravelroute:user_id -> appmodelsuser:id [
+label=" "
+xlabel="BelongsTo
+user"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelstravelroute:id -> appmodelsroutepoint:route_id [
+label=" "
+xlabel="HasMany
+routePoints"
+color="#FCBF49"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="crow"
+arrowtail="none"
+]
+appmodelsuser:id -> appmodelsapitoken:user_id [
+label=" "
+xlabel="HasMany
+apiTokens"
+color="#FCBF49"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="crow"
+arrowtail="none"
+]
+appmodelsuser:id -> appmodelshazardreport:user_id [
+label=" "
+xlabel="HasMany
+hazardReports"
+color="#FCBF49"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="crow"
+arrowtail="none"
+]
+appmodelsuser:id -> appmodelspet:user_id [
+label=" "
+xlabel="HasMany
+pets"
+color="#FCBF49"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="crow"
+arrowtail="none"
+]
+appmodelsuser:id -> appmodelstravelroute:user_id [
+label=" "
+xlabel="HasMany
+routes"
+color="#FCBF49"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="crow"
+arrowtail="none"
+]
+"appmodelsapitoken" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">ApiToken</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (integer)</font></td></tr>
+<tr width="100%"><td port="user_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >user_id (integer)</font></td></tr>
+<tr width="100%"><td port="name" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >name (varchar)</font></td></tr>
+<tr width="100%"><td port="token_hash" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >token_hash (varchar)</font></td></tr>
+<tr width="100%"><td port="last_used_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >last_used_at (datetime)</font></td></tr>
+<tr width="100%"><td port="expires_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >expires_at (datetime)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (datetime)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (datetime)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelsfoundpetreport" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">FoundPetReport</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (integer)</font></td></tr>
+<tr width="100%"><td port="user_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >user_id (integer)</font></td></tr>
+<tr width="100%"><td port="pet_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >pet_id (integer)</font></td></tr>
+<tr width="100%"><td port="matched_lost_pet_report_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >matched_lost_pet_report_id (integer)</font></td></tr>
+<tr width="100%"><td port="pet_local_uuid" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >pet_local_uuid (varchar)</font></td></tr>
+<tr width="100%"><td port="latitude" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >latitude (numeric)</font></td></tr>
+<tr width="100%"><td port="longitude" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >longitude (numeric)</font></td></tr>
+<tr width="100%"><td port="details" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >details (text)</font></td></tr>
+<tr width="100%"><td port="found_date" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >found_date (datetime)</font></td></tr>
+<tr width="100%"><td port="photo_url" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >photo_url (varchar)</font></td></tr>
+<tr width="100%"><td port="phone" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >phone (varchar)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (datetime)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (datetime)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelsgenericreport" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">GenericReport</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (integer)</font></td></tr>
+<tr width="100%"><td port="user_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >user_id (integer)</font></td></tr>
+<tr width="100%"><td port="latitude" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >latitude (numeric)</font></td></tr>
+<tr width="100%"><td port="longitude" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >longitude (numeric)</font></td></tr>
+<tr width="100%"><td port="description" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >description (text)</font></td></tr>
+<tr width="100%"><td port="reported_date" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >reported_date (datetime)</font></td></tr>
+<tr width="100%"><td port="risk_level_code" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >risk_level_code (varchar)</font></td></tr>
+<tr width="100%"><td port="impact_radius_meters" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >impact_radius_meters (integer)</font></td></tr>
+<tr width="100%"><td port="photo_url" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >photo_url (varchar)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (datetime)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (datetime)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelshazardcategory" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">HazardCategory</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (integer)</font></td></tr>
+<tr width="100%"><td port="code" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >code (varchar)</font></td></tr>
+<tr width="100%"><td port="label" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >label (varchar)</font></td></tr>
+<tr width="100%"><td port="sort_order" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >sort_order (integer)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (datetime)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (datetime)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelshazardcomment" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">HazardComment</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (integer)</font></td></tr>
+<tr width="100%"><td port="hazard_report_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >hazard_report_id (integer)</font></td></tr>
+<tr width="100%"><td port="user_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >user_id (integer)</font></td></tr>
+<tr width="100%"><td port="author_name" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >author_name (varchar)</font></td></tr>
+<tr width="100%"><td port="author_avatar_url" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >author_avatar_url (varchar)</font></td></tr>
+<tr width="100%"><td port="is_anonymous" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >is_anonymous (tinyint(1))</font></td></tr>
+<tr width="100%"><td port="comment_text" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >comment_text (text)</font></td></tr>
+<tr width="100%"><td port="commented_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >commented_at (datetime)</font></td></tr>
+<tr width="100%"><td port="content_hash" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >content_hash (varchar)</font></td></tr>
+<tr width="100%"><td port="last_modified_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >last_modified_at (datetime)</font></td></tr>
+<tr width="100%"><td port="synced_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >synced_at (datetime)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (datetime)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (datetime)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelshazardestimatedduration" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">HazardEstimatedDuration</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (integer)</font></td></tr>
+<tr width="100%"><td port="code" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >code (varchar)</font></td></tr>
+<tr width="100%"><td port="label" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >label (varchar)</font></td></tr>
+<tr width="100%"><td port="sort_order" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >sort_order (integer)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (datetime)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (datetime)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelshazardreport" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">HazardReport</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (integer)</font></td></tr>
+<tr width="100%"><td port="incident_latitude" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >incident_latitude (numeric)</font></td></tr>
+<tr width="100%"><td port="incident_longitude" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >incident_longitude (numeric)</font></td></tr>
+<tr width="100%"><td port="impact_radius_meters" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >impact_radius_meters (numeric)</font></td></tr>
+<tr width="100%"><td port="description" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >description (varchar)</font></td></tr>
+<tr width="100%"><td port="narrative_description" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >narrative_description (varchar)</font></td></tr>
+<tr width="100%"><td port="reported_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >reported_at (datetime)</font></td></tr>
+<tr width="100%"><td port="evidence_photo_url" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >evidence_photo_url (varchar)</font></td></tr>
+<tr width="100%"><td port="reported_by_username" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >reported_by_username (varchar)</font></td></tr>
+<tr width="100%"><td port="user_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >user_id (integer)</font></td></tr>
+<tr width="100%"><td port="status" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >status (varchar)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (datetime)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (datetime)</font></td></tr>
+<tr width="100%"><td port="risk_level_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >risk_level_id (integer)</font></td></tr>
+<tr width="100%"><td port="category_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >category_id (integer)</font></td></tr>
+<tr width="100%"><td port="estimated_duration_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >estimated_duration_id (integer)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelshazardrisklevel" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">HazardRiskLevel</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (integer)</font></td></tr>
+<tr width="100%"><td port="code" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >code (varchar)</font></td></tr>
+<tr width="100%"><td port="label" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >label (varchar)</font></td></tr>
+<tr width="100%"><td port="sort_order" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >sort_order (integer)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (datetime)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (datetime)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelslostpetreport" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">LostPetReport</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (integer)</font></td></tr>
+<tr width="100%"><td port="user_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >user_id (integer)</font></td></tr>
+<tr width="100%"><td port="pet_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >pet_id (integer)</font></td></tr>
+<tr width="100%"><td port="pet_local_uuid" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >pet_local_uuid (varchar)</font></td></tr>
+<tr width="100%"><td port="last_seen_latitude" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >last_seen_latitude (numeric)</font></td></tr>
+<tr width="100%"><td port="last_seen_longitude" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >last_seen_longitude (numeric)</font></td></tr>
+<tr width="100%"><td port="name" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >name (varchar)</font></td></tr>
+<tr width="100%"><td port="details" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >details (text)</font></td></tr>
+<tr width="100%"><td port="disappearance_date" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >disappearance_date (datetime)</font></td></tr>
+<tr width="100%"><td port="photo_url" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >photo_url (varchar)</font></td></tr>
+<tr width="100%"><td port="phone" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >phone (varchar)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (datetime)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (datetime)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelspet" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">Pet</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (integer)</font></td></tr>
+<tr width="100%"><td port="user_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >user_id (integer)</font></td></tr>
+<tr width="100%"><td port="name" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >name (varchar)</font></td></tr>
+<tr width="100%"><td port="photo_path" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >photo_path (varchar)</font></td></tr>
+<tr width="100%"><td port="total_walks" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >total_walks (integer)</font></td></tr>
+<tr width="100%"><td port="registered_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >registered_at (datetime)</font></td></tr>
+<tr width="100%"><td port="adoption_date" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >adoption_date (datetime)</font></td></tr>
+<tr width="100%"><td port="birth_date" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >birth_date (datetime)</font></td></tr>
+<tr width="100%"><td port="status" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >status (varchar)</font></td></tr>
+<tr width="100%"><td port="is_ownerless" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >is_ownerless (tinyint(1))</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (datetime)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (datetime)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelsreportcomment" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">ReportComment</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (integer)</font></td></tr>
+<tr width="100%"><td port="commentable_type" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >commentable_type (varchar)</font></td></tr>
+<tr width="100%"><td port="commentable_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >commentable_id (integer)</font></td></tr>
+<tr width="100%"><td port="user_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >user_id (integer)</font></td></tr>
+<tr width="100%"><td port="author_name" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >author_name (varchar)</font></td></tr>
+<tr width="100%"><td port="author_avatar_url" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >author_avatar_url (varchar)</font></td></tr>
+<tr width="100%"><td port="is_anonymous" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >is_anonymous (tinyint(1))</font></td></tr>
+<tr width="100%"><td port="comment_text" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >comment_text (text)</font></td></tr>
+<tr width="100%"><td port="commented_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >commented_at (datetime)</font></td></tr>
+<tr width="100%"><td port="content_hash" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >content_hash (varchar)</font></td></tr>
+<tr width="100%"><td port="last_modified_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >last_modified_at (datetime)</font></td></tr>
+<tr width="100%"><td port="synced_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >synced_at (datetime)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (datetime)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (datetime)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelsroutepoint" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">RoutePoint</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (integer)</font></td></tr>
+<tr width="100%"><td port="route_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >route_id (integer)</font></td></tr>
+<tr width="100%"><td port="sequence" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >sequence (integer)</font></td></tr>
+<tr width="100%"><td port="latitude" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >latitude (numeric)</font></td></tr>
+<tr width="100%"><td port="longitude" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >longitude (numeric)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (datetime)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (datetime)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelstravelroute" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">TravelRoute</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (integer)</font></td></tr>
+<tr width="100%"><td port="user_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >user_id (integer)</font></td></tr>
+<tr width="100%"><td port="name" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >name (varchar)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (datetime)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (datetime)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelsuser" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">User</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (integer)</font></td></tr>
+<tr width="100%"><td port="name" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >name (varchar)</font></td></tr>
+<tr width="100%"><td port="email" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >email (varchar)</font></td></tr>
+<tr width="100%"><td port="email_verified_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >email_verified_at (datetime)</font></td></tr>
+<tr width="100%"><td port="password" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >password (varchar)</font></td></tr>
+<tr width="100%"><td port="remember_token" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >remember_token (varchar)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (datetime)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (datetime)</font></td></tr>
+<tr width="100%"><td port="profile_photo_url" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >profile_photo_url (varchar)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+}
