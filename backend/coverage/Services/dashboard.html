@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <title>Dashboard for C:\projects\Web\A4MPets\backend\app\Services</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="../_css/bootstrap.min.css?v=11.0.12" rel="stylesheet" type="text/css">
+  <link href="../_css/nv.d3.min.css?v=11.0.12" rel="stylesheet" type="text/css">
+  <link href="../_css/style.css?v=11.0.12" rel="stylesheet" type="text/css">
+  <link href="../_css/custom.css" rel="stylesheet" type="text/css">
+ </head>
+ <body>
+  <header>
+   <div class="container-fluid">
+    <div class="row">
+     <div class="col-md-12">
+      <nav aria-label="breadcrumb">
+       <ol class="breadcrumb">
+         <li class="breadcrumb-item"><a href="../index.html">C:\projects\Web\A4MPets\backend\app</a></li>
+         <li class="breadcrumb-item"><a href="index.html">Services</a></li>
+         <li class="breadcrumb-item active">(Dashboard)</li>
+
+       </ol>
+      </nav>
+     </div>
+    </div>
+   </div>
+  </header>
+  <div class="container-fluid">
+   <div class="row">
+    <div class="col-md-12">
+     <h2>Classes</h2>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Coverage Distribution</h3>
+     <div id="classCoverageDistribution" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Complexity</h3>
+     <div id="classComplexity" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Insufficient Coverage</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Class</th>
+         <th class="text-right">Coverage</th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="Comments/ReportCommentFormatter.php.html#7">App\Services\Comments\ReportCommentFormatter</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hazards/HazardCommentSyncService.php.html#10">App\Services\Hazards\HazardCommentSyncService</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/GenericReportService.php.html#10">App\Services\Reports\GenericReportService</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/LostPetReportService.php.html#11">App\Services\Reports\LostPetReportService</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Routes/TravelRouteService.php.html#11">App\Services\Routes\TravelRouteService</a></td><td class="text-right">9%</td></tr>
+       <tr><td><a href="Hazards/HazardRoutingRiskFilter.php.html#5">App\Services\Hazards\HazardRoutingRiskFilter</a></td><td class="text-right">9%</td></tr>
+       <tr><td><a href="Hazards/HazardReportService.php.html#12">App\Services\Hazards\HazardReportService</a></td><td class="text-right">13%</td></tr>
+       <tr><td><a href="Reports/FoundPetReportService.php.html#12">App\Services\Reports\FoundPetReportService</a></td><td class="text-right">26%</td></tr>
+       <tr><td><a href="Comments/ReportCommentService.php.html#10">App\Services\Comments\ReportCommentService</a></td><td class="text-right">27%</td></tr>
+       <tr><td><a href="Pets/PetService.php.html#12">App\Services\Pets\PetService</a></td><td class="text-right">28%</td></tr>
+       <tr><td><a href="GraphHopperRoutingService.php.html#14">App\Services\GraphHopperRoutingService</a></td><td class="text-right">40%</td></tr>
+       <tr><td><a href="Hazards/HazardResponseFormatter.php.html#8">App\Services\Hazards\HazardResponseFormatter</a></td><td class="text-right">60%</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Project Risks</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Class</th>
+         <th class="text-right"><abbr title="Change Risk Anti-Patterns (CRAP) Index">CRAP</abbr></th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="Hazards/HazardCommentSyncService.php.html#10">App\Services\Hazards\HazardCommentSyncService</a></td><td class="text-right">992</td></tr>
+       <tr><td><a href="Hazards/HazardReportService.php.html#12">App\Services\Hazards\HazardReportService</a></td><td class="text-right">649</td></tr>
+       <tr><td><a href="Reports/LostPetReportService.php.html#11">App\Services\Reports\LostPetReportService</a></td><td class="text-right">420</td></tr>
+       <tr><td><a href="Comments/ReportCommentService.php.html#10">App\Services\Comments\ReportCommentService</a></td><td class="text-right">399</td></tr>
+       <tr><td><a href="Reports/GenericReportService.php.html#10">App\Services\Reports\GenericReportService</a></td><td class="text-right">342</td></tr>
+       <tr><td><a href="GraphHopperRoutingService.php.html#14">App\Services\GraphHopperRoutingService</a></td><td class="text-right">230</td></tr>
+       <tr><td><a href="Routes/TravelRouteService.php.html#11">App\Services\Routes\TravelRouteService</a></td><td class="text-right">206</td></tr>
+       <tr><td><a href="Reports/FoundPetReportService.php.html#12">App\Services\Reports\FoundPetReportService</a></td><td class="text-right">197</td></tr>
+       <tr><td><a href="Pets/PetService.php.html#12">App\Services\Pets\PetService</a></td><td class="text-right">183</td></tr>
+       <tr><td><a href="Hazards/HazardRoutingRiskFilter.php.html#5">App\Services\Hazards\HazardRoutingRiskFilter</a></td><td class="text-right">100</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-12">
+     <h2>Methods</h2>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Coverage Distribution</h3>
+     <div id="methodCoverageDistribution" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Complexity</h3>
+     <div id="methodComplexity" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Insufficient Coverage</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Method</th>
+         <th class="text-right">Coverage</th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="Comments/ReportCommentFormatter.php.html#12"><abbr title="App\Services\Comments\ReportCommentFormatter::formatComment">formatComment</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Comments/ReportCommentService.php.html#15"><abbr title="App\Services\Comments\ReportCommentService::syncComments">syncComments</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Comments/ReportCommentService.php.html#132"><abbr title="App\Services\Comments\ReportCommentService::findEquivalentComment">findEquivalentComment</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Comments/ReportCommentService.php.html#157"><abbr title="App\Services\Comments\ReportCommentService::pruneDuplicateComments">pruneDuplicateComments</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="GraphHopperRoutingService.php.html#228"><abbr title="App\Services\GraphHopperRoutingService::loadHazardAvoidanceAreas">loadHazardAvoidanceAreas</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="GraphHopperRoutingService.php.html#263"><abbr title="App\Services\GraphHopperRoutingService::loadGenericReportAvoidanceAreas">loadGenericReportAvoidanceAreas</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="GraphHopperRoutingService.php.html#306"><abbr title="App\Services\GraphHopperRoutingService::buildCirclePolygon">buildCirclePolygon</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hazards/HazardCommentSyncService.php.html#15"><abbr title="App\Services\Hazards\HazardCommentSyncService::syncComments">syncComments</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hazards/HazardCommentSyncService.php.html#81"><abbr title="App\Services\Hazards\HazardCommentSyncService::storeComment">storeComment</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hazards/HazardCommentSyncService.php.html#120"><abbr title="App\Services\Hazards\HazardCommentSyncService::parseCommentTimestamp">parseCommentTimestamp</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hazards/HazardCommentSyncService.php.html#140"><abbr title="App\Services\Hazards\HazardCommentSyncService::findEquivalentComment">findEquivalentComment</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hazards/HazardCommentSyncService.php.html#164"><abbr title="App\Services\Hazards\HazardCommentSyncService::pruneDuplicateComments">pruneDuplicateComments</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hazards/HazardReportService.php.html#22"><abbr title="App\Services\Hazards\HazardReportService::paginate">paginate</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hazards/HazardReportService.php.html#85"><abbr title="App\Services\Hazards\HazardReportService::update">update</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hazards/HazardReportService.php.html#109"><abbr title="App\Services\Hazards\HazardReportService::unsynced">unsynced</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hazards/HazardReportService.php.html#118"><abbr title="App\Services\Hazards\HazardReportService::sync">sync</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hazards/HazardReportService.php.html#236"><abbr title="App\Services\Hazards\HazardReportService::normalizeUpdatePayload">normalizeUpdatePayload</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hazards/HazardReportService.php.html#261"><abbr title="App\Services\Hazards\HazardReportService::ensureRemoteId">ensureRemoteId</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hazards/HazardResponseFormatter.php.html#13"><abbr title="App\Services\Hazards\HazardResponseFormatter::formatComment">formatComment</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hazards/HazardRoutingRiskFilter.php.html#26"><abbr title="App\Services\Hazards\HazardRoutingRiskFilter::routingBucketForRiskCode">routingBucketForRiskCode</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hazards/HazardRoutingRiskFilter.php.html#42"><abbr title="App\Services\Hazards\HazardRoutingRiskFilter::shouldAvoidRisk">shouldAvoidRisk</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hazards/HazardRoutingRiskFilter.php.html#54"><abbr title="App\Services\Hazards\HazardRoutingRiskFilter::shouldAvoidOtherReports">shouldAvoidOtherReports</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Pets/PetService.php.html#14"><abbr title="App\Services\Pets\PetService::paginateForUser">paginateForUser</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Pets/PetService.php.html#23"><abbr title="App\Services\Pets\PetService::paginateOwnedForUser">paginateOwnedForUser</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Pets/PetService.php.html#96"><abbr title="App\Services\Pets\PetService::sync">sync</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Pets/PetService.php.html#182"><abbr title="App\Services\Pets\PetService::queryForUser">queryForUser</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Pets/PetService.php.html#193"><abbr title="App\Services\Pets\PetService::ensureRemoteId">ensureRemoteId</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/FoundPetReportService.php.html#18"><abbr title="App\Services\Reports\FoundPetReportService::paginate">paginate</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/FoundPetReportService.php.html#52"><abbr title="App\Services\Reports\FoundPetReportService::update">update</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/FoundPetReportService.php.html#70"><abbr title="App\Services\Reports\FoundPetReportService::delete">delete</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/FoundPetReportService.php.html#76"><abbr title="App\Services\Reports\FoundPetReportService::canMutate">canMutate</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/FoundPetReportService.php.html#85"><abbr title="App\Services\Reports\FoundPetReportService::sync">sync</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/FoundPetReportService.php.html#167"><abbr title="App\Services\Reports\FoundPetReportService::ensureRemoteId">ensureRemoteId</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/GenericReportService.php.html#12"><abbr title="App\Services\Reports\GenericReportService::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/GenericReportService.php.html#16"><abbr title="App\Services\Reports\GenericReportService::paginate">paginate</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/GenericReportService.php.html#28"><abbr title="App\Services\Reports\GenericReportService::store">store</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/GenericReportService.php.html#47"><abbr title="App\Services\Reports\GenericReportService::update">update</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/GenericReportService.php.html#62"><abbr title="App\Services\Reports\GenericReportService::delete">delete</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/GenericReportService.php.html#68"><abbr title="App\Services\Reports\GenericReportService::canMutate">canMutate</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/GenericReportService.php.html#77"><abbr title="App\Services\Reports\GenericReportService::sync">sync</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/GenericReportService.php.html#150"><abbr title="App\Services\Reports\GenericReportService::ensureRemoteId">ensureRemoteId</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/GenericReportService.php.html#157"><abbr title="App\Services\Reports\GenericReportService::normalizeRiskCode">normalizeRiskCode</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/GenericReportService.php.html#168"><abbr title="App\Services\Reports\GenericReportService::normalizeImpactRadiusMeters">normalizeImpactRadiusMeters</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/LostPetReportService.php.html#13"><abbr title="App\Services\Reports\LostPetReportService::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/LostPetReportService.php.html#17"><abbr title="App\Services\Reports\LostPetReportService::paginate">paginate</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/LostPetReportService.php.html#29"><abbr title="App\Services\Reports\LostPetReportService::store">store</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/LostPetReportService.php.html#57"><abbr title="App\Services\Reports\LostPetReportService::update">update</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/LostPetReportService.php.html#80"><abbr title="App\Services\Reports\LostPetReportService::delete">delete</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/LostPetReportService.php.html#92"><abbr title="App\Services\Reports\LostPetReportService::canMutate">canMutate</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/LostPetReportService.php.html#101"><abbr title="App\Services\Reports\LostPetReportService::sync">sync</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/LostPetReportService.php.html#202"><abbr title="App\Services\Reports\LostPetReportService::ensureRemoteId">ensureRemoteId</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/LostPetReportService.php.html#209"><abbr title="App\Services\Reports\LostPetReportService::resolvePetForUser">resolvePetForUser</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Reports/LostPetReportService.php.html#217"><abbr title="App\Services\Reports\LostPetReportService::ensureNoActiveReportForPet">ensureNoActiveReportForPet</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Routes/TravelRouteService.php.html#13"><abbr title="App\Services\Routes\TravelRouteService::paginateForUser">paginateForUser</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Routes/TravelRouteService.php.html#38"><abbr title="App\Services\Routes\TravelRouteService::update">update</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Routes/TravelRouteService.php.html#62"><abbr title="App\Services\Routes\TravelRouteService::sync">sync</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Routes/TravelRouteService.php.html#135"><abbr title="App\Services\Routes\TravelRouteService::queryForUser">queryForUser</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Routes/TravelRouteService.php.html#146"><abbr title="App\Services\Routes\TravelRouteService::ensureRemoteId">ensureRemoteId</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hazards/HazardRoutingRiskFilter.php.html#10"><abbr title="App\Services\Hazards\HazardRoutingRiskFilter::normalizeSelectedFilters">normalizeSelectedFilters</abbr></a></td><td class="text-right">22%</td></tr>
+       <tr><td><a href="GraphHopperRoutingService.php.html#148"><abbr title="App\Services\GraphHopperRoutingService::buildPayload">buildPayload</abbr></a></td><td class="text-right">27%</td></tr>
+       <tr><td><a href="GraphHopperRoutingService.php.html#291"><abbr title="App\Services\GraphHopperRoutingService::mapTravelModeToProfiles">mapTravelModeToProfiles</abbr></a></td><td class="text-right">50%</td></tr>
+       <tr><td><a href="Comments/ReportCommentService.php.html#112"><abbr title="App\Services\Comments\ReportCommentService::parseCommentTimestamp">parseCommentTimestamp</abbr></a></td><td class="text-right">57%</td></tr>
+       <tr><td><a href="Reports/FoundPetReportService.php.html#178"><abbr title="App\Services\Reports\FoundPetReportService::resolvePetContext">resolvePetContext</abbr></a></td><td class="text-right">61%</td></tr>
+       <tr><td><a href="GraphHopperRoutingService.php.html#20"><abbr title="App\Services\GraphHopperRoutingService::planRoute">planRoute</abbr></a></td><td class="text-right">76%</td></tr>
+       <tr><td><a href="Hazards/HazardReportService.php.html#61"><abbr title="App\Services\Hazards\HazardReportService::store">store</abbr></a></td><td class="text-right">85%</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Project Risks</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Method</th>
+         <th class="text-right"><abbr title="Change Risk Anti-Patterns (CRAP) Index">CRAP</abbr></th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="Comments/ReportCommentService.php.html#15"><abbr title="App\Services\Comments\ReportCommentService::syncComments">syncComments</abbr></a></td><td class="text-right">90</td></tr>
+       <tr><td><a href="Hazards/HazardCommentSyncService.php.html#15"><abbr title="App\Services\Hazards\HazardCommentSyncService::syncComments">syncComments</abbr></a></td><td class="text-right">90</td></tr>
+       <tr><td><a href="Hazards/HazardCommentSyncService.php.html#120"><abbr title="App\Services\Hazards\HazardCommentSyncService::parseCommentTimestamp">parseCommentTimestamp</abbr></a></td><td class="text-right">72</td></tr>
+       <tr><td><a href="Hazards/HazardReportService.php.html#118"><abbr title="App\Services\Hazards\HazardReportService::sync">sync</abbr></a></td><td class="text-right">72</td></tr>
+       <tr><td><a href="Hazards/HazardReportService.php.html#236"><abbr title="App\Services\Hazards\HazardReportService::normalizeUpdatePayload">normalizeUpdatePayload</abbr></a></td><td class="text-right">72</td></tr>
+       <tr><td><a href="Reports/LostPetReportService.php.html#101"><abbr title="App\Services\Reports\LostPetReportService::sync">sync</abbr></a></td><td class="text-right">72</td></tr>
+       <tr><td><a href="Hazards/HazardCommentSyncService.php.html#81"><abbr title="App\Services\Hazards\HazardCommentSyncService::storeComment">storeComment</abbr></a></td><td class="text-right">56</td></tr>
+       <tr><td><a href="Pets/PetService.php.html#96"><abbr title="App\Services\Pets\PetService::sync">sync</abbr></a></td><td class="text-right">56</td></tr>
+       <tr><td><a href="Reports/FoundPetReportService.php.html#85"><abbr title="App\Services\Reports\FoundPetReportService::sync">sync</abbr></a></td><td class="text-right">56</td></tr>
+       <tr><td><a href="Reports/GenericReportService.php.html#77"><abbr title="App\Services\Reports\GenericReportService::sync">sync</abbr></a></td><td class="text-right">56</td></tr>
+       <tr><td><a href="Routes/TravelRouteService.php.html#62"><abbr title="App\Services\Routes\TravelRouteService::sync">sync</abbr></a></td><td class="text-right">56</td></tr>
+       <tr><td><a href="Hazards/HazardRoutingRiskFilter.php.html#26"><abbr title="App\Services\Hazards\HazardRoutingRiskFilter::routingBucketForRiskCode">routingBucketForRiskCode</abbr></a></td><td class="text-right">42</td></tr>
+       <tr><td><a href="Comments/ReportCommentService.php.html#132"><abbr title="App\Services\Comments\ReportCommentService::findEquivalentComment">findEquivalentComment</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="Hazards/HazardCommentSyncService.php.html#140"><abbr title="App\Services\Hazards\HazardCommentSyncService::findEquivalentComment">findEquivalentComment</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="Hazards/HazardReportService.php.html#22"><abbr title="App\Services\Hazards\HazardReportService::paginate">paginate</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="GraphHopperRoutingService.php.html#20"><abbr title="App\Services\GraphHopperRoutingService::planRoute">planRoute</abbr></a></td><td class="text-right">15</td></tr>
+       <tr><td><a href="GraphHopperRoutingService.php.html#148"><abbr title="App\Services\GraphHopperRoutingService::buildPayload">buildPayload</abbr></a></td><td class="text-right">14</td></tr>
+       <tr><td><a href="Comments/ReportCommentService.php.html#112"><abbr title="App\Services\Comments\ReportCommentService::parseCommentTimestamp">parseCommentTimestamp</abbr></a></td><td class="text-right">13</td></tr>
+       <tr><td><a href="Comments/ReportCommentService.php.html#157"><abbr title="App\Services\Comments\ReportCommentService::pruneDuplicateComments">pruneDuplicateComments</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="Hazards/HazardCommentSyncService.php.html#164"><abbr title="App\Services\Hazards\HazardCommentSyncService::pruneDuplicateComments">pruneDuplicateComments</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="Reports/FoundPetReportService.php.html#178"><abbr title="App\Services\Reports\FoundPetReportService::resolvePetContext">resolvePetContext</abbr></a></td><td class="text-right">8</td></tr>
+       <tr><td><a href="GraphHopperRoutingService.php.html#263"><abbr title="App\Services\GraphHopperRoutingService::loadGenericReportAvoidanceAreas">loadGenericReportAvoidanceAreas</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="GraphHopperRoutingService.php.html#306"><abbr title="App\Services\GraphHopperRoutingService::buildCirclePolygon">buildCirclePolygon</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Hazards/HazardReportService.php.html#85"><abbr title="App\Services\Hazards\HazardReportService::update">update</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Hazards/HazardRoutingRiskFilter.php.html#42"><abbr title="App\Services\Hazards\HazardRoutingRiskFilter::shouldAvoidRisk">shouldAvoidRisk</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Pets/PetService.php.html#182"><abbr title="App\Services\Pets\PetService::queryForUser">queryForUser</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Reports/FoundPetReportService.php.html#76"><abbr title="App\Services\Reports\FoundPetReportService::canMutate">canMutate</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Reports/GenericReportService.php.html#68"><abbr title="App\Services\Reports\GenericReportService::canMutate">canMutate</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Reports/GenericReportService.php.html#157"><abbr title="App\Services\Reports\GenericReportService::normalizeRiskCode">normalizeRiskCode</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Reports/LostPetReportService.php.html#80"><abbr title="App\Services\Reports\LostPetReportService::delete">delete</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Reports/LostPetReportService.php.html#92"><abbr title="App\Services\Reports\LostPetReportService::canMutate">canMutate</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Reports/LostPetReportService.php.html#217"><abbr title="App\Services\Reports\LostPetReportService::ensureNoActiveReportForPet">ensureNoActiveReportForPet</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Routes/TravelRouteService.php.html#135"><abbr title="App\Services\Routes\TravelRouteService::queryForUser">queryForUser</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="GraphHopperRoutingService.php.html#291"><abbr title="App\Services\GraphHopperRoutingService::mapTravelModeToProfiles">mapTravelModeToProfiles</abbr></a></td><td class="text-right">4</td></tr>
+       <tr><td><a href="Hazards/HazardRoutingRiskFilter.php.html#10"><abbr title="App\Services\Hazards\HazardRoutingRiskFilter::normalizeSelectedFilters">normalizeSelectedFilters</abbr></a></td><td class="text-right">3</td></tr>
+       <tr><td><a href="Hazards/HazardReportService.php.html#61"><abbr title="App\Services\Hazards\HazardReportService::store">store</abbr></a></td><td class="text-right">2</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+   </div>
+   <footer>
+    <hr/>
+    <p>
+     <small>Generated by <a href="https://github.com/sebastianbergmann/php-code-coverage" target="_top">php-code-coverage 11.0.12</a> using <a href="https://www.php.net/" target="_top">PHP 8.4.19</a> and <a href="https://phpunit.de/">PHPUnit 11.5.48</a> at Fri May 8 16:51:49 UTC 2026.</small>
+    </p>
+   </footer>
+  </div>
+  <script src="../_js/jquery.min.js?v=11.0.12" type="text/javascript"></script>
+  <script src="../_js/d3.min.js?v=11.0.12" type="text/javascript"></script>
+  <script src="../_js/nv.d3.min.js?v=11.0.12" type="text/javascript"></script>
+  <script type="text/javascript">
+$(document).ready(function() {
+  nv.addGraph(function() {
+    var chart = nv.models.multiBarChart();
+    chart.tooltips(false)
+      .showControls(false)
+      .showLegend(false)
+      .reduceXTicks(false)
+      .staggerLabels(true)
+      .yAxis.tickFormat(d3.format('d'));
+
+    d3.select('#classCoverageDistribution svg')
+      .datum(getCoverageDistributionData([4,2,1,3,0,1,0,1,0,0,0,2], "Class Coverage"))
+      .transition().duration(500).call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  nv.addGraph(function() {
+    var chart = nv.models.multiBarChart();
+    chart.tooltips(false)
+      .showControls(false)
+      .showLegend(false)
+      .reduceXTicks(false)
+      .staggerLabels(true)
+      .yAxis.tickFormat(d3.format('d'));
+
+    d3.select('#methodCoverageDistribution svg')
+      .datum(getCoverageDistributionData([58,0,0,2,0,0,2,1,1,1,0,25], "Method Coverage"))
+      .transition().duration(500).call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  function getCoverageDistributionData(data, label) {
+    var labels = [
+      '0%',
+      '0-10%',
+      '10-20%',
+      '20-30%',
+      '30-40%',
+      '40-50%',
+      '50-60%',
+      '60-70%',
+      '70-80%',
+      '80-90%',
+      '90-100%',
+      '100%'
+    ];
+    var values = [];
+    $.each(labels, function(key) {
+      values.push({x: labels[key], y: data[key]});
+    });
+
+    return [
+      {
+        key: label,
+        values: values,
+        color: "#4572A7"
+      }
+    ];
+  }
+  nv.addGraph(function() {
+    var chart = nv.models.scatterChart()
+      .showDistX(true)
+      .showDistY(true)
+      .showLegend(false)
+      .forceX([0, 100]);
+    chart.tooltipContent(function(graph) {
+      return '<p>' + graph.point.class + '</p>';
+    });
+
+    chart.xAxis.axisLabel('Code Coverage (in percent)');
+    chart.yAxis.axisLabel('Cyclomatic Complexity');
+
+    d3.select('#classComplexity svg')
+      .datum(getComplexityData([[100,4,"<a href=\"Auth\/AuthTokenService.php.html#10\">App\\Services\\Auth\\AuthTokenService<\/a>"],[0,1,"<a href=\"Comments\/ReportCommentFormatter.php.html#7\">App\\Services\\Comments\\ReportCommentFormatter<\/a>"],[27.358490566037734,31,"<a href=\"Comments\/ReportCommentService.php.html#10\">App\\Services\\Comments\\ReportCommentService<\/a>"],[40.758293838862556,31,"<a href=\"GraphHopperRoutingService.php.html#14\">App\\Services\\GraphHopperRoutingService<\/a>"],[0,31,"<a href=\"Hazards\/HazardCommentSyncService.php.html#10\">App\\Services\\Hazards\\HazardCommentSyncService<\/a>"],[13.66906474820144,31,"<a href=\"Hazards\/HazardReportService.php.html#12\">App\\Services\\Hazards\\HazardReportService<\/a>"],[60.71428571428571,2,"<a href=\"Hazards\/HazardResponseFormatter.php.html#8\">App\\Services\\Hazards\\HazardResponseFormatter<\/a>"],[9.523809523809524,11,"<a href=\"Hazards\/HazardRoutingRiskFilter.php.html#5\">App\\Services\\Hazards\\HazardRoutingRiskFilter<\/a>"],[100,7,"<a href=\"Hazards\/HazardValueNormalizer.php.html#5\">App\\Services\\Hazards\\HazardValueNormalizer<\/a>"],[28.31858407079646,21,"<a href=\"Pets\/PetService.php.html#12\">App\\Services\\Pets\\PetService<\/a>"],[26.356589147286826,21,"<a href=\"Reports\/FoundPetReportService.php.html#12\">App\\Services\\Reports\\FoundPetReportService<\/a>"],[0,18,"<a href=\"Reports\/GenericReportService.php.html#10\">App\\Services\\Reports\\GenericReportService<\/a>"],[0,20,"<a href=\"Reports\/LostPetReportService.php.html#11\">App\\Services\\Reports\\LostPetReportService<\/a>"],[9.333333333333334,16,"<a href=\"Routes\/TravelRouteService.php.html#11\">App\\Services\\Routes\\TravelRouteService<\/a>"]], 'Class Complexity'))
+      .transition()
+      .duration(500)
+      .call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  nv.addGraph(function() {
+    var chart = nv.models.scatterChart()
+      .showDistX(true)
+      .showDistY(true)
+      .showLegend(false)
+      .forceX([0, 100]);
+    chart.tooltipContent(function(graph) {
+      return '<p>' + graph.point.class + '</p>';
+    });
+
+    chart.xAxis.axisLabel('Code Coverage (in percent)');
+    chart.yAxis.axisLabel('Method Complexity');
+
+    d3.select('#methodComplexity svg')
+      .datum(getComplexityData([[100,1,"<a href=\"Auth\/AuthTokenService.php.html#15\">App\\Services\\Auth\\AuthTokenService::issueToken<\/a>"],[100,2,"<a href=\"Auth\/AuthTokenService.php.html#31\">App\\Services\\Auth\\AuthTokenService::revokeCurrentToken<\/a>"],[100,1,"<a href=\"Auth\/AuthTokenService.php.html#43\">App\\Services\\Auth\\AuthTokenService::formatUser<\/a>"],[0,1,"<a href=\"Comments\/ReportCommentFormatter.php.html#12\">App\\Services\\Comments\\ReportCommentFormatter::formatComment<\/a>"],[0,9,"<a href=\"Comments\/ReportCommentService.php.html#15\">App\\Services\\Comments\\ReportCommentService::syncComments<\/a>"],[100,7,"<a href=\"Comments\/ReportCommentService.php.html#78\">App\\Services\\Comments\\ReportCommentService::storeComment<\/a>"],[57.14285714285714,8,"<a href=\"Comments\/ReportCommentService.php.html#112\">App\\Services\\Comments\\ReportCommentService::parseCommentTimestamp<\/a>"],[0,4,"<a href=\"Comments\/ReportCommentService.php.html#132\">App\\Services\\Comments\\ReportCommentService::findEquivalentComment<\/a>"],[0,3,"<a href=\"Comments\/ReportCommentService.php.html#157\">App\\Services\\Comments\\ReportCommentService::pruneDuplicateComments<\/a>"],[100,1,"<a href=\"GraphHopperRoutingService.php.html#16\">App\\Services\\GraphHopperRoutingService::__construct<\/a>"],[76.47058823529412,13,"<a href=\"GraphHopperRoutingService.php.html#20\">App\\Services\\GraphHopperRoutingService::planRoute<\/a>"],[100,4,"<a href=\"GraphHopperRoutingService.php.html#124\">App\\Services\\GraphHopperRoutingService::resolveBaseUrls<\/a>"],[27.586206896551722,5,"<a href=\"GraphHopperRoutingService.php.html#148\">App\\Services\\GraphHopperRoutingService::buildPayload<\/a>"],[0,1,"<a href=\"GraphHopperRoutingService.php.html#228\">App\\Services\\GraphHopperRoutingService::loadHazardAvoidanceAreas<\/a>"],[0,2,"<a href=\"GraphHopperRoutingService.php.html#263\">App\\Services\\GraphHopperRoutingService::loadGenericReportAvoidanceAreas<\/a>"],[50,3,"<a href=\"GraphHopperRoutingService.php.html#291\">App\\Services\\GraphHopperRoutingService::mapTravelModeToProfiles<\/a>"],[0,2,"<a href=\"GraphHopperRoutingService.php.html#306\">App\\Services\\GraphHopperRoutingService::buildCirclePolygon<\/a>"],[0,9,"<a href=\"Hazards\/HazardCommentSyncService.php.html#15\">App\\Services\\Hazards\\HazardCommentSyncService::syncComments<\/a>"],[0,7,"<a href=\"Hazards\/HazardCommentSyncService.php.html#81\">App\\Services\\Hazards\\HazardCommentSyncService::storeComment<\/a>"],[0,8,"<a href=\"Hazards\/HazardCommentSyncService.php.html#120\">App\\Services\\Hazards\\HazardCommentSyncService::parseCommentTimestamp<\/a>"],[0,4,"<a href=\"Hazards\/HazardCommentSyncService.php.html#140\">App\\Services\\Hazards\\HazardCommentSyncService::findEquivalentComment<\/a>"],[0,3,"<a href=\"Hazards\/HazardCommentSyncService.php.html#164\">App\\Services\\Hazards\\HazardCommentSyncService::pruneDuplicateComments<\/a>"],[100,1,"<a href=\"Hazards\/HazardReportService.php.html#14\">App\\Services\\Hazards\\HazardReportService::__construct<\/a>"],[0,4,"<a href=\"Hazards\/HazardReportService.php.html#22\">App\\Services\\Hazards\\HazardReportService::paginate<\/a>"],[85.71428571428571,2,"<a href=\"Hazards\/HazardReportService.php.html#61\">App\\Services\\Hazards\\HazardReportService::store<\/a>"],[100,2,"<a href=\"Hazards\/HazardReportService.php.html#76\">App\\Services\\Hazards\\HazardReportService::canMutate<\/a>"],[0,2,"<a href=\"Hazards\/HazardReportService.php.html#85\">App\\Services\\Hazards\\HazardReportService::update<\/a>"],[100,1,"<a href=\"Hazards\/HazardReportService.php.html#103\">App\\Services\\Hazards\\HazardReportService::delete<\/a>"],[0,1,"<a href=\"Hazards\/HazardReportService.php.html#109\">App\\Services\\Hazards\\HazardReportService::unsynced<\/a>"],[0,8,"<a href=\"Hazards\/HazardReportService.php.html#118\">App\\Services\\Hazards\\HazardReportService::sync<\/a>"],[100,1,"<a href=\"Hazards\/HazardReportService.php.html#218\">App\\Services\\Hazards\\HazardReportService::normalizeStorePayload<\/a>"],[0,8,"<a href=\"Hazards\/HazardReportService.php.html#236\">App\\Services\\Hazards\\HazardReportService::normalizeUpdatePayload<\/a>"],[0,1,"<a href=\"Hazards\/HazardReportService.php.html#261\">App\\Services\\Hazards\\HazardReportService::ensureRemoteId<\/a>"],[0,1,"<a href=\"Hazards\/HazardResponseFormatter.php.html#13\">App\\Services\\Hazards\\HazardResponseFormatter::formatComment<\/a>"],[100,1,"<a href=\"Hazards\/HazardResponseFormatter.php.html#31\">App\\Services\\Hazards\\HazardResponseFormatter::formatHazard<\/a>"],[22.22222222222222,2,"<a href=\"Hazards\/HazardRoutingRiskFilter.php.html#10\">App\\Services\\Hazards\\HazardRoutingRiskFilter::normalizeSelectedFilters<\/a>"],[0,6,"<a href=\"Hazards\/HazardRoutingRiskFilter.php.html#26\">App\\Services\\Hazards\\HazardRoutingRiskFilter::routingBucketForRiskCode<\/a>"],[0,2,"<a href=\"Hazards\/HazardRoutingRiskFilter.php.html#42\">App\\Services\\Hazards\\HazardRoutingRiskFilter::shouldAvoidRisk<\/a>"],[0,1,"<a href=\"Hazards\/HazardRoutingRiskFilter.php.html#54\">App\\Services\\Hazards\\HazardRoutingRiskFilter::shouldAvoidOtherReports<\/a>"],[100,2,"<a href=\"Hazards\/HazardValueNormalizer.php.html#7\">App\\Services\\Hazards\\HazardValueNormalizer::normalizeRiskCode<\/a>"],[100,3,"<a href=\"Hazards\/HazardValueNormalizer.php.html#18\">App\\Services\\Hazards\\HazardValueNormalizer::normalizeCategoryCode<\/a>"],[100,2,"<a href=\"Hazards\/HazardValueNormalizer.php.html#39\">App\\Services\\Hazards\\HazardValueNormalizer::normalizeDurationCode<\/a>"],[0,1,"<a href=\"Pets\/PetService.php.html#14\">App\\Services\\Pets\\PetService::paginateForUser<\/a>"],[0,1,"<a href=\"Pets\/PetService.php.html#23\">App\\Services\\Pets\\PetService::paginateOwnedForUser<\/a>"],[100,1,"<a href=\"Pets\/PetService.php.html#35\">App\\Services\\Pets\\PetService::store<\/a>"],[100,1,"<a href=\"Pets\/PetService.php.html#53\">App\\Services\\Pets\\PetService::update<\/a>"],[100,1,"<a href=\"Pets\/PetService.php.html#69\">App\\Services\\Pets\\PetService::delete<\/a>"],[100,1,"<a href=\"Pets\/PetService.php.html#74\">App\\Services\\Pets\\PetService::markFound<\/a>"],[100,2,"<a href=\"Pets\/PetService.php.html#87\">App\\Services\\Pets\\PetService::canMutate<\/a>"],[0,7,"<a href=\"Pets\/PetService.php.html#96\">App\\Services\\Pets\\PetService::sync<\/a>"],[0,2,"<a href=\"Pets\/PetService.php.html#182\">App\\Services\\Pets\\PetService::queryForUser<\/a>"],[0,1,"<a href=\"Pets\/PetService.php.html#193\">App\\Services\\Pets\\PetService::ensureRemoteId<\/a>"],[100,3,"<a href=\"Pets\/PetService.php.html#201\">App\\Services\\Pets\\PetService::normalizePetStatus<\/a>"],[100,1,"<a href=\"Reports\/FoundPetReportService.php.html#14\">App\\Services\\Reports\\FoundPetReportService::__construct<\/a>"],[0,1,"<a href=\"Reports\/FoundPetReportService.php.html#18\">App\\Services\\Reports\\FoundPetReportService::paginate<\/a>"],[100,1,"<a href=\"Reports\/FoundPetReportService.php.html#30\">App\\Services\\Reports\\FoundPetReportService::store<\/a>"],[0,1,"<a href=\"Reports\/FoundPetReportService.php.html#52\">App\\Services\\Reports\\FoundPetReportService::update<\/a>"],[0,1,"<a href=\"Reports\/FoundPetReportService.php.html#70\">App\\Services\\Reports\\FoundPetReportService::delete<\/a>"],[0,2,"<a href=\"Reports\/FoundPetReportService.php.html#76\">App\\Services\\Reports\\FoundPetReportService::canMutate<\/a>"],[0,7,"<a href=\"Reports\/FoundPetReportService.php.html#85\">App\\Services\\Reports\\FoundPetReportService::sync<\/a>"],[0,1,"<a href=\"Reports\/FoundPetReportService.php.html#167\">App\\Services\\Reports\\FoundPetReportService::ensureRemoteId<\/a>"],[61.29032258064516,6,"<a href=\"Reports\/FoundPetReportService.php.html#178\">App\\Services\\Reports\\FoundPetReportService::resolvePetContext<\/a>"],[0,1,"<a href=\"Reports\/GenericReportService.php.html#12\">App\\Services\\Reports\\GenericReportService::__construct<\/a>"],[0,1,"<a href=\"Reports\/GenericReportService.php.html#16\">App\\Services\\Reports\\GenericReportService::paginate<\/a>"],[0,1,"<a href=\"Reports\/GenericReportService.php.html#28\">App\\Services\\Reports\\GenericReportService::store<\/a>"],[0,1,"<a href=\"Reports\/GenericReportService.php.html#47\">App\\Services\\Reports\\GenericReportService::update<\/a>"],[0,1,"<a href=\"Reports\/GenericReportService.php.html#62\">App\\Services\\Reports\\GenericReportService::delete<\/a>"],[0,2,"<a href=\"Reports\/GenericReportService.php.html#68\">App\\Services\\Reports\\GenericReportService::canMutate<\/a>"],[0,7,"<a href=\"Reports\/GenericReportService.php.html#77\">App\\Services\\Reports\\GenericReportService::sync<\/a>"],[0,1,"<a href=\"Reports\/GenericReportService.php.html#150\">App\\Services\\Reports\\GenericReportService::ensureRemoteId<\/a>"],[0,2,"<a href=\"Reports\/GenericReportService.php.html#157\">App\\Services\\Reports\\GenericReportService::normalizeRiskCode<\/a>"],[0,1,"<a href=\"Reports\/GenericReportService.php.html#168\">App\\Services\\Reports\\GenericReportService::normalizeImpactRadiusMeters<\/a>"],[0,1,"<a href=\"Reports\/LostPetReportService.php.html#13\">App\\Services\\Reports\\LostPetReportService::__construct<\/a>"],[0,1,"<a href=\"Reports\/LostPetReportService.php.html#17\">App\\Services\\Reports\\LostPetReportService::paginate<\/a>"],[0,1,"<a href=\"Reports\/LostPetReportService.php.html#29\">App\\Services\\Reports\\LostPetReportService::store<\/a>"],[0,1,"<a href=\"Reports\/LostPetReportService.php.html#57\">App\\Services\\Reports\\LostPetReportService::update<\/a>"],[0,2,"<a href=\"Reports\/LostPetReportService.php.html#80\">App\\Services\\Reports\\LostPetReportService::delete<\/a>"],[0,2,"<a href=\"Reports\/LostPetReportService.php.html#92\">App\\Services\\Reports\\LostPetReportService::canMutate<\/a>"],[0,8,"<a href=\"Reports\/LostPetReportService.php.html#101\">App\\Services\\Reports\\LostPetReportService::sync<\/a>"],[0,1,"<a href=\"Reports\/LostPetReportService.php.html#202\">App\\Services\\Reports\\LostPetReportService::ensureRemoteId<\/a>"],[0,1,"<a href=\"Reports\/LostPetReportService.php.html#209\">App\\Services\\Reports\\LostPetReportService::resolvePetForUser<\/a>"],[0,2,"<a href=\"Reports\/LostPetReportService.php.html#217\">App\\Services\\Reports\\LostPetReportService::ensureNoActiveReportForPet<\/a>"],[0,1,"<a href=\"Routes\/TravelRouteService.php.html#13\">App\\Services\\Routes\\TravelRouteService::paginateForUser<\/a>"],[100,1,"<a href=\"Routes\/TravelRouteService.php.html#26\">App\\Services\\Routes\\TravelRouteService::store<\/a>"],[0,1,"<a href=\"Routes\/TravelRouteService.php.html#38\">App\\Services\\Routes\\TravelRouteService::update<\/a>"],[100,1,"<a href=\"Routes\/TravelRouteService.php.html#48\">App\\Services\\Routes\\TravelRouteService::delete<\/a>"],[100,2,"<a href=\"Routes\/TravelRouteService.php.html#53\">App\\Services\\Routes\\TravelRouteService::canMutate<\/a>"],[0,7,"<a href=\"Routes\/TravelRouteService.php.html#62\">App\\Services\\Routes\\TravelRouteService::sync<\/a>"],[0,2,"<a href=\"Routes\/TravelRouteService.php.html#135\">App\\Services\\Routes\\TravelRouteService::queryForUser<\/a>"],[0,1,"<a href=\"Routes\/TravelRouteService.php.html#146\">App\\Services\\Routes\\TravelRouteService::ensureRemoteId<\/a>"]], 'Method Complexity'))
+      .transition()
+      .duration(500)
+      .call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  function getComplexityData(data, label) {
+    var values = [];
+    $.each(data, function(key) {
+      var value = Math.round(data[key][0]*100) / 100;
+      values.push({
+        x: value,
+        y: data[key][1],
+        class: data[key][2],
+        size: 0.05,
+        shape: 'diamond'
+      });
+    });
+
+    return [
+      {
+        key: label,
+        values: values,
+        color: "#4572A7"
+      }
+    ];
+  }
+});
+  </script>
+ </body>
+</html>
