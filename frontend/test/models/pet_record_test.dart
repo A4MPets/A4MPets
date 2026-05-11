@@ -38,17 +38,20 @@ void main() {
       expect(pet.needsSync, isFalse);
     });
 
-    test('fromMap normaliza status "lost" a "perdida" (F2-001 - normalización)', () {
-      final int now = DateTime.now().millisecondsSinceEpoch;
+    test(
+      'fromMap normaliza status "lost" a "perdida" (F2-001 - normalización)',
+      () {
+        final int now = DateTime.now().millisecondsSinceEpoch;
 
-      final PetRecord pet = PetRecord.fromMap(<String, Object?>{
-        'id': 2,
-        'status': 'lost',
-        'created_at': now,
-      });
+        final PetRecord pet = PetRecord.fromMap(<String, Object?>{
+          'id': 2,
+          'status': 'lost',
+          'created_at': now,
+        });
 
-      expect(pet.status, equals('perdida'));
-    });
+        expect(pet.status, equals('perdida'));
+      },
+    );
 
     test('fromMap normaliza status "perdida" permanece "perdida"', () {
       final int now = DateTime.now().millisecondsSinceEpoch;

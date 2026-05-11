@@ -1,0 +1,57 @@
+{
+  "consoleErrors": [
+    "Failed to load resource: net::ERR_NO_BUFFER_SPACE"
+  ],
+  "pageErrors": [],
+  "requestFailures": [
+    {
+      "url": "http://127.0.0.1:8000/api/lost-pet-reports?include_archived=1&per_page=100",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/generic-reports?include_archived=1&per_page=100",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/auth/me",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/found-pet-reports?include_archived=1&per_page=100",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/hazards?include_archived=1&per_page=100",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/lost-pet-reports?include_archived=1&per_page=100",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/generic-reports?include_archived=1&per_page=100",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/found-pet-reports?include_archived=1&per_page=100",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/hazards?include_archived=1&per_page=100",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/lost-pet-reports?include_archived=1&per_page=100",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/routes?include_archived=1&per_page=100",
+      "error": "net::ERR_NO_BUFFER_SPACE"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/pets?scope=mine&per_page=100",
+      "error": "net::ERR_ABORTED"
+    }
+  ],
+  "http500": []
+}

@@ -1,0 +1,371 @@
+{
+  "info": {
+    "_postman_id": "f7-a4mpets-load",
+    "name": "A4MPets F7 - Postman Cloudflare Load",
+    "description": "Coleccion para F7: pruebas no funcionales/carga ligera sobre API A4MPets expuesta por Cloudflare Tunnel. Ejecutar por carpetas con Postman Runner y las iteraciones indicadas en cada nombre.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const i = pm.info.iteration || 0;",
+          "const baseLat = Number(pm.environment.get('lat_base') || 3.4516);",
+          "const baseLng = Number(pm.environment.get('lng_base') || -76.5320);",
+          "pm.environment.set('unique_suffix', `${Date.now()}_${i}`);",
+          "pm.environment.set('lat_iter', (baseLat + (i * 0.0001)).toFixed(6));",
+          "pm.environment.set('lng_iter', (baseLng + (i * 0.0001)).toFixed(6));"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('F7-global: no retorna HTTP 500+', function () {",
+          "  pm.expect(pm.response.code).to.be.below(500);",
+          "});"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Setup",
+      "item": [
+        {
+          "name": "Setup - Login QA y guardar token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Setup: login exitoso', function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "const json = pm.response.json();",
+                  "const token = json.data && json.data.access_token;",
+                  "pm.test('Setup: respuesta contiene access_token', function () { pm.expect(token).to.be.a('string').and.not.empty; });",
+                  "if (token) pm.environment.set('access_token', token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"{{qa_login}}\",\n  \"password\": \"{{qa_password}}\"\n}"
+            },
+            "url": "{{base_url}}/api/auth/login"
+          }
+        },
+        {
+          "name": "Setup - Crear peligro base y guardar id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Setup hazard: creado', function () { pm.expect(pm.response.code).to.eql(201); });",
+                  "const json = pm.response.json();",
+                  "const id = json.data && json.data.id;",
+                  "if (id) {",
+                  "  pm.environment.set('created_hazard_id', id);",
+                  "  pm.environment.set('hazard_id', id);",
+                  "}",
+                  "pm.test('Setup hazard: contiene id', function () { pm.expect(pm.environment.get('hazard_id')).to.not.be.empty; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"incident_latitude\": {{lat_iter}},\n  \"incident_longitude\": {{lng_iter}},\n  \"impact_radius_meters\": 50,\n  \"risk_level_code\": \"low\",\n  \"category_code\": \"traffic\",\n  \"estimated_duration_code\": \"temporary\",\n  \"description\": \"Peligro base F7 {{unique_suffix}}\",\n  \"narrative_description\": \"Peligro base creado para comentarios F7\"\n}"
+            },
+            "url": "{{base_url}}/api/hazards"
+          }
+        }
+      ]
+    },
+    {
+      "name": "F7-001 - Health 50 iteraciones",
+      "item": [
+        {
+          "name": "F7-001 GET /api/health",
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [
+                "pm.test('F7-001: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });",
+                "const json = pm.response.json();",
+                "pm.test('F7-001: status ok', function () { pm.expect(json.status).to.eql('ok'); });"
+              ] }
+            }
+          ],
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{base_url}}/api/health" }
+        }
+      ]
+    },
+    {
+      "name": "F7-002 - Login 30 iteraciones",
+      "item": [
+        {
+          "name": "F7-002 POST /api/auth/login",
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [
+                "pm.test('F7-002: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });",
+                "const json = pm.response.json();",
+                "pm.test('F7-002: contiene token', function () { pm.expect(json.data.access_token).to.be.a('string').and.not.empty; });",
+                "pm.environment.set('access_token', json.data.access_token);"
+              ] }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"login\": \"{{qa_login}}\",\n  \"password\": \"{{qa_password}}\"\n}" },
+            "url": "{{base_url}}/api/auth/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "F7-003 - Listar peligros 50 iteraciones",
+      "item": [
+        {
+          "name": "F7-003 GET /api/hazards",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('F7-003: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });",
+            "const json = pm.response.json();",
+            "pm.test('F7-003: data y pagination existen', function () { pm.expect(json.data).to.be.an('array'); pm.expect(json.pagination).to.be.an('object'); });"
+          ] } }],
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{base_url}}/api/hazards?per_page=20&page=1" }
+        }
+      ]
+    },
+    {
+      "name": "F7-004 - Crear mascotas 20 iteraciones",
+      "item": [
+        {
+          "name": "F7-004 POST /api/pets",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('F7-004: HTTP 201', function () { pm.expect(pm.response.code).to.eql(201); });",
+            "const json = pm.response.json();",
+            "if (json.data && json.data.id) pm.environment.set('created_pet_id', json.data.id);",
+            "pm.test('F7-004: mascota creada con id', function () { pm.expect(json.data.id).to.exist; });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"MascotaCarga_{{unique_suffix}}\",\n  \"registered_at\": \"2026-05-11\",\n  \"adoption_date\": \"2025-01-10\",\n  \"birth_date\": \"2024-01-10\",\n  \"status\": \"normal\",\n  \"is_ownerless\": false\n}" },
+            "url": "{{base_url}}/api/pets"
+          }
+        }
+      ]
+    },
+    {
+      "name": "F7-005 - Crear peligros 20 iteraciones",
+      "item": [
+        {
+          "name": "F7-005 POST /api/hazards",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('F7-005: HTTP 201', function () { pm.expect(pm.response.code).to.eql(201); });",
+            "const json = pm.response.json();",
+            "if (json.data && json.data.id) pm.environment.set('created_hazard_id', json.data.id);",
+            "pm.test('F7-005: peligro creado con low', function () { pm.expect(json.data.id).to.exist; });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"incident_latitude\": {{lat_iter}},\n  \"incident_longitude\": {{lng_iter}},\n  \"impact_radius_meters\": 50,\n  \"risk_level_code\": \"low\",\n  \"category_code\": \"traffic\",\n  \"estimated_duration_code\": \"temporary\",\n  \"description\": \"Peligro carga {{unique_suffix}}\",\n  \"narrative_description\": \"Carga F7 con coordenadas variables\"\n}" },
+            "url": "{{base_url}}/api/hazards"
+          }
+        }
+      ]
+    },
+    {
+      "name": "F7-006 - Subir media 10 iteraciones",
+      "item": [
+        {
+          "name": "F7-006 POST /api/media/upload",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('F7-006: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });",
+            "const json = pm.response.json();",
+            "if (json.data && json.data.url) pm.environment.set('media_url', json.data.url);",
+            "pm.test('F7-006: retorna URL', function () { pm.expect(json.data.url).to.be.a('string').and.not.empty; });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"bucket\": \"pets\",\n  \"image_data\": \"{{image_base64}}\",\n  \"file_name\": \"f7-{{unique_suffix}}.png\"\n}" },
+            "url": "{{base_url}}/api/media/upload"
+          }
+        }
+      ]
+    },
+    {
+      "name": "F7-007 - Planificar ruta 15 iteraciones",
+      "item": [
+        {
+          "name": "F7-007 POST /api/routes/plan",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('F7-007: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });",
+            "const json = pm.response.json();",
+            "pm.test('F7-007: ruta con distancia y duracion', function () { pm.expect(json.data.coordinates).to.be.an('array'); pm.expect(json.data.distance_meters).to.exist; pm.expect(json.data.duration_seconds).to.exist; });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"travel_mode\": \"walking\",\n  \"avoid_hazards\": false,\n  \"points\": [\n    { \"lat\": {{lat_iter}}, \"lng\": {{lng_iter}} },\n    { \"lat\": 3.455500, \"lng\": -76.529900 }\n  ]\n}" },
+            "url": "{{base_url}}/api/routes/plan"
+          }
+        }
+      ]
+    },
+    {
+      "name": "F7-008 - Health incremental 10-20-30-50",
+      "description": "Ejecutar esta carpeta cuatro veces con 10, 20, 30 y 50 iteraciones y comparar promedios de latencia en el reporte.",
+      "item": [
+        {
+          "name": "F7-008 GET /api/health incremental",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('F7-008: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });"
+          ] } }],
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{base_url}}/api/health" }
+        }
+      ]
+    },
+    {
+      "name": "F7-009 - Burst hazards + health",
+      "description": "Ejecutar GET hazards con 20 iteraciones sin delay. Luego ejecutar manualmente health despues de esperar 10 segundos.",
+      "item": [
+        {
+          "name": "F7-009A GET /api/hazards burst",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('F7-009A: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });"] } }],
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{base_url}}/api/hazards?per_page=20" }
+        },
+        {
+          "name": "F7-009B GET /api/health despues de 10s",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('F7-009B: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });"] } }],
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{base_url}}/api/health" }
+        }
+      ]
+    },
+    {
+      "name": "F7-010 - Crear mascota sin token 20 iteraciones",
+      "item": [
+        {
+          "name": "F7-010 POST /api/pets sin token",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('F7-010: HTTP 401', function () { pm.expect(pm.response.code).to.eql(401); });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"MascotaSinToken_{{unique_suffix}}\",\n  \"status\": \"normal\"\n}" },
+            "url": "{{base_url}}/api/pets"
+          }
+        }
+      ]
+    },
+    {
+      "name": "F7-011 - Rutas dos vs cinco puntos",
+      "description": "Ejecutar cada request con 10 iteraciones y comparar latencia media.",
+      "item": [
+        {
+          "name": "F7-011A POST /api/routes/plan dos puntos",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('F7-011A: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }], "body": { "mode": "raw", "raw": "{\n  \"travel_mode\": \"walking\",\n  \"points\": [\n    { \"lat\": 3.4516, \"lng\": -76.5320 },\n    { \"lat\": 3.4555, \"lng\": -76.5299 }\n  ]\n}" }, "url": "{{base_url}}/api/routes/plan" }
+        },
+        {
+          "name": "F7-011B POST /api/routes/plan cinco puntos",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('F7-011B: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }], "body": { "mode": "raw", "raw": "{\n  \"travel_mode\": \"walking\",\n  \"points\": [\n    { \"lat\": 3.4516, \"lng\": -76.5320 },\n    { \"lat\": 3.4525, \"lng\": -76.5315 },\n    { \"lat\": 3.4535, \"lng\": -76.5310 },\n    { \"lat\": 3.4545, \"lng\": -76.5305 },\n    { \"lat\": 3.4555, \"lng\": -76.5299 }\n  ]\n}" }, "url": "{{base_url}}/api/routes/plan" }
+        }
+      ]
+    },
+    {
+      "name": "F7-012 - Rutas con y sin filtros",
+      "description": "Ejecutar cada request con 10 iteraciones y comparar latencia/errores.",
+      "item": [
+        {
+          "name": "F7-012A POST /api/routes/plan sin filtros",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('F7-012A: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }], "body": { "mode": "raw", "raw": "{\n  \"travel_mode\": \"walking\",\n  \"avoid_hazards\": false,\n  \"points\": [\n    { \"lat\": 3.4516, \"lng\": -76.5320 },\n    { \"lat\": 3.4555, \"lng\": -76.5299 }\n  ]\n}" }, "url": "{{base_url}}/api/routes/plan" }
+        },
+        {
+          "name": "F7-012B POST /api/routes/plan filtros high medium",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('F7-012B: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }], "body": { "mode": "raw", "raw": "{\n  \"travel_mode\": \"walking\",\n  \"avoid_hazards\": true,\n  \"hazard_risk_filters\": [\"high\", \"medium\"],\n  \"points\": [\n    { \"lat\": 3.4516, \"lng\": -76.5320 },\n    { \"lat\": 3.4555, \"lng\": -76.5299 }\n  ]\n}" }, "url": "{{base_url}}/api/routes/plan" }
+        }
+      ]
+    },
+    {
+      "name": "F7-013 a F7-016 - Listados 30 iteraciones",
+      "item": [
+        { "name": "F7-013 GET /api/lost-pet-reports", "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('F7-013: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });", "const json = pm.response.json();", "pm.test('F7-013: data array', function () { pm.expect(json.data).to.be.an('array'); });"] } }], "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{base_url}}/api/lost-pet-reports?per_page=20" } },
+        { "name": "F7-014 GET /api/found-pet-reports", "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('F7-014: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });", "const json = pm.response.json();", "pm.test('F7-014: data array', function () { pm.expect(json.data).to.be.an('array'); });"] } }], "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{base_url}}/api/found-pet-reports?per_page=20" } },
+        { "name": "F7-015 GET /api/generic-reports", "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('F7-015: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });", "const json = pm.response.json();", "pm.test('F7-015: data array', function () { pm.expect(json.data).to.be.an('array'); });"] } }], "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{base_url}}/api/generic-reports?per_page=20" } },
+        { "name": "F7-016 GET /api/routes", "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('F7-016: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });", "const json = pm.response.json();", "pm.test('F7-016: data array', function () { pm.expect(json.data).to.be.an('array'); });"] } }], "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{base_url}}/api/routes?per_page=20" } }
+      ]
+    },
+    {
+      "name": "F7-017 - Comentar peligro 15 iteraciones",
+      "item": [
+        {
+          "name": "F7-017 POST /api/hazards/{{hazard_id}}/comments",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('F7-017: HTTP 201', function () { pm.expect(pm.response.code).to.eql(201); });",
+            "const json = pm.response.json();",
+            "pm.test('F7-017: comentario con id', function () { pm.expect(json.data.id).to.exist; });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"comment_text\": \"Comentario carga F7 {{unique_suffix}}\",\n  \"author_name\": \"QA F7\",\n  \"is_anonymous\": false\n}" },
+            "url": "{{base_url}}/api/hazards/{{hazard_id}}/comments"
+          }
+        }
+      ]
+    },
+    {
+      "name": "F7-018 - Cloudflare URL activa despues de 1 hora",
+      "description": "Ejecutar al inicio y repetir despues de una hora. Documentar si la URL cambio.",
+      "item": [
+        {
+          "name": "F7-018 GET /api/health estabilidad tunnel",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('F7-018: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });"] } }],
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{base_url}}/api/health" }
+        }
+      ]
+    },
+    {
+      "name": "F7-019 y F7-020 - Consolidacion",
+      "description": "No son endpoints nuevos. Exportar resultados del Runner y consolidar: errores, HTTP 500, iteraciones totales, latencias promedio/min/max y conclusion de estabilidad.",
+      "item": [
+        {
+          "name": "F7-019/F7-020 GET /api/health cierre",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('F7 cierre: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });"] } }],
+          "request": { "method": "GET", "header": [{ "key": "Accept", "value": "application/json" }], "url": "{{base_url}}/api/health" }
+        }
+      ]
+    }
+  ]
+}

@@ -61,26 +61,33 @@ void main() {
       expect(loaded.isAuthenticated, isTrue);
     });
 
-    test('sobreescribe perfil anterior cuando se llama saveLocalUserProfile', () async {
-      final SessionStore store = SessionStore();
+    test(
+      'sobreescribe perfil anterior cuando se llama saveLocalUserProfile',
+      () async {
+        final SessionStore store = SessionStore();
 
-      await store.saveLocalUserProfile(const LocalUserProfile(
-        id: 1,
-        username: 'usuario_inicial',
-        isAuthenticated: false,
-      ));
+        await store.saveLocalUserProfile(
+          const LocalUserProfile(
+            id: 1,
+            username: 'usuario_inicial',
+            isAuthenticated: false,
+          ),
+        );
 
-      await store.saveLocalUserProfile(const LocalUserProfile(
-        id: 2,
-        username: 'usuario_actualizado',
-        isAuthenticated: true,
-        accessToken: 'nuevo_token',
-      ));
+        await store.saveLocalUserProfile(
+          const LocalUserProfile(
+            id: 2,
+            username: 'usuario_actualizado',
+            isAuthenticated: true,
+            accessToken: 'nuevo_token',
+          ),
+        );
 
-      final LocalUserProfile loaded = await store.getLocalUserProfile();
-      expect(loaded.username, equals('usuario_actualizado'));
-      expect(loaded.isAuthenticated, isTrue);
-    });
+        final LocalUserProfile loaded = await store.getLocalUserProfile();
+        expect(loaded.username, equals('usuario_actualizado'));
+        expect(loaded.isAuthenticated, isTrue);
+      },
+    );
   });
 
   group('SessionStore.clearUserSessionData (F2-005)', () {
@@ -88,12 +95,14 @@ void main() {
       final SessionStore store = SessionStore();
 
       // Primero guardar un perfil
-      await store.saveLocalUserProfile(const LocalUserProfile(
-        id: 99,
-        username: 'borrar_usuario',
-        isAuthenticated: true,
-        accessToken: 'token_a_borrar',
-      ));
+      await store.saveLocalUserProfile(
+        const LocalUserProfile(
+          id: 99,
+          username: 'borrar_usuario',
+          isAuthenticated: true,
+          accessToken: 'token_a_borrar',
+        ),
+      );
 
       // Limpiar
       await store.clearUserSessionData();
@@ -105,10 +114,13 @@ void main() {
       expect(profile.username, equals('Usuario'));
     });
 
-    test('clearUserSessionData no lanza excepción si no hay datos previos', () async {
-      final SessionStore store = SessionStore();
-      // No debería lanzar ninguna excepción
-      await expectLater(store.clearUserSessionData(), completes);
-    });
+    test(
+      'clearUserSessionData no lanza excepción si no hay datos previos',
+      () async {
+        final SessionStore store = SessionStore();
+        // No debería lanzar ninguna excepción
+        await expectLater(store.clearUserSessionData(), completes);
+      },
+    );
   });
 }

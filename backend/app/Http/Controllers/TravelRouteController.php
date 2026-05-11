@@ -17,8 +17,15 @@ class TravelRouteController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        if (! $request->user()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autenticado',
+            ], 401);
+        }
+
         $routes = $this->travelRouteService->paginateForUser(
-            $request->user()?->id,
+            (int) $request->user()->id,
             (bool) $request->query('include_archived'),
             min((int) $request->query('per_page', 50), 100),
             (int) $request->query('page', 1)

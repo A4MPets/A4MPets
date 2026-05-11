@@ -1,0 +1,15 @@
+$kind: http-request
+name: 'F7-020 GET /api/hazards consolidado'
+order: 2000
+method: GET
+url: '{{base_url}}/api/hazards?per_page=5'
+headers:
+  - key: Accept
+    value: application/json
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('F7-020: HTTP 200 consolidado', function () { pm.expect(pm.response.code).to.eql(200); });
+      const json = pm.response.json();
+      pm.test('F7-020: data array consolidado', function () { pm.expect(json.data).to.be.an('array'); });

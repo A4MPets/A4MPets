@@ -1,0 +1,9 @@
+# Use this workspace to collaborate
+workspace:
+  id: 5d9cded3-0860-4249-b97d-102b341fbc67
+
+localResources:
+  collections:
+    - ..\F7_A4MPets_Load.postman_collection.json
+  environments:
+    - ..\F7_A4MPets_Cloudflare.postman_environment.json

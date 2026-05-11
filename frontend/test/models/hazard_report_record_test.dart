@@ -7,25 +7,25 @@ void main() {
   final int now = DateTime.now().millisecondsSinceEpoch;
 
   Map<String, Object?> baseMap() => <String, Object?>{
-        'id': 1,
-        'local_uuid': 'hz_test_uuid',
-        'remote_id': 'remote_hz_1',
-        'sync_status': 'synced',
-        'incident_latitude': 4.711,
-        'incident_longitude': -74.072,
-        'impact_radius_meters': 100,
-        'category_code': 'stagnant_water',
-        'narrative_description': 'Descripción de prueba QA',
-        'estimated_duration_code': '1_week',
-        'risk_level_code': 'high',
-        'reported_by_username': 'qa_tester',
-        'comments_json': '[]',
-        'created_at': now,
-        'updated_at': now,
-        'reported_at': now,
-        'last_modified_at': now,
-        'needs_sync': 0,
-      };
+    'id': 1,
+    'local_uuid': 'hz_test_uuid',
+    'remote_id': 'remote_hz_1',
+    'sync_status': 'synced',
+    'incident_latitude': 4.711,
+    'incident_longitude': -74.072,
+    'impact_radius_meters': 100,
+    'category_code': 'stagnant_water',
+    'narrative_description': 'Descripción de prueba QA',
+    'estimated_duration_code': '1_week',
+    'risk_level_code': 'high',
+    'reported_by_username': 'qa_tester',
+    'comments_json': '[]',
+    'created_at': now,
+    'updated_at': now,
+    'reported_at': now,
+    'last_modified_at': now,
+    'needs_sync': 0,
+  };
 
   group('HazardReportRecord - fromMap (F2-009)', () {
     test('fromMap construye HazardReportRecord con todos los campos', () {
@@ -44,12 +44,15 @@ void main() {
       expect(record.comments, isEmpty);
     });
 
-    test('fromMap genera localUuid de fallback cuando no se provee (F2-009)', () {
-      final Map<String, Object?> map = baseMap();
-      map['local_uuid'] = null;
-      final HazardReportRecord record = HazardReportRecord.fromMap(map);
-      expect(record.localUuid, startsWith('legacy-'));
-    });
+    test(
+      'fromMap genera localUuid de fallback cuando no se provee (F2-009)',
+      () {
+        final Map<String, Object?> map = baseMap();
+        map['local_uuid'] = null;
+        final HazardReportRecord record = HazardReportRecord.fromMap(map);
+        expect(record.localUuid, startsWith('legacy-'));
+      },
+    );
 
     test('fromMap usa syncStatus "created" por defecto cuando es nulo', () {
       final Map<String, Object?> map = baseMap();
@@ -60,8 +63,9 @@ void main() {
 
     test('fromMap parsea lista de comentarios desde comments_json', () {
       final Map<String, Object?> map = baseMap();
-      map['comments_json'] = '[{"id":1,"author_name":"QA","comment_text":"Test comment",'
-          '"is_anonymous":0,"commented_at":$now,"created_at":$now}]';
+      map['comments_json'] =
+          '[{"author_username":"QA","comment_text":"Test comment",'
+          '"is_anonymous":false,"created_at":$now}]';
 
       final HazardReportRecord record = HazardReportRecord.fromMap(map);
       expect(record.comments.length, equals(1));
@@ -94,26 +98,35 @@ void main() {
   });
 
   group('HazardReportRecord - labels estáticos (F2-010)', () {
-    test('categoryLabelFromCode retorna etiqueta correcta para stagnant_water', () {
-      expect(
-        HazardReportRecord.categoryLabelFromCode('stagnant_water'),
-        equals('Aguas estancadas'),
-      );
-    });
+    test(
+      'categoryLabelFromCode retorna etiqueta correcta para stagnant_water',
+      () {
+        expect(
+          HazardReportRecord.categoryLabelFromCode('stagnant_water'),
+          equals('Aguas estancadas'),
+        );
+      },
+    );
 
-    test('categoryLabelFromCode retorna etiqueta correcta para contagious_disease', () {
-      expect(
-        HazardReportRecord.categoryLabelFromCode('contagious_disease'),
-        equals('Enfermedad contagiosa'),
-      );
-    });
+    test(
+      'categoryLabelFromCode retorna etiqueta correcta para contagious_disease',
+      () {
+        expect(
+          HazardReportRecord.categoryLabelFromCode('contagious_disease'),
+          equals('Enfermedad contagiosa'),
+        );
+      },
+    );
 
-    test('categoryLabelFromCode retorna fallback para código desconocido (F2-010)', () {
-      expect(
-        HazardReportRecord.categoryLabelFromCode('unknown_code'),
-        equals('No lo se'),
-      );
-    });
+    test(
+      'categoryLabelFromCode retorna fallback para código desconocido (F2-010)',
+      () {
+        expect(
+          HazardReportRecord.categoryLabelFromCode('unknown_code'),
+          equals('No lo se'),
+        );
+      },
+    );
 
     test('durationLabelFromCode retorna etiqueta para 1_week', () {
       expect(

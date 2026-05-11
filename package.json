@@ -15,9 +15,11 @@
     "dev:android": "concurrently \"npm run backend\" \"npm run frontend:android\" \"npm run graphhopper\"",
     "dev:cloudflare": "concurrently \"npm run backend:cloudflare\" \"npm run frontend:runtime\" \"npm run graphhopper\"",
     "dev:cloudflare:android": "concurrently \"npm run backend:cloudflare\" \"npm run frontend:android:runtime\" \"npm run graphhopper\"",
-    "dev:docker": "docker compose up -d --build"
+    "dev:docker": "docker compose up -d --build",
+    "test:e2e:f5": "playwright test --config=playwright.f5.config.js"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "concurrently": "^9.0.1",
     "playwright": "^1.59.1",
     "puppeteer": "^24.42.0"

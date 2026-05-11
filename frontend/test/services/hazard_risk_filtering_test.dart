@@ -6,7 +6,9 @@ import 'package:frontend/services/hazard_risk_filtering.dart';
 void main() {
   group('HazardRiskFiltering.normalizeSelectedFilters (F2-007)', () {
     test('retorna todos los filtros cuando filters es null', () {
-      final Set<String> result = HazardRiskFiltering.normalizeSelectedFilters(null);
+      final Set<String> result = HazardRiskFiltering.normalizeSelectedFilters(
+        null,
+      );
       expect(result, containsAll(<String>['low', 'medium', 'high', 'other']));
     });
 
@@ -42,26 +44,41 @@ void main() {
 
   group('HazardRiskFiltering.routingBucketForRiskCode (F2-007)', () {
     test('retorna "low" para código de riesgo bajo', () {
-      expect(HazardRiskFiltering.routingBucketForRiskCode('low'), equals('low'));
+      expect(
+        HazardRiskFiltering.routingBucketForRiskCode('low'),
+        equals('low'),
+      );
     });
 
     test('retorna "medium" para código de riesgo medio', () {
-      expect(HazardRiskFiltering.routingBucketForRiskCode('medium'), equals('medium'));
+      expect(
+        HazardRiskFiltering.routingBucketForRiskCode('medium'),
+        equals('medium'),
+      );
     });
 
     test('retorna "high" para código de riesgo alto', () {
-      expect(HazardRiskFiltering.routingBucketForRiskCode('high'), equals('high'));
-    });
-
-    test('retorna "high" para código "undefined" (F2-007 - valor por defecto)', () {
       expect(
-        HazardRiskFiltering.routingBucketForRiskCode('undefined'),
+        HazardRiskFiltering.routingBucketForRiskCode('high'),
         equals('high'),
       );
     });
 
+    test(
+      'retorna "high" para código "undefined" (F2-007 - valor por defecto)',
+      () {
+        expect(
+          HazardRiskFiltering.routingBucketForRiskCode('undefined'),
+          equals('high'),
+        );
+      },
+    );
+
     test('retorna "high" para código nulo (F2-007 - valor por defecto)', () {
-      expect(HazardRiskFiltering.routingBucketForRiskCode(null), equals('high'));
+      expect(
+        HazardRiskFiltering.routingBucketForRiskCode(null),
+        equals('high'),
+      );
     });
   });
 
@@ -74,21 +91,27 @@ void main() {
       expect(result, isTrue);
     });
 
-    test('retorna false cuando el riesgo NO está en los filtros seleccionados', () {
-      final bool result = HazardRiskFiltering.shouldConsiderRisk(
-        riskLevelCode: 'low',
-        selectedFilters: <String>['high', 'medium'],
-      );
-      expect(result, isFalse);
-    });
+    test(
+      'retorna false cuando el riesgo NO está en los filtros seleccionados',
+      () {
+        final bool result = HazardRiskFiltering.shouldConsiderRisk(
+          riskLevelCode: 'low',
+          selectedFilters: <String>['high', 'medium'],
+        );
+        expect(result, isFalse);
+      },
+    );
 
-    test('retorna true para código "undefined" si high está en filtros (F2-008)', () {
-      final bool result = HazardRiskFiltering.shouldConsiderRisk(
-        riskLevelCode: 'undefined',
-        selectedFilters: <String>['high'],
-      );
-      expect(result, isTrue);
-    });
+    test(
+      'retorna true para código "undefined" si high está en filtros (F2-008)',
+      () {
+        final bool result = HazardRiskFiltering.shouldConsiderRisk(
+          riskLevelCode: 'undefined',
+          selectedFilters: <String>['high'],
+        );
+        expect(result, isTrue);
+      },
+    );
 
     test('retorna false cuando selectedFilters está vacío', () {
       final bool result = HazardRiskFiltering.shouldConsiderRisk(

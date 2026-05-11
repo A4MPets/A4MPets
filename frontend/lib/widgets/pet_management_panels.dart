@@ -321,13 +321,11 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
     return '$day/$month/${date.year}';
   }
 
-
   @override
   Widget build(BuildContext context) {
     final Color borderColor = AppPalette.border(widget.isDarkMode);
     final Color textColor = AppPalette.textPrimary(widget.isDarkMode);
     final double keyboardInset = MediaQuery.of(context).viewInsets.bottom;
-
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -496,20 +494,30 @@ class _PetCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   child: Material(
                     color: Colors.transparent,
-                    child: InkWell(
+                    child: Semantics(
+                      label: 'Seleccionar mascota ${pet.displayName}',
+                      button: true,
+                      selected: isSelected,
                       onTap: onPressed,
-                      child: SizedBox.expand(
-                        child:
-                            pet.photoPath != null && pet.photoPath!.isNotEmpty
-                            ? buildLocalImageWidget(
-                                source: pet.photoPath,
-                                fit: BoxFit.cover,
-                                fallback: const _PetPlaceholder(),
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const _PetPlaceholder();
-                                },
-                              )
-                            : const _PetPlaceholder(),
+                      child: ExcludeSemantics(
+                        child: InkWell(
+                          onTap: onPressed,
+                          child: SizedBox.expand(
+                            child:
+                                pet.photoPath != null &&
+                                    pet.photoPath!.isNotEmpty
+                                ? buildLocalImageWidget(
+                                    source: pet.photoPath,
+                                    fit: BoxFit.cover,
+                                    fallback: const _PetPlaceholder(),
+                                    errorBuilder:
+                                        (context, error, stackTrace) {
+                                          return const _PetPlaceholder();
+                                        },
+                                  )
+                                : const _PetPlaceholder(),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -523,13 +531,22 @@ class _PetCard extends StatelessWidget {
                     child: Material(
                       color: Colors.white.withValues(alpha: 0.9),
                       shape: const CircleBorder(),
-                      child: InkWell(
-                        onTap: onEditPressed,
-                        customBorder: const CircleBorder(),
-                        child: const Icon(
-                          Icons.settings,
-                          size: 14,
-                          color: AppPalette.charcoal,
+                      child: Tooltip(
+                        message: 'Editar mascota ${pet.displayName}',
+                        child: Semantics(
+                          label: 'Editar mascota ${pet.displayName}',
+                          button: true,
+                          child: ExcludeSemantics(
+                            child: InkWell(
+                              onTap: onEditPressed,
+                              customBorder: const CircleBorder(),
+                              child: const Icon(
+                                Icons.settings,
+                                size: 14,
+                                color: AppPalette.charcoal,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -658,39 +675,46 @@ class _PetNameField extends StatelessWidget {
     final Color fieldBackground = AppPalette.fieldBackground(isDarkMode);
     final Color textColor = AppPalette.textPrimary(isDarkMode);
 
-    return TextField(
-      controller: controller,
-      textInputAction: TextInputAction.done,
-      onSubmitted: onSubmitted,
-      style: TextStyle(
-        color: textColor,
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-      ),
-      decoration: InputDecoration(
-        hintText: 'Nombre',
-        hintStyle: const TextStyle(
-          color: AppPalette.textMutedDark,
+    return Semantics(
+      label: 'Nombre de mascota',
+      textField: true,
+      child: TextField(
+        controller: controller,
+        textInputAction: TextInputAction.done,
+        onSubmitted: onSubmitted,
+        style: TextStyle(
+          color: textColor,
           fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
-        filled: true,
-        fillColor: fieldBackground,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 12,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppPalette.primaryBlue, width: 1),
+        decoration: InputDecoration(
+          hintText: 'Nombre de mascota',
+          hintStyle: const TextStyle(
+            color: AppPalette.textMutedDark,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+          filled: true,
+          fillColor: fieldBackground,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 12,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(
+              color: AppPalette.primaryBlue,
+              width: 1,
+            ),
+          ),
         ),
       ),
     );

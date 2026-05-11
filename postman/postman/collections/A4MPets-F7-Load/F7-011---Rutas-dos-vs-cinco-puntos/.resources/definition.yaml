@@ -1,0 +1,4 @@
+$kind: collection
+name: 'F7-011 - Rutas dos vs cinco puntos'
+description: 'Ejecutar cada request con 10 iteraciones y comparar latencia media.'
+order: 12000

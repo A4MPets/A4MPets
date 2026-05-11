@@ -1,0 +1,33 @@
+$kind: http-request
+name: 'F7-005 POST /api/hazards'
+order: 1000
+method: POST
+url: '{{base_url}}/api/hazards'
+headers:
+  - key: Accept
+    value: application/json
+  - key: Content-Type
+    value: application/json
+  - key: Authorization
+    value: 'Bearer {{access_token}}'
+body:
+  type: json
+  content: |-
+    {
+      "incident_latitude": {{lat_iter}},
+      "incident_longitude": {{lng_iter}},
+      "impact_radius_meters": 50,
+      "risk_level_code": "low",
+      "category_code": "traffic",
+      "estimated_duration_code": "temporary",
+      "description": "Peligro carga {{unique_suffix}}",
+      "narrative_description": "Carga F7 con coordenadas variables"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('F7-005: HTTP 201', function () { pm.expect(pm.response.code).to.eql(201); });
+      const json = pm.response.json();
+      if (json.data && json.data.id) pm.environment.set('created_hazard_id', json.data.id);
+      pm.test('F7-005: peligro creado con low', function () { pm.expect(json.data.id).to.exist; });

@@ -37,35 +37,35 @@ class PetRecord {
 
   factory PetRecord.fromMap(Map<String, Object?> map) {
     final int nowMs = DateTime.now().millisecondsSinceEpoch;
-    final int createdAtMs = (map['created_at'] as int?) ?? nowMs;
+    final int createdAtMs = _timestampMs(map['created_at'], nowMs);
     DateTime? optionalDate(Object? value) {
-      final int? ms = (value as num?)?.toInt();
+      final int? ms = _optionalTimestampMs(value);
       return ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
     }
 
     return PetRecord(
-      id: map['id'] as int,
+      id: _intValue(map['id'], 0),
       localUuid: map['local_uuid'] as String? ?? 'pt_${map['id']}_$createdAtMs',
       remoteId: map['remote_id']?.toString(),
       name: map['name'] as String?,
       photoPath: map['photo_path'] as String?,
-      totalWalks: (map['total_walks'] as num?)?.toInt() ?? 0,
+      totalWalks: _intValue(map['total_walks'], 0),
       registeredAt: DateTime.fromMillisecondsSinceEpoch(
-        (map['registered_at'] as num?)?.toInt() ?? createdAtMs,
+        _timestampMs(map['registered_at'], createdAtMs),
       ),
       adoptionDate: optionalDate(map['adoption_date']),
       birthDate: optionalDate(map['birth_date']),
       status: _normalizeStatus(map['status'] as String?),
-      isOwnerless: (map['is_ownerless'] as int? ?? 0) == 1,
+      isOwnerless: _boolValue(map['is_ownerless']),
       syncStatus: map['sync_status'] as String? ?? 'created',
       lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(
-        (map['last_modified_at'] as int?) ?? nowMs,
+        _timestampMs(map['last_modified_at'], nowMs),
       ),
       createdAt: DateTime.fromMillisecondsSinceEpoch(createdAtMs),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(
-        (map['updated_at'] as int?) ?? nowMs,
+        _timestampMs(map['updated_at'], nowMs),
       ),
-      needsSync: (map['needs_sync'] as int? ?? 0) == 1,
+      needsSync: _boolValue(map['needs_sync']),
     );
   }
 
@@ -140,5 +140,34 @@ class PetRecord {
 
   static String _normalizeStatus(String? value) {
     return value == 'perdida' || value == 'lost' ? 'perdida' : 'normal';
+  }
+
+  static int _intValue(Object? value, int fallback) {
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? fallback;
+    return fallback;
+  }
+
+  static bool _boolValue(Object? value) {
+    if (value is bool) return value;
+    if (value is num) return value.toInt() == 1;
+    if (value is String) {
+      final String normalized = value.toLowerCase().trim();
+      return normalized == '1' || normalized == 'true';
+    }
+    return false;
+  }
+
+  static int _timestampMs(Object? value, int fallback) {
+    return _optionalTimestampMs(value) ?? fallback;
+  }
+
+  static int? _optionalTimestampMs(Object? value) {
+    if (value is num) return value.toInt();
+    if (value is String && value.trim().isNotEmpty) {
+      return DateTime.tryParse(value)?.millisecondsSinceEpoch ??
+          int.tryParse(value);
+    }
+    return null;
   }
 }

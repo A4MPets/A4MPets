@@ -51,7 +51,7 @@ Route::prefix('pets')->group(function (): void {
 });
 
 Route::prefix('routes')->group(function (): void {
-    Route::get('/', [TravelRouteController::class, 'index']);
+    Route::get('/', [TravelRouteController::class, 'index'])->middleware('api.token');
     Route::get('/{route}', [TravelRouteController::class, 'show']);
 });
 

@@ -1,0 +1,20 @@
+$kind: collection
+name: 'A4MPets F7 - Postman Cloudflare Load'
+description: |-
+  Coleccion para F7: pruebas no funcionales/carga ligera sobre API A4MPets expuesta por Cloudflare Tunnel. Ejecutar por carpetas con Postman Runner y las iteraciones indicadas en cada nombre.
+scripts:
+  - type: http:beforeRequest
+    language: text/javascript
+    code: |-
+      const i = pm.info.iteration || 0;
+      const baseLat = Number(pm.environment.get('lat_base') || 3.4516);
+      const baseLng = Number(pm.environment.get('lng_base') || -76.5320);
+      pm.environment.set('unique_suffix', `${Date.now()}_${i}`);
+      pm.environment.set('lat_iter', (baseLat + (i * 0.0001)).toFixed(6));
+      pm.environment.set('lng_iter', (baseLng + (i * 0.0001)).toFixed(6));
+  - type: http:afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('F7-global: no retorna HTTP 500+', function () {
+        pm.expect(pm.response.code).to.be.below(500);
+      });

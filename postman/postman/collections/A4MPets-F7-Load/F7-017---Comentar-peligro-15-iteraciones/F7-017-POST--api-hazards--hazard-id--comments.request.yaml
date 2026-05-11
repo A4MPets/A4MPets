@@ -1,0 +1,25 @@
+$kind: http-request
+name: 'F7-017 POST /api/hazards/{{hazard_id}}/comments'
+order: 1000
+method: POST
+url: '{{base_url}}/api/hazards/{{hazard_id}}/comments'
+headers:
+  - key: Accept
+    value: application/json
+  - key: Content-Type
+    value: application/json
+  - key: Authorization
+    value: 'Bearer {{access_token}}'
+body:
+  type: json
+  content: |-
+    {
+      "content": "Comentario carga F7 iteracion {{unique_suffix}}"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('F7-017: HTTP 201', function () { pm.expect(pm.response.code).to.eql(201); });
+      const json = pm.response.json();
+      pm.test('F7-017: comentario creado', function () { pm.expect(json.data.id).to.exist; });

@@ -345,7 +345,7 @@ class _TripStartPanelContent extends StatelessWidget {
       children: [
         Expanded(
           child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(0, contentTopPadding, 0, 4),
+            padding: EdgeInsets.fromLTRB(0, contentTopPadding, 0, 72),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -354,6 +354,9 @@ class _TripStartPanelContent extends StatelessWidget {
                 _TripGrayActionButton(
                   label: selectedPetsCount == 0
                       ? 'Seleccionar'
+                      : 'Mascotas seleccionadas: $selectedPetsCount',
+                  semanticLabel: selectedPetsCount == 0
+                      ? 'Seleccionar mascotas'
                       : 'Mascotas seleccionadas: $selectedPetsCount',
                   backgroundColor: grayButton,
                   textColor: textColor,
@@ -446,6 +449,9 @@ class _TripStartPanelContent extends StatelessWidget {
                   label: selectedRouteName == null
                       ? 'Seleccionar'
                       : 'Ruta: $selectedRouteName',
+                  semanticLabel: selectedRouteName == null
+                      ? 'Seleccionar ruta'
+                      : 'Ruta: $selectedRouteName',
                   backgroundColor: grayButton,
                   textColor: textColor,
                   onPressed: onSelectRoute,
@@ -495,21 +501,26 @@ class _TripStartPanelContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        SizedBox(
-          height: 48,
-          child: ElevatedButton(
-            onPressed: onStartTrip,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppPalette.primaryBlue,
-              foregroundColor: AppPalette.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+        Semantics(
+          label: 'Confirmar inicio de viaje',
+          button: true,
+          onTap: onStartTrip,
+          child: SizedBox(
+            height: 48,
+            child: ElevatedButton(
+              onPressed: onStartTrip,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppPalette.primaryBlue,
+                foregroundColor: AppPalette.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-            ),
-            child: const Text(
-              'Iniciar Viaje',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              child: const Text(
+                'Iniciar Viaje',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
             ),
           ),
         ),
@@ -685,6 +696,7 @@ class _TripPetSelectionPanelContent extends StatelessWidget {
           height: 46,
           child: _TripGrayActionButton(
             label: 'Agregar mascota',
+            semanticLabel: 'Agregar mascota para viaje',
             backgroundColor: bgColor,
             textColor: textColor,
             onPressed: onAddPetPressed,
@@ -852,12 +864,14 @@ class _TripFieldTitle extends StatelessWidget {
 
 class _TripGrayActionButton extends StatelessWidget {
   final String label;
+  final String? semanticLabel;
   final Color backgroundColor;
   final Color textColor;
   final VoidCallback onPressed;
 
   const _TripGrayActionButton({
     required this.label,
+    this.semanticLabel,
     required this.backgroundColor,
     required this.textColor,
     required this.onPressed,
@@ -867,21 +881,27 @@ class _TripGrayActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 46,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: backgroundColor,
-          side: BorderSide.none,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+      child: Semantics(
+        label: semanticLabel ?? label,
+        button: true,
+        child: OutlinedButton(
+          onPressed: onPressed,
+          style: OutlinedButton.styleFrom(
+            backgroundColor: backgroundColor,
+            side: BorderSide.none,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: textColor,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
+          child: ExcludeSemantics(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: textColor,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ),
       ),

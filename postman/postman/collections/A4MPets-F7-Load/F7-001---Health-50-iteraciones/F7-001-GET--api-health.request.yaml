@@ -1,0 +1,15 @@
+$kind: http-request
+name: 'F7-001 GET /api/health'
+order: 1000
+method: GET
+url: '{{base_url}}/api/health'
+headers:
+  - key: Accept
+    value: application/json
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('F7-001: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });
+      const json = pm.response.json();
+      pm.test('F7-001: status ok', function () { pm.expect(json.status).to.eql('ok'); });

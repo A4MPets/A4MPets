@@ -970,10 +970,19 @@ class _MapWidgetState extends State<MapWidget>
                           ),
                           width: 24,
                           height: 24,
-                          child: GestureDetector(
-                            onTap: () => widget.onHazardTap?.call(report),
-                            child: _HazardMarkerWidget(
-                              color: _hazardBorderColor(report),
+                          child: Tooltip(
+                            message:
+                                'Abrir peligro ${report.narrativeDescription}',
+                            child: Semantics(
+                              label:
+                                  'Abrir peligro ${report.narrativeDescription}',
+                              button: true,
+                              child: GestureDetector(
+                                onTap: () => widget.onHazardTap?.call(report),
+                                child: _HazardMarkerWidget(
+                                  color: _hazardBorderColor(report),
+                                ),
+                              ),
                             ),
                           ),
                         );
@@ -1010,11 +1019,18 @@ class _MapWidgetState extends State<MapWidget>
                           ),
                           width: 24,
                           height: 24,
-                          child: GestureDetector(
-                            onTap: () => widget.onLostPetTap?.call(report),
-                            child: const _HazardMarkerWidget(
-                              color: AppPalette.reportYellow,
-                              label: '?',
+                          child: Tooltip(
+                            message: 'Abrir mascota perdida ${report.details}',
+                            child: Semantics(
+                              label: 'Abrir mascota perdida ${report.details}',
+                              button: true,
+                              child: GestureDetector(
+                                onTap: () => widget.onLostPetTap?.call(report),
+                                child: const _HazardMarkerWidget(
+                                  color: AppPalette.reportYellow,
+                                  label: '?',
+                                ),
+                              ),
                             ),
                           ),
                         );
@@ -1031,11 +1047,20 @@ class _MapWidgetState extends State<MapWidget>
                           point: LatLng(report.latitude, report.longitude),
                           width: 24,
                           height: 24,
-                          child: GestureDetector(
-                            onTap: () => widget.onFoundPetTap?.call(report),
-                            child: const _HazardMarkerWidget(
-                              color: AppPalette.reportGreen,
-                              label: '!',
+                          child: Tooltip(
+                            message:
+                                'Abrir mascota encontrada ${report.details}',
+                            child: Semantics(
+                              label:
+                                  'Abrir mascota encontrada ${report.details}',
+                              button: true,
+                              child: GestureDetector(
+                                onTap: () => widget.onFoundPetTap?.call(report),
+                                child: const _HazardMarkerWidget(
+                                  color: AppPalette.reportGreen,
+                                  label: '!',
+                                ),
+                              ),
                             ),
                           ),
                         );
@@ -1075,12 +1100,21 @@ class _MapWidgetState extends State<MapWidget>
                           point: LatLng(report.latitude, report.longitude),
                           width: 24,
                           height: 24,
-                          child: GestureDetector(
-                            onTap: () =>
-                                widget.onGenericReportTap?.call(report),
-                            child: const _HazardMarkerWidget(
-                              color: AppPalette.charcoal,
-                              label: 'i',
+                          child: Tooltip(
+                            message:
+                                'Abrir reporte generico ${report.description}',
+                            child: Semantics(
+                              label:
+                                  'Abrir reporte generico ${report.description}',
+                              button: true,
+                              child: GestureDetector(
+                                onTap: () =>
+                                    widget.onGenericReportTap?.call(report),
+                                child: const _HazardMarkerWidget(
+                                  color: AppPalette.charcoal,
+                                  label: 'i',
+                                ),
+                              ),
                             ),
                           ),
                         );
@@ -1341,11 +1375,13 @@ class _MapWidgetState extends State<MapWidget>
                     _buildMapActionButton(
                       icon: Icons.my_location,
                       onPressed: _centerOnUserLocation,
+                      semanticLabel: 'Centrar en mi ubicacion',
                     ),
                     const SizedBox(height: 8),
                     _buildMapActionButton(
                       icon: Icons.explore_outlined,
                       onPressed: _resetMapRotation,
+                      semanticLabel: 'Restablecer rotacion del mapa',
                     ),
                   ],
                 ),
@@ -1360,20 +1396,27 @@ class _MapWidgetState extends State<MapWidget>
             child: _buildAnimatedControl(
               visible: controlsVisible,
               hiddenOffset: const Offset(-0.06, 0),
-              child: GestureDetector(
-                onTap: _onProfileTap,
-                child: SizedBox(
-                  width: 48,
-                  height: 48,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: translucentWhite,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.person,
-                      color: contentGray,
-                      size: 24,
+              child: Semantics(
+                label: 'Abrir perfil',
+                button: true,
+                child: Tooltip(
+                  message: 'Abrir perfil',
+                  child: GestureDetector(
+                    onTap: _onProfileTap,
+                    child: SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: translucentWhite,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.person,
+                          color: contentGray,
+                          size: 24,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -1388,20 +1431,27 @@ class _MapWidgetState extends State<MapWidget>
             child: _buildAnimatedControl(
               visible: controlsVisible,
               hiddenOffset: const Offset(0.06, 0),
-              child: GestureDetector(
-                onTap: _openSettings,
-                child: SizedBox(
-                  width: 48,
-                  height: 48,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: translucentWhite,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.settings,
-                      color: contentGray,
-                      size: 24,
+              child: Semantics(
+                label: 'Abrir configuracion',
+                button: true,
+                child: Tooltip(
+                  message: 'Abrir configuracion',
+                  child: GestureDetector(
+                    onTap: _openSettings,
+                    child: SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: translucentWhite,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.settings,
+                          color: contentGray,
+                          size: 24,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -1468,12 +1518,14 @@ class _MapWidgetState extends State<MapWidget>
                     icon: Icons.add,
                     onPressed: _zoomIn,
                     isTop: true,
+                    semanticLabel: 'Acercar mapa',
                   ),
                   const SizedBox(height: 8),
                   _buildZoomButton(
                     icon: Icons.remove,
                     onPressed: _zoomOut,
                     isTop: false,
+                    semanticLabel: 'Alejar mapa',
                   ),
                   const SizedBox(height: 12),
                   // Start Trip - larger, below zoom buttons
@@ -1518,11 +1570,13 @@ class _MapWidgetState extends State<MapWidget>
                   _buildMapActionButton(
                     icon: Icons.my_location,
                     onPressed: _centerOnUserLocation,
+                    semanticLabel: 'Centrar en mi ubicacion',
                   ),
                   const SizedBox(height: 8),
                   _buildMapActionButton(
                     icon: Icons.explore_outlined,
                     onPressed: _resetMapRotation,
+                    semanticLabel: 'Restablecer rotacion del mapa',
                   ),
                 ],
               ),
@@ -1536,20 +1590,27 @@ class _MapWidgetState extends State<MapWidget>
             child: _buildAnimatedControl(
               visible: controlsVisible,
               hiddenOffset: const Offset(-0.06, 0),
-              child: GestureDetector(
-                onTap: _onProfileTap,
-                child: SizedBox(
-                  width: 48,
-                  height: 48,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: white,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.person,
-                      color: contentGray,
-                      size: 24,
+              child: Semantics(
+                label: 'Abrir perfil',
+                button: true,
+                child: Tooltip(
+                  message: 'Abrir perfil',
+                  child: GestureDetector(
+                    onTap: _onProfileTap,
+                    child: SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: white,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.person,
+                          color: contentGray,
+                          size: 24,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -1564,20 +1625,27 @@ class _MapWidgetState extends State<MapWidget>
             child: _buildAnimatedControl(
               visible: controlsVisible,
               hiddenOffset: const Offset(0.06, 0),
-              child: GestureDetector(
-                onTap: _openSettings,
-                child: SizedBox(
-                  width: 48,
-                  height: 48,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: translucentWhite,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.settings,
-                      color: contentGray,
-                      size: 24,
+              child: Semantics(
+                label: 'Abrir configuracion',
+                button: true,
+                child: Tooltip(
+                  message: 'Abrir configuracion',
+                  child: GestureDetector(
+                    onTap: _openSettings,
+                    child: SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: translucentWhite,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.settings,
+                          color: contentGray,
+                          size: 24,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -1593,22 +1661,29 @@ class _MapWidgetState extends State<MapWidget>
           child: _buildAnimatedControl(
             visible: modifyLocationVisible,
             hiddenOffset: const Offset(0.06, 0),
-            child: GestureDetector(
-              onTap: _toggleCustomPositionMode,
-              child: SizedBox(
-                width: 48,
-                height: 48,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: _isCustomPositionMode
-                        ? AppPalette.primaryBlue.withValues(alpha: 0.92)
-                        : translucentWhite,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.location_on,
-                    color: _isCustomPositionMode ? white : contentGray,
-                    size: 24,
+            child: Semantics(
+              label: 'Cambiar ubicacion manual',
+              button: true,
+              child: Tooltip(
+                message: 'Cambiar ubicacion manual',
+                child: GestureDetector(
+                  onTap: _toggleCustomPositionMode,
+                  child: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: _isCustomPositionMode
+                            ? AppPalette.primaryBlue.withValues(alpha: 0.92)
+                            : translucentWhite,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.location_on,
+                        color: _isCustomPositionMode ? white : contentGray,
+                        size: 24,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -1657,6 +1732,7 @@ class _MapWidgetState extends State<MapWidget>
   Widget _buildMapActionButton({
     required IconData icon,
     required VoidCallback onPressed,
+    String? semanticLabel,
   }) {
     return SizedBox(
       width: 48,
@@ -1664,6 +1740,7 @@ class _MapWidgetState extends State<MapWidget>
       child: FloatingActionButton(
         mini: true,
         onPressed: onPressed,
+        tooltip: semanticLabel,
         backgroundColor: translucentWhite,
         foregroundColor: contentGray,
         elevation: 0,
@@ -1677,8 +1754,13 @@ class _MapWidgetState extends State<MapWidget>
     required IconData icon,
     required VoidCallback onPressed,
     required bool isTop,
+    String? semanticLabel,
   }) {
-    return _buildMapActionButton(icon: icon, onPressed: onPressed);
+    return _buildMapActionButton(
+      icon: icon,
+      onPressed: onPressed,
+      semanticLabel: semanticLabel,
+    );
   }
 
   Widget _buildAnimatedControl({

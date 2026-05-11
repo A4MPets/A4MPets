@@ -136,11 +136,11 @@ class TravelRouteService
     {
         $query = TravelRoute::query();
 
-        if ($userId) {
-            $query->where('user_id', $userId);
+        if ($userId === null || $userId <= 0) {
+            return $query->whereRaw('1 = 0');
         }
 
-        return $query;
+        return $query->where('user_id', $userId);
     }
 
     private function ensureRemoteId(TravelRoute $route): void

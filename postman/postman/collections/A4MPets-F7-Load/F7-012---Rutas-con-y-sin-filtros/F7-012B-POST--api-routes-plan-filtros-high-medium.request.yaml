@@ -1,0 +1,29 @@
+$kind: http-request
+name: 'F7-012B POST /api/routes/plan filtros high-medium'
+order: 2000
+method: POST
+url: '{{base_url}}/api/routes/plan'
+headers:
+  - key: Accept
+    value: application/json
+  - key: Content-Type
+    value: application/json
+  - key: Authorization
+    value: 'Bearer {{access_token}}'
+body:
+  type: json
+  content: |-
+    {
+      "travel_mode": "walking",
+      "avoid_hazards": true,
+      "hazard_risk_filters": ["high", "medium"],
+      "points": [
+        { "lat": 3.4516, "lng": -76.5320 },
+        { "lat": 3.4555, "lng": -76.5299 }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('F7-012B: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });

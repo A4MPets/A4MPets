@@ -21,16 +21,17 @@ void main() {
     test('fromMap construye perfil autenticado con todos los campos', () {
       final int now = DateTime.now().millisecondsSinceEpoch;
 
-      final LocalUserProfile profile = LocalUserProfile.fromMap(<String, Object?>{
-        'id': 42,
-        'username': 'qa_user',
-        'avatar_path': '/storage/avatar.jpg',
-        'is_authenticated': 1,
-        'backend_user_id': 100,
-        'email': 'qa@a4mpets.test',
-        'access_token': 'token_abc123',
-        'last_synced_at': now,
-      });
+      final LocalUserProfile profile =
+          LocalUserProfile.fromMap(<String, Object?>{
+            'id': 42,
+            'username': 'qa_user',
+            'avatar_path': '/storage/avatar.jpg',
+            'is_authenticated': 1,
+            'backend_user_id': 100,
+            'email': 'qa@a4mpets.test',
+            'access_token': 'token_abc123',
+            'last_synced_at': now,
+          });
 
       expect(profile.id, equals(42));
       expect(profile.username, equals('qa_user'));
@@ -42,10 +43,9 @@ void main() {
     });
 
     test('fromMap con is_authenticated=0 produce isAuthenticated false', () {
-      final LocalUserProfile profile = LocalUserProfile.fromMap(<String, Object?>{
-        'id': 1,
-        'is_authenticated': 0,
-      });
+      final LocalUserProfile profile = LocalUserProfile.fromMap(
+        <String, Object?>{'id': 1, 'is_authenticated': 0},
+      );
 
       expect(profile.isAuthenticated, isFalse);
     });

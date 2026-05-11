@@ -1,0 +1,15 @@
+$kind: http-request
+name: 'F7-003 GET /api/hazards'
+order: 1000
+method: GET
+url: '{{base_url}}/api/hazards?per_page=20&page=1'
+headers:
+  - key: Accept
+    value: application/json
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('F7-003: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });
+      const json = pm.response.json();
+      pm.test('F7-003: data y pagination existen', function () { pm.expect(json.data).to.be.an('array'); pm.expect(json.pagination).to.be.an('object'); });

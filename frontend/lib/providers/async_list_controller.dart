@@ -4,6 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Shared AsyncNotifier foundation for list-oriented controllers.
 abstract class AsyncListController<T> extends AsyncNotifier<List<T>> {
+  static const bool _disableBackgroundRefresh = bool.fromEnvironment(
+    'A4M_DISABLE_BACKGROUND_REFRESH',
+    defaultValue: false,
+  );
+
   Timer? _refreshTimer;
   bool _isDisposed = false;
 
@@ -41,6 +46,13 @@ abstract class AsyncListController<T> extends AsyncNotifier<List<T>> {
   }
 
   void _registerRefreshLifecycle() {
+    if (_disableBackgroundRefresh) {
+      ref.onDispose(() {
+        _isDisposed = true;
+      });
+      return;
+    }
+
     final Duration? interval = refreshInterval;
     if (interval != null) {
       _refreshTimer ??= Timer.periodic(interval, (_) async {

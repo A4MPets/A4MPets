@@ -1,0 +1,174 @@
+{
+  "phase": "F4",
+  "startedAt": "2026-05-09T04:29:03.883Z",
+  "finishedAt": "2026-05-09T04:29:48.874Z",
+  "backendBase": "http://127.0.0.1:8000",
+  "frontendBase": "http://127.0.0.1:7357",
+  "graphhopperBase": "http://127.0.0.1:8989",
+  "results": [
+    {
+      "id": "F4-001",
+      "status": "PASS",
+      "detail": "Backend, frontend web server and GraphHopper are available.",
+      "timestamp": "2026-05-09T04:29:29.854Z",
+      "graphhopperStatus": "a4mpets-graphhopper Up 9 hours (healthy)",
+      "backendStarted": false,
+      "frontendStarted": true
+    },
+    {
+      "id": "F4-002",
+      "status": "PASS",
+      "detail": "User registration persisted through real Laravel API.",
+      "timestamp": "2026-05-09T04:29:31.548Z",
+      "email": "qa_f4_1778300969854@example.com",
+      "userId": 9
+    },
+    {
+      "id": "F4-003",
+      "status": "PASS",
+      "detail": "Login token works against protected backend endpoint.",
+      "timestamp": "2026-05-09T04:29:32.722Z"
+    },
+    {
+      "id": "F4-004",
+      "status": "PASS",
+      "detail": "Pet created and returned from authenticated owner list.",
+      "timestamp": "2026-05-09T04:29:33.386Z",
+      "petId": 13
+    },
+    {
+      "id": "F4-005",
+      "status": "PASS",
+      "detail": "Hazard marker source data is available through public hazards API.",
+      "timestamp": "2026-05-09T04:29:34.108Z",
+      "hazardId": 14
+    },
+    {
+      "id": "F4-006",
+      "status": "PASS",
+      "detail": "Hazard created with manual-coordinate payload and persisted.",
+      "timestamp": "2026-05-09T04:29:34.108Z",
+      "hazardId": 14
+    },
+    {
+      "id": "F4-007",
+      "status": "PASS",
+      "detail": "Backend supplies risk-filtered hazard data for map layer toggles.",
+      "timestamp": "2026-05-09T04:29:34.766Z"
+    },
+    {
+      "id": "F4-008",
+      "status": "PASS",
+      "detail": "Lost pet report created with persisted pet association.",
+      "timestamp": "2026-05-09T04:29:35.132Z",
+      "lostId": 8,
+      "petId": 13
+    },
+    {
+      "id": "F4-009",
+      "status": "PASS",
+      "detail": "Found pet report created and linked to lost pet report.",
+      "timestamp": "2026-05-09T04:29:35.491Z",
+      "foundId": 11,
+      "lostId": 8
+    },
+    {
+      "id": "F4-011",
+      "status": "PASS",
+      "detail": "Travel route created and persisted through backend.",
+      "timestamp": "2026-05-09T04:29:35.915Z",
+      "routeId": 8
+    },
+    {
+      "id": "F4-010",
+      "status": "PASS",
+      "detail": "Backend planned a real route through local GraphHopper.",
+      "timestamp": "2026-05-09T04:29:37.935Z",
+      "distanceMeters": 967.585,
+      "durationSeconds": 683.695,
+      "coordinateCount": 19
+    },
+    {
+      "id": "F4-021",
+      "status": "PASS",
+      "detail": "Navigation instructions payload is returned for planned route.",
+      "timestamp": "2026-05-09T04:29:37.935Z",
+      "instructionCount": 17,
+      "profile": "foot"
+    },
+    {
+      "id": "F4-012",
+      "status": "PASS",
+      "detail": "Hazard comment persisted and returned with author data.",
+      "timestamp": "2026-05-09T04:29:38.266Z",
+      "hazardId": 14
+    },
+    {
+      "id": "F4-013",
+      "status": "PASS",
+      "detail": "Logout revokes token and private API rejects it.",
+      "timestamp": "2026-05-09T04:29:38.793Z"
+    },
+    {
+      "id": "F4-014",
+      "status": "PASS",
+      "detail": "Lost pet marker source data is available through public API.",
+      "timestamp": "2026-05-09T04:29:39.122Z",
+      "lostId": 8
+    },
+    {
+      "id": "F4-015",
+      "status": "PASS",
+      "detail": "Manual map coordinates persisted in report payloads.",
+      "timestamp": "2026-05-09T04:29:39.122Z",
+      "lostLatitude": 3.4516,
+      "lostLongitude": -76.532
+    },
+    {
+      "id": "F4-016",
+      "status": "PASS",
+      "detail": "Route planning considers persisted high-risk hazards.",
+      "timestamp": "2026-05-09T04:29:39.828Z",
+      "hazardsConsidered": 7,
+      "profile": "car"
+    },
+    {
+      "id": "F4-020",
+      "status": "PASS",
+      "detail": "Generic report radius data persisted for map impact circle.",
+      "timestamp": "2026-05-09T04:29:40.214Z",
+      "genericId": 8,
+      "impactRadiusMeters": 200
+    },
+    {
+      "id": "F4-022",
+      "status": "PASS",
+      "detail": "Image upload endpoint stores media usable by hazard reports.",
+      "timestamp": "2026-05-09T04:29:41.004Z",
+      "url": "http://127.0.0.1:8000/api/media/hazards/fc810f84646f55799f287b584670b172000b7267.png"
+    },
+    {
+      "id": "F4-018",
+      "status": "PASS",
+      "detail": "Health remains OK after integrated create/list/plan/upload operations.",
+      "timestamp": "2026-05-09T04:29:41.228Z"
+    },
+    {
+      "id": "F4-017",
+      "status": "PASS",
+      "detail": "Frontend loaded in headless Chromium without critical console errors.",
+      "timestamp": "2026-05-09T04:29:48.874Z",
+      "apiResponses": [],
+      "flutterSurfaceCount": 3,
+      "requestFailures": [],
+      "screenshot": "docs/evidencias/F4/f4_frontend_smoke.png"
+    },
+    {
+      "id": "F4-001-extra",
+      "status": "PASS",
+      "detail": "Frontend runtime API base URL configured for local backend.",
+      "timestamp": "2026-05-09T04:29:48.874Z",
+      "runtimeEnv": "frontend\\env\\runtime.local.json"
+    }
+  ]
+}

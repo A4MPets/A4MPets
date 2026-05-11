@@ -1,0 +1,26 @@
+$kind: http-request
+name: 'F7-006 POST /api/media/upload'
+order: 1000
+method: POST
+url: '{{base_url}}/api/media/upload'
+headers:
+  - key: Accept
+    value: application/json
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "bucket": "pets",
+      "image_data": "{{image_base64}}",
+      "file_name": "f7-{{unique_suffix}}.png"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('F7-006: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });
+      const json = pm.response.json();
+      if (json.data && json.data.url) pm.environment.set('media_url', json.data.url);
+      pm.test('F7-006: retorna URL', function () { pm.expect(json.data.url).to.be.a('string').and.not.empty; });

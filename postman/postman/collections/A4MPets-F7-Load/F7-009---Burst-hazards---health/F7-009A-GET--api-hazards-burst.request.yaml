@@ -1,0 +1,13 @@
+$kind: http-request
+name: 'F7-009A GET /api/hazards burst'
+order: 1000
+method: GET
+url: '{{base_url}}/api/hazards?per_page=20'
+headers:
+  - key: Accept
+    value: application/json
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('F7-009A: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });

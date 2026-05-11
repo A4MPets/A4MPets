@@ -1,0 +1,31 @@
+$kind: http-request
+name: 'F7-004 POST /api/pets'
+order: 1000
+method: POST
+url: '{{base_url}}/api/pets'
+headers:
+  - key: Accept
+    value: application/json
+  - key: Content-Type
+    value: application/json
+  - key: Authorization
+    value: 'Bearer {{access_token}}'
+body:
+  type: json
+  content: |-
+    {
+      "name": "MascotaCarga_{{unique_suffix}}",
+      "registered_at": "2026-05-11",
+      "adoption_date": "2025-01-10",
+      "birth_date": "2024-01-10",
+      "status": "normal",
+      "is_ownerless": false
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('F7-004: HTTP 201', function () { pm.expect(pm.response.code).to.eql(201); });
+      const json = pm.response.json();
+      if (json.data && json.data.id) pm.environment.set('created_pet_id', json.data.id);
+      pm.test('F7-004: mascota creada con id', function () { pm.expect(json.data.id).to.exist; });

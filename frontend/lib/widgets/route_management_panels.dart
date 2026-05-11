@@ -158,9 +158,14 @@ class _RouteCard extends StatelessWidget {
     final Color itemBackground = AppPalette.cardBackground(isDarkMode);
     final Color textColor = AppPalette.textPrimary(isDarkMode);
 
-    return GestureDetector(
+    return Semantics(
+      label: 'Seleccionar ruta ${route.name}',
+      button: true,
+      selected: isSelected,
       onTap: onPressed,
-      child: Container(
+      child: GestureDetector(
+        onTap: onPressed,
+        child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: itemBackground,
@@ -188,20 +193,27 @@ class _RouteCard extends StatelessWidget {
                   Positioned(
                     top: 6,
                     left: 6,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: onEditPressed,
-                      child: Container(
-                        width: 26,
-                        height: 26,
-                        decoration: BoxDecoration(
-                          color: AppPalette.white.withValues(alpha: 0.92),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.settings,
-                          size: 15,
-                          color: AppPalette.charcoal,
+                    child: Tooltip(
+                      message: 'Editar ruta ${route.name}',
+                      child: Semantics(
+                        label: 'Editar ruta ${route.name}',
+                        button: true,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: onEditPressed,
+                          child: Container(
+                            width: 26,
+                            height: 26,
+                            decoration: BoxDecoration(
+                              color: AppPalette.white.withValues(alpha: 0.92),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.settings,
+                              size: 15,
+                              color: AppPalette.charcoal,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -209,20 +221,27 @@ class _RouteCard extends StatelessWidget {
                   Positioned(
                     top: 6,
                     right: 6,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: onDeletePressed,
-                      child: Container(
-                        width: 26,
-                        height: 26,
-                        decoration: BoxDecoration(
-                          color: AppPalette.white.withValues(alpha: 0.92),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.close,
-                          size: 15,
-                          color: AppPalette.charcoal,
+                    child: Tooltip(
+                      message: 'Eliminar ruta ${route.name}',
+                      child: Semantics(
+                        label: 'Eliminar ruta ${route.name}',
+                        button: true,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: onDeletePressed,
+                          child: Container(
+                            width: 26,
+                            height: 26,
+                            decoration: BoxDecoration(
+                              color: AppPalette.white.withValues(alpha: 0.92),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              size: 15,
+                              color: AppPalette.charcoal,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -243,6 +262,7 @@ class _RouteCard extends StatelessWidget {
               ),
             ),
           ],
+          ),
         ),
       ),
     );

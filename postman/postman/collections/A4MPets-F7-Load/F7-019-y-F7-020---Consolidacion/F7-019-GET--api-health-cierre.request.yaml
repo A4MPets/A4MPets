@@ -1,0 +1,15 @@
+$kind: http-request
+name: 'F7-019 GET /api/health cierre'
+order: 1000
+method: GET
+url: '{{base_url}}/api/health'
+headers:
+  - key: Accept
+    value: application/json
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('F7-019: HTTP 200 cierre', function () { pm.expect(pm.response.code).to.eql(200); });
+      const json = pm.response.json();
+      pm.test('F7-019: status ok cierre', function () { pm.expect(json.status).to.eql('ok'); });

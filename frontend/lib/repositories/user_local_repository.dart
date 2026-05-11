@@ -151,7 +151,12 @@ class UserLocalRepository {
     if (!await _isAuthenticated()) {
       return guestDataStore.getPets();
     }
-    return _getList('/pets?include_archived=1&per_page=100', PetRecord.fromMap);
+    final String token = await _requireToken();
+    return _getList(
+      '/pets?include_archived=1&per_page=100',
+      PetRecord.fromMap,
+      bearerToken: token,
+    );
   }
 
   Future<List<PetRecord>> getMyPets() async {
@@ -294,9 +299,11 @@ class UserLocalRepository {
     if (!await _isAuthenticated()) {
       return guestDataStore.getRoutes();
     }
+    final String token = await _requireToken();
     return _getList(
       '/routes?include_archived=1&per_page=100',
       RouteRecord.fromMap,
+      bearerToken: token,
     );
   }
 

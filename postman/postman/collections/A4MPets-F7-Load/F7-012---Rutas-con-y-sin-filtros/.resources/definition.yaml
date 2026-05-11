@@ -1,0 +1,4 @@
+$kind: collection
+name: 'F7-012 - Rutas con y sin filtros'
+description: 'Ejecutar cada request con 10 iteraciones y comparar latencia/errores.'
+order: 13000

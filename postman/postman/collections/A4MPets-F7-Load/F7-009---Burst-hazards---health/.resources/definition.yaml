@@ -1,0 +1,4 @@
+$kind: collection
+name: 'F7-009 - Burst hazards + health'
+description: 'Ejecutar GET hazards con 20 iteraciones sin delay. Luego ejecutar manualmente health despues de esperar 10 segundos.'
+order: 10000

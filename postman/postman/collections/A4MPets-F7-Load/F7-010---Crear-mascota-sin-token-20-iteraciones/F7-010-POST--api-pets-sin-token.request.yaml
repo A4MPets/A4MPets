@@ -1,0 +1,22 @@
+$kind: http-request
+name: 'F7-010 POST /api/pets sin token'
+order: 1000
+method: POST
+url: '{{base_url}}/api/pets'
+headers:
+  - key: Accept
+    value: application/json
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "MascotaSinToken_{{unique_suffix}}",
+      "status": "normal"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('F7-010: HTTP 401', function () { pm.expect(pm.response.code).to.eql(401); });

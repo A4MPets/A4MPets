@@ -1,0 +1,30 @@
+$kind: http-request
+name: 'F7-007 POST /api/routes/plan'
+order: 1000
+method: POST
+url: '{{base_url}}/api/routes/plan'
+headers:
+  - key: Accept
+    value: application/json
+  - key: Content-Type
+    value: application/json
+  - key: Authorization
+    value: 'Bearer {{access_token}}'
+body:
+  type: json
+  content: |-
+    {
+      "travel_mode": "walking",
+      "avoid_hazards": false,
+      "points": [
+        { "lat": {{lat_iter}}, "lng": {{lng_iter}} },
+        { "lat": 3.455500, "lng": -76.529900 }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('F7-007: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });
+      const json = pm.response.json();
+      pm.test('F7-007: ruta con distancia y duracion', function () { pm.expect(json.data.coordinates).to.be.an('array'); pm.expect(json.data.distance_meters).to.exist; pm.expect(json.data.duration_seconds).to.exist; });

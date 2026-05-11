@@ -5,6 +5,15 @@ import '../repositories/user_local_repository.dart';
 import 'async_list_controller.dart';
 import 'session_providers.dart';
 
+Future<void> _reloadBestEffort(Future<void> Function() reload) async {
+  try {
+    await reload();
+  } catch (_) {
+    // The mutation already succeeded; a transient refresh failure should not
+    // turn the completed user action into an error state.
+  }
+}
+
 final petsControllerProvider =
     AsyncNotifierProvider<PetsController, List<PetRecord>>(PetsController.new);
 
@@ -35,7 +44,7 @@ class PetsController extends AsyncListController<PetRecord> {
       birthDate: birthDate,
       isOwnerless: isOwnerless,
     );
-    await reload();
+    await _reloadBestEffort(reload);
     return petId;
   }
 
@@ -53,22 +62,22 @@ class PetsController extends AsyncListController<PetRecord> {
       adoptionDate: adoptionDate,
       birthDate: birthDate,
     );
-    await reload();
+    await _reloadBestEffort(reload);
   }
 
   Future<void> deletePet({required int petId}) async {
     await _repository.deletePet(petId: petId);
-    await reload();
+    await _reloadBestEffort(reload);
   }
 
   Future<void> incrementPetWalks({required Iterable<int> petIds}) async {
     await _repository.incrementPetWalks(petIds: petIds);
-    await reload();
+    await _reloadBestEffort(reload);
   }
 
   Future<void> markPetFound({required int petId}) async {
     await _repository.markPetFound(petId: petId);
-    await reload();
+    await _reloadBestEffort(reload);
   }
 }
 
@@ -104,8 +113,8 @@ class MyPetsController extends AsyncListController<PetRecord> {
       birthDate: birthDate,
       isOwnerless: isOwnerless,
     );
-    await reload();
-    await ref.read(petsControllerProvider.notifier).reload();
+    await _reloadBestEffort(reload);
+    await _reloadBestEffort(ref.read(petsControllerProvider.notifier).reload);
     return petId;
   }
 
@@ -123,25 +132,25 @@ class MyPetsController extends AsyncListController<PetRecord> {
       adoptionDate: adoptionDate,
       birthDate: birthDate,
     );
-    await reload();
-    await ref.read(petsControllerProvider.notifier).reload();
+    await _reloadBestEffort(reload);
+    await _reloadBestEffort(ref.read(petsControllerProvider.notifier).reload);
   }
 
   Future<void> deletePet({required int petId}) async {
     await _repository.deletePet(petId: petId);
-    await reload();
-    await ref.read(petsControllerProvider.notifier).reload();
+    await _reloadBestEffort(reload);
+    await _reloadBestEffort(ref.read(petsControllerProvider.notifier).reload);
   }
 
   Future<void> incrementPetWalks({required Iterable<int> petIds}) async {
     await _repository.incrementPetWalks(petIds: petIds);
-    await reload();
-    await ref.read(petsControllerProvider.notifier).reload();
+    await _reloadBestEffort(reload);
+    await _reloadBestEffort(ref.read(petsControllerProvider.notifier).reload);
   }
 
   Future<void> markPetFound({required int petId}) async {
     await _repository.markPetFound(petId: petId);
-    await reload();
-    await ref.read(petsControllerProvider.notifier).reload();
+    await _reloadBestEffort(reload);
+    await _reloadBestEffort(ref.read(petsControllerProvider.notifier).reload);
   }
 }

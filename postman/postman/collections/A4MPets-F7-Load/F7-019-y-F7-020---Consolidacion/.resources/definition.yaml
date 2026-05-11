@@ -1,0 +1,4 @@
+$kind: collection
+name: 'F7-019 y F7-020 - Consolidacion'
+description: 'Ejecutar 1 iteracion de cierre. Luego consolidar manualmente el reporte F7.'
+order: 17000

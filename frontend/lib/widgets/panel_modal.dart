@@ -233,20 +233,29 @@ class _AppModalPanelState extends State<AppModalPanel> {
                             top: 14,
                             left: 56,
                             right: 56,
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
+                            child: Semantics(
+                              label: widget.canMinimize
+                                  ? '${widget.isMinimized ? 'Expandir' : 'Minimizar'} panel ${widget.title}'
+                                  : widget.title,
+                              button: widget.canMinimize,
                               onTap: widget.canMinimize
                                   ? widget.onToggleMinimize
                                   : null,
-                              child: Text(
-                                widget.title!,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: titleColor,
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w600,
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: widget.canMinimize
+                                    ? widget.onToggleMinimize
+                                    : null,
+                                child: Text(
+                                  widget.title!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: titleColor,
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ),
@@ -257,21 +266,30 @@ class _AppModalPanelState extends State<AppModalPanel> {
                             left: 0,
                             right: 0,
                             child: Center(
-                              child: GestureDetector(
-                                behavior: HitTestBehavior.opaque,
+                              child: Semantics(
+                                label:
+                                    '${widget.isMinimized ? 'Expandir' : 'Minimizar'} panel ${widget.title ?? ''}'
+                                        .trim(),
+                                button: true,
                                 onTap: widget.onToggleMinimize,
-                                child: Container(
-                                  width: 42,
-                                  height: 14,
-                                  alignment: Alignment.topCenter,
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: widget.onToggleMinimize,
                                   child: Container(
                                     width: 42,
-                                    height: 5,
-                                    decoration: BoxDecoration(
-                                      color: widget.isDarkMode
-                                          ? const Color(0x66FFFFFF)
-                                          : const Color(0x66404040),
-                                      borderRadius: BorderRadius.circular(999),
+                                    height: 14,
+                                    alignment: Alignment.topCenter,
+                                    child: Container(
+                                      width: 42,
+                                      height: 5,
+                                      decoration: BoxDecoration(
+                                        color: widget.isDarkMode
+                                            ? const Color(0x66FFFFFF)
+                                            : const Color(0x66404040),
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),

@@ -52,7 +52,7 @@ class BackendApiClient {
     String path, {
     required Object body,
     String? bearerToken,
-    Duration timeout = const Duration(seconds: 10),
+    Duration timeout = const Duration(seconds: 30),
   }) async {
     http.Response? lastServerError;
     for (final String baseUrl in baseUrls) {
@@ -81,7 +81,7 @@ class BackendApiClient {
   Future<http.Response?> getWithFallback(
     String path, {
     String? bearerToken,
-    Duration timeout = const Duration(seconds: 10),
+    Duration timeout = const Duration(seconds: 30),
   }) async {
     http.Response? lastServerError;
     for (final String baseUrl in baseUrls) {
@@ -110,7 +110,7 @@ class BackendApiClient {
     String path, {
     required Object body,
     String? bearerToken,
-    Duration timeout = const Duration(seconds: 10),
+    Duration timeout = const Duration(seconds: 30),
   }) async {
     http.Response? lastServerError;
     for (final String baseUrl in baseUrls) {
@@ -139,7 +139,7 @@ class BackendApiClient {
   Future<http.Response?> deleteWithFallback(
     String path, {
     String? bearerToken,
-    Duration timeout = const Duration(seconds: 10),
+    Duration timeout = const Duration(seconds: 30),
   }) async {
     http.Response? lastServerError;
     for (final String baseUrl in baseUrls) {

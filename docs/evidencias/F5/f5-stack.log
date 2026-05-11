@@ -1,0 +1,29 @@
+[F5-stack] 2026-05-09T05:57:02.782Z $ docker compose up -d graphhopper
+[F5-stack] 2026-05-09T05:57:03.051Z GraphHopper health ready at http://127.0.0.1:8989/health
+[F5-stack] 2026-05-09T05:57:03.051Z $ docker ps --filter name=a4mpets-graphhopper --format {{.Names}} {{.Status}}
+[F5-stack] 2026-05-09T05:57:03.118Z a4mpets-graphhopper Up 11 hours (healthy)
+[F5-stack] 2026-05-09T05:57:03.356Z existing Laravel backend ready at http://127.0.0.1:8000/api/health
+[F5-stack] 2026-05-09T05:57:03.357Z runtime env written to frontend\env\runtime.local.json
+[F5-stack] 2026-05-09T05:57:06.376Z spawn flutter run -d web-server --web-hostname 127.0.0.1 --web-port 7357 --dart-define-from-file=env/runtime.local.json
+[F5-stack] 2026-05-09T05:57:08.032Z Launching lib\main.dart on Web Server in debug mode...
+[F5-stack] 2026-05-09T05:57:08.291Z Waiting for connection from debug service on Web Server...
+[F5-stack] 2026-05-09T05:57:09.433Z Flutter web frontend ready at http://127.0.0.1:7357
+[F5-stack] 2026-05-09T05:57:27.216Z    18,9s
+[F5-stack] 2026-05-09T05:57:27.252Z lib\main.dart is being served at http://127.0.0.1:7357
+[F5-stack] 2026-05-09T05:57:27.252Z Flutter web build ready from Flutter output
+[F5-stack] 2026-05-09T05:57:27.255Z The web-server device requires the Dart Debug Chrome extension for debugging. Consider using the Chrome or Edge devices for an improved development workflow.
+
+Flutter run key commands.
+[F5-stack] 2026-05-09T05:57:27.256Z r Hot reload.
+[F5-stack] 2026-05-09T05:57:27.256Z R Hot restart.
+h List all available interactive commands.
+[F5-stack] 2026-05-09T05:57:27.257Z d Detach (terminate "flutter run" but leave application running).
+[F5-stack] 2026-05-09T05:57:27.257Z c Clear the screen
+[F5-stack] 2026-05-09T05:57:27.258Z q Quit (terminate the application on the device).
+[F5-stack] 2026-05-09T05:57:27.266Z Flutter compiled entrypoint ready at http://127.0.0.1:7357/main.dart.js
+[F5-stack] 2026-05-09T05:57:32.948Z Debug service listening on ws://127.0.0.1:64787/eSHCKkCF0i0=/ws
+[F5-stack] 2026-05-09T05:57:32.949Z A Dart VM Service on Web Server is available at: http://127.0.0.1:64787/eSHCKkCF0i0=
+[F5-stack] 2026-05-09T05:57:32.949Z The Flutter DevTools debugger and profiler on Web Server is available at: http://127.0.0.1:64787/eSHCKkCF0i0=/devtools/?uri=ws://127.0.0.1:64787/eSHCKkCF0i0=/ws
+[F5-stack] 2026-05-09T05:57:35.979Z Flutter render surface ready in Chromium: 3
+[F5-stack] 2026-05-09T05:57:36.064Z stack ready: http://127.0.0.1:7357
+[F5-stack] 2026-05-09T05:57:36.070Z F5 readiness endpoint ready at http://127.0.0.1:7358/ready

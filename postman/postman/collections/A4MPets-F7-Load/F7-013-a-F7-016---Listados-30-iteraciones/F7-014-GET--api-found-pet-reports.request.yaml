@@ -1,0 +1,15 @@
+$kind: http-request
+name: 'F7-014 GET /api/found-pet-reports'
+order: 2000
+method: GET
+url: '{{base_url}}/api/found-pet-reports?per_page=20'
+headers:
+  - key: Accept
+    value: application/json
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('F7-014: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });
+      const json = pm.response.json();
+      pm.test('F7-014: data array', function () { pm.expect(json.data).to.be.an('array'); });

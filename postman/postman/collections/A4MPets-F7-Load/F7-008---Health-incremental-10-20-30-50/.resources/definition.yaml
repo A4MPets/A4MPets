@@ -1,0 +1,4 @@
+$kind: collection
+name: 'F7-008 - Health incremental 10-20-30-50'
+description: 'Ejecutar esta carpeta cuatro veces con 10, 20, 30 y 50 iteraciones y comparar promedios de latencia en el reporte.'
+order: 9000
