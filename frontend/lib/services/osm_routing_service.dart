@@ -39,6 +39,7 @@ class OsmRoutingService {
     List<String> hazardRiskFilters = const <String>[],
     String travelMode = 'walking',
     Map<String, Object?>? tripConfig,
+    String? bearerToken,
   }) async {
     if (waypoints.length < 2) {
       return PlannedRouteResult(
@@ -79,7 +80,12 @@ class OsmRoutingService {
         final http.Response current = await http
             .post(
               Uri.parse('$baseUrl/routes/plan'),
-              headers: <String, String>{'Content-Type': 'application/json'},
+              headers: <String, String>{
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                if (bearerToken != null && bearerToken.isNotEmpty)
+                  'Authorization': 'Bearer $bearerToken',
+              },
               body: jsonEncode(payload),
             )
             .timeout(const Duration(seconds: 8));
@@ -116,12 +122,18 @@ class OsmRoutingService {
       throw Exception('La geometría de la ruta llegó vacía.');
     }
 
-    final List<LatLng> polyline = coords.map((dynamic raw) {
-      final List<dynamic> pair = raw as List<dynamic>;
-      return LatLng((pair[1] as num).toDouble(), (pair[0] as num).toDouble());
-    }).toList(growable: false);
+    final List<LatLng> polyline = coords
+        .map((dynamic raw) {
+          final List<dynamic> pair = raw as List<dynamic>;
+          return LatLng(
+            (pair[1] as num).toDouble(),
+            (pair[0] as num).toDouble(),
+          );
+        })
+        .toList(growable: false);
     final List<RouteNavigationInstruction> navigationInstructions =
-        (data?['navigation_instructions'] as List<dynamic>? ?? const <dynamic>[])
+        (data?['navigation_instructions'] as List<dynamic>? ??
+                const <dynamic>[])
             .map(
               (dynamic raw) => RouteNavigationInstruction.fromMap(
                 (raw as Map<String, dynamic>),

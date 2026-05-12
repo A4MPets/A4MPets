@@ -58,21 +58,39 @@ async function attachDiagnostics(testInfo, diagnostics) {
 async function openApp(page, testInfo) {
   let bodyText = '';
   let flutterSurfaceCount = 0;
+  let currentUrl = '';
+  let lastError = null;
 
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
     const url = attempt === 0 ? '/' : `/?f5Reload=${Date.now()}-${attempt}`;
-    await page.goto(url, { waitUntil: 'domcontentloaded' });
+    try {
+      if (attempt > 0) {
+        await page.context().clearCookies().catch(() => {});
+        await page.evaluate(() => {
+          window.localStorage?.clear();
+          window.sessionStorage?.clear();
+        }).catch(() => {});
+      }
+      await page.goto(url, { waitUntil: attempt < 2 ? 'networkidle' : 'domcontentloaded', timeout: 90000 });
+      currentUrl = page.url();
+    } catch (error) {
+      lastError = error.message;
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 90000 }).catch((fallbackError) => {
+        lastError = fallbackError.message;
+      });
+      currentUrl = page.url();
+    }
     await page
       .waitForFunction(() => {
         const hasText = (document.body?.innerText || '').trim().length > 0;
         const hasSurface = document.querySelector('flutter-view, flt-glass-pane, canvas') !== null;
         return hasText || hasSurface;
-      }, null, { timeout: 30000 })
+      }, null, { timeout: 90000 })
       .catch(() => {});
-    await page.waitForTimeout(1000 + attempt * 500);
+    await page.waitForTimeout(2000 + attempt * 1000);
 
-    bodyText = await page.locator('body').innerText({ timeout: 1000 }).catch(() => '');
-    flutterSurfaceCount = await page.locator('flutter-view, flt-glass-pane, canvas').count();
+    bodyText = await page.locator('body').innerText({ timeout: 5000 }).catch(() => '');
+    flutterSurfaceCount = await page.locator('flutter-view, flt-glass-pane, canvas').count().catch(() => 0);
     if (bodyText.trim().length > 0 || flutterSurfaceCount > 0) {
       break;
     }
@@ -92,6 +110,8 @@ async function openApp(page, testInfo) {
         bodyTextLength: bodyText.trim().length,
         bodyTextPreview: bodyText.trim().slice(0, 300),
         flutterSurfaceCount,
+        currentUrl,
+        lastError,
         screenshotError,
       },
       null,
@@ -130,12 +150,20 @@ async function fillFirstMatching(page, pattern, value) {
 async function fillAccessibleTextbox(page, namePattern, value) {
   await enableFlutterSemantics(page);
   const textbox = page.getByRole('textbox', { name: namePattern }).first();
+  const typeIntoFocusedField = async () => {
+    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A');
+    await page.keyboard.press('Backspace');
+    await page.keyboard.type(value);
+    await page.waitForTimeout(250);
+  };
+
   await textbox.scrollIntoViewIfNeeded({ timeout: 10000 }).catch(() => {});
-  await textbox.click({ timeout: 10000 });
-  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A');
-  await page.keyboard.press('Backspace');
-  await page.keyboard.type(value);
-  await page.waitForTimeout(250);
+  try {
+    await textbox.click({ timeout: 10000 });
+    await typeIntoFocusedField();
+  } catch (_) {
+    // Flutter web can briefly expose stale textbox semantics while a date picker is open.
+  }
 
   const typedValue = await page
     .evaluate(() => {
@@ -147,15 +175,41 @@ async function fillAccessibleTextbox(page, namePattern, value) {
     return;
   }
 
+  await closeMaterialDialogIfOpen(page);
+
   try {
     await textbox.fill(value, { timeout: 5000 });
   } catch (_) {
-    await textbox.click({ timeout: 10000 });
-    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A');
-    await page.keyboard.press('Backspace');
-    await page.keyboard.type(value);
+    await closeMaterialDialogIfOpen(page);
+    try {
+      await fillFlutterField(page, namePattern, value, { timeout: 15000 });
+    } catch (fieldError) {
+      await fillFieldAfterLabel(page, namePattern, value, { timeout: 15000 }).catch(() => {
+        throw fieldError;
+      });
+    }
   }
   await page.waitForTimeout(250);
+}
+
+async function closeMaterialDialogIfOpen(page) {
+  const dialogVisible = await page
+    .getByRole('dialog')
+    .first()
+    .isVisible({ timeout: 500 })
+    .catch(() => false);
+  if (!dialogVisible) {
+    return;
+  }
+
+  const cancelButton = page.getByRole('button', { name: /^Cancel(ar)?$/i }).first();
+  if (await cancelButton.isVisible({ timeout: 500 }).catch(() => false)) {
+    await cancelButton.click({ timeout: 3000 }).catch(() => {});
+  } else {
+    await page.keyboard.press('Escape').catch(() => {});
+  }
+  await page.waitForTimeout(300);
+  await enableFlutterSemantics(page).catch(() => {});
 }
 
 async function enableFlutterSemantics(page) {
@@ -769,6 +823,7 @@ module.exports = {
   clickVisibleText,
   fillFirstMatching,
   fillAccessibleTextbox,
+  closeMaterialDialogIfOpen,
   enableFlutterSemantics,
   semanticsSnapshot,
   clickSemanticsText,

@@ -490,6 +490,9 @@ extension _MapPageRoutesState on _MapPageState {
     }
 
     try {
+      final LocalUserProfile profile = await ref
+          .read(sessionStoreProvider)
+          .getLocalUserProfile();
       final PlannedRouteResult routeResult = await _routingService
           .buildRoadRoute(
             waypoints: waypoints,
@@ -507,6 +510,9 @@ extension _MapPageRoutesState on _MapPageState {
                 growable: false,
               ),
             },
+            bearerToken: profile.isAuthenticated == true
+                ? profile.accessToken
+                : null,
           );
       if (!mounted || requestVersion != _routePolylineRequestVersion) {
         return;

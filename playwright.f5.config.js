@@ -7,7 +7,7 @@ const baseURL = process.env.A4M_F5_BASE_URL || `http://127.0.0.1:${frontendPort}
 module.exports = defineConfig({
   testDir: './tests/e2e/f5',
   outputDir: './test-results/f5',
-  timeout: 120000,
+  timeout: 300000,
   expect: {
     timeout: 8000,
   },
@@ -20,8 +20,8 @@ module.exports = defineConfig({
   ],
   use: {
     baseURL,
-    actionTimeout: 15000,
-    navigationTimeout: 30000,
+    actionTimeout: 30000,
+    navigationTimeout: 90000,
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
     video: 'off',

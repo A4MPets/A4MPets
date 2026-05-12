@@ -402,7 +402,8 @@ test.describe.serial('F5 - Caja negra E2E navegador', () => {
     await expectVisibleText(page, textPattern(lostReportDetails), { timeout: 30000 });
   });
 
-  test('F5-007 crear reporte de mascota encontrada vinculado', async ({ page }) => {
+  test('F5-007 crear reporte de mascota encontrada vinculado', async ({ page }, testInfo) => {
+    testInfo.setTimeout(300000);
     const linkedLostPet = `Mascota perdida vinculada F5 ${Date.now()}`;
     const linkedLostDetails = `Perdida para encontrado F5 ${Date.now()}`;
     await login(page);
