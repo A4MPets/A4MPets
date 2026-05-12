@@ -32,11 +32,16 @@ services:
     environment:
       - APP_NAME=A4MPets
       - APP_ENV=production
+      - APP_KEY=${APP_KEY:-base64:wQoPdz7KfnHMZbLyL+2sb0l0mE6EdxpmXiYSK6bhL2Q=}
       - APP_DEBUG=${APP_DEBUG:-false}
       - APP_URL=${BACKEND_PUBLIC_URL:-http://localhost:8000}
       - DB_CONNECTION=sqlite
       - DB_DATABASE=/data/database.sqlite
+      - SESSION_DRIVER=database
+      - CACHE_STORE=database
+      - QUEUE_CONNECTION=database
       - GRAPHHOPPER_BASE_URL=http://graphhopper:8989
+      - GRAPHHOPPER_API_KEY=
       - LOG_CHANNEL=stack
     ports:
       - "${BACKEND_PORT:-8000}:8000"
