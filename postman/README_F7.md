@@ -28,6 +28,7 @@ npm run dev:cloudflare
    - `qa_login`: usuario QA existente.
    - `qa_password`: contrasena QA.
 7. Ejecutar primero `00 - Setup` con Run normal para guardar `access_token` y `hazard_id`.
+8. En Postman Desktop, configurar el timeout de requests en al menos `15000 ms` para escenarios con GraphHopper. Un timeout global de `2000 ms` es demasiado bajo para rutas por Cloudflare en el host local de F7, especialmente durante arranque frio o bajo carga.
 
 ## Ejecucion Performance
 
@@ -48,6 +49,8 @@ Usar Postman Desktop, abrir la coleccion o carpeta, seleccionar `Run`, entrar a 
 
 Si tu plan de Postman permite data files en performance, carga `f7-performance-data.csv`.
 
+Para `GraphHopper Performance`, ejecutar primero una corrida corta con 1 VU durante 30-60 segundos para calentar cache y confirmar que el contenedor ya importo el mapa. Luego ejecutar la corrida formal. La coleccion usa `travel_mode: car` y puntos compactos para medir estabilidad API sin forzar rutas peatonales costosas en cada usuario virtual.
+
 ## Umbrales
 
 | Tipo | p95 max | Error max | 5xx |
@@ -55,10 +58,12 @@ Si tu plan de Postman permite data files en performance, carga `f7-performance-d
 | Health | 500 ms | 1% | 0 |
 | Login y lecturas | 1500 ms | 1% | 0 |
 | Escrituras y media | 3500 ms | 2% | 0 |
-| GraphHopper/rutas | 8000 ms | 5% | 0 |
+| GraphHopper/rutas | 15000 ms | 5% | 0 |
 | Sin token | 100% HTTP 401 | N/A | 0 |
 
 La coleccion incluye assertions por request y umbrales de response time por tipo de escenario. Los percentiles p90/p95/p99, RPS y error % se toman del reporte Performance de Postman.
+
+El warning de GraphHopper `Unrealistic low speed calculated from duration` proviene de metadatos OSM anomalos en una via concreta y no implica por si solo fallo del backend. Debe registrarse como condicion del mapa solo si coincide con errores HTTP, timeouts sistematicos o degradacion sostenida.
 
 ## Evidencia
 

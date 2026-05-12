@@ -1,6 +1,6 @@
 services:
   graphhopper:
-    image: israelhikingmap/graphhopper:latest
+    image: israelhikingmap/graphhopper:${GRAPHHOPPER_IMAGE_TAG:-11.0}
     container_name: a4mpets-graphhopper
     restart: unless-stopped
     environment:

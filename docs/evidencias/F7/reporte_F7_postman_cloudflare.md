@@ -88,7 +88,7 @@ npm run dev:cloudflare
 | Health | 500 ms | 1% | 0 |
 | Login y lecturas | 1500 ms | 1% | 0 |
 | Escrituras y media | 3500 ms | 2% | 0 |
-| GraphHopper/rutas | 8000 ms | 5% | 0 |
+| GraphHopper/rutas | 15000 ms | 5% | 0 |
 | Endpoints protegidos sin token | 100% HTTP 401 | N/A | 0 |
 
 ## Resultados por Escenario

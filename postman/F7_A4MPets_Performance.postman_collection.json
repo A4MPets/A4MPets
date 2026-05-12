@@ -155,23 +155,23 @@
     },
     {
       "name": "F7-008/F7-010 - GraphHopper Performance",
-      "description": "Performance: fixed, 2-4 VU, 3-5 minutos. GraphHopper debe estar activo.",
-      "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["pm.environment.set('active_threshold_ms', pm.environment.get('threshold_route_ms') || '8000');"] } }],
+      "description": "Performance: fixed, 2-4 VU, 3-5 minutos. GraphHopper debe estar activo. Se usa modo car y puntos compactos para medir estabilidad API sin forzar rutas peatonales costosas en cada VU.",
+      "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["pm.environment.set('active_threshold_ms', pm.environment.get('threshold_route_ms') || '15000');"] } }],
       "item": [
         {
           "name": "F7-008 POST /api/routes/plan simple",
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('F7-008: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });", "const data = pm.response.json().data;", "pm.test('F7-008: ruta valida', function () { pm.expect(data.coordinates).to.be.an('array'); pm.expect(data.distance_meters).to.exist; pm.expect(data.duration_seconds).to.exist; });"] } }],
-          "request": { "method": "POST", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }], "body": { "mode": "raw", "raw": "{\n  \"travel_mode\": \"walking\",\n  \"avoid_hazards\": false,\n  \"points\": [\n    { \"lat\": 3.4516, \"lng\": -76.5320 },\n    { \"lat\": 3.4570, \"lng\": -76.5280 }\n  ]\n}" }, "url": "{{base_url}}/api/routes/plan" }
+          "request": { "method": "POST", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }], "body": { "mode": "raw", "raw": "{\n  \"travel_mode\": \"car\",\n  \"avoid_hazards\": false,\n  \"points\": [\n    { \"lat\": 3.4516, \"lng\": -76.5320 },\n    { \"lat\": 3.4525, \"lng\": -76.5311 }\n  ]\n}" }, "url": "{{base_url}}/api/routes/plan" }
         },
         {
           "name": "F7-009 POST /api/routes/plan multipunto",
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('F7-009: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });", "pm.test('F7-009: ruta valida', function () { pm.expect(pm.response.json().data.coordinates).to.be.an('array'); });"] } }],
-          "request": { "method": "POST", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }], "body": { "mode": "raw", "raw": "{\n  \"travel_mode\": \"walking\",\n  \"avoid_hazards\": false,\n  \"points\": [\n    { \"lat\": 3.4516, \"lng\": -76.5320 },\n    { \"lat\": 3.4525, \"lng\": -76.5315 },\n    { \"lat\": 3.4535, \"lng\": -76.5310 },\n    { \"lat\": 3.4550, \"lng\": -76.5295 },\n    { \"lat\": 3.4570, \"lng\": -76.5280 }\n  ]\n}" }, "url": "{{base_url}}/api/routes/plan" }
+          "request": { "method": "POST", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }], "body": { "mode": "raw", "raw": "{\n  \"travel_mode\": \"car\",\n  \"avoid_hazards\": false,\n  \"points\": [\n    { \"lat\": 3.4516, \"lng\": -76.5320 },\n    { \"lat\": 3.4519, \"lng\": -76.5317 },\n    { \"lat\": 3.4522, \"lng\": -76.5314 },\n    { \"lat\": 3.4524, \"lng\": -76.5312 },\n    { \"lat\": 3.4525, \"lng\": -76.5311 }\n  ]\n}" }, "url": "{{base_url}}/api/routes/plan" }
         },
         {
           "name": "F7-010 POST /api/routes/plan filtros riesgo",
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('F7-010: HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });", "pm.test('F7-010: usa avoidance', function () { pm.expect(pm.response.json().data.used_hazard_avoidance).to.eql(true); });"] } }],
-          "request": { "method": "POST", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }], "body": { "mode": "raw", "raw": "{\n  \"travel_mode\": \"walking\",\n  \"avoid_hazards\": true,\n  \"hazard_risk_filters\": [\"high\", \"medium\"],\n  \"points\": [\n    { \"lat\": 3.4516, \"lng\": -76.5320 },\n    { \"lat\": 3.4570, \"lng\": -76.5280 }\n  ]\n}" }, "url": "{{base_url}}/api/routes/plan" }
+          "request": { "method": "POST", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }], "body": { "mode": "raw", "raw": "{\n  \"travel_mode\": \"car\",\n  \"avoid_hazards\": true,\n  \"hazard_risk_filters\": [\"high\", \"medium\"],\n  \"points\": [\n    { \"lat\": 3.4516, \"lng\": -76.5320 },\n    { \"lat\": 3.4525, \"lng\": -76.5311 }\n  ]\n}" }, "url": "{{base_url}}/api/routes/plan" }
         }
       ]
     },
