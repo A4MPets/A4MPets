@@ -1,18 +1,25 @@
-version: '3.8'
-
 services:
   graphhopper:
     image: israelhikingmap/graphhopper:latest
     container_name: a4mpets-graphhopper
+    restart: unless-stopped
+    environment:
+      JAVA_OPTS: ${GRAPHHOPPER_JAVA_OPTS:--Xms512m -Xmx1536m}
     volumes:
-      - /home/nestor/A4MPets/backend/graphhopper/data:/data
-      - /home/nestor/A4MPets/backend/graphhopper/config.yml:/config/config.yml:ro
+      - ./backend/graphhopper/data/map.osm.pbf:/data/map.osm.pbf:ro
+      - graphhopper_cache:/data/graph-cache
+      - ./backend/graphhopper/config.yml:/config/config.yml:ro
     ports:
       - "${GRAPHHOPPER_PORT:-8989}:8989"
       - "${GRAPHHOPPER_ADMIN_PORT:-8990}:8990"
-    environment:
-      - JAVA_OPTS=-Xmx2g -Xms2g
-    restart: unless-stopped
+    entrypoint: ["./graphhopper.sh"]
+    command:
+      - --config
+      - /config/config.yml
+      - --input
+      - /data/map.osm.pbf
+      - --graph-cache
+      - /data/graph-cache
 
   backend:
     build:
@@ -66,4 +73,6 @@ services:
 
 volumes:
   backend_sqlite_data:
+    driver: local
+  graphhopper_cache:
     driver: local

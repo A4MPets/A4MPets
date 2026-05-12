@@ -5,6 +5,8 @@ services:
     image: israelhikingmap/graphhopper:latest
     container_name: a4mpets-graphhopper
     restart: unless-stopped
+    environment:
+      JAVA_OPTS: ${GRAPHHOPPER_JAVA_OPTS:--Xms512m -Xmx1536m}
     ports:
       - "${GRAPHHOPPER_PORT:-8989}:8989"
       - "${GRAPHHOPPER_ADMIN_PORT:-8990}:8990"
