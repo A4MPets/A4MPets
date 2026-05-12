@@ -1,81 +1,90 @@
-# A4MPets F7 - Postman Cloudflare
+# A4MPets F7 - Postman Performance Cloudflare
 
-Este paquete deja preparada la fase F7 para ejecutarla desde Postman Runner contra el backend publicado por Cloudflare Tunnel.
+Este paquete prepara F7 como pruebas no funcionales de performance API usando Postman Desktop Performance Testing contra el backend local expuesto por Cloudflare Tunnel.
 
 ## Archivos
 
-- `F7_A4MPets_Load.postman_collection.json`: coleccion Postman con casos F7-001 a F7-020.
-- `F7_A4MPets_Cloudflare.postman_environment.json`: environment con `base_url`, credenciales QA y variables dinamicas.
-- `f7-runner-data.csv`: datos de apoyo para iteraciones con nombres, coordenadas y comentarios variables.
+- `F7_A4MPets_Performance.postman_collection.json`: coleccion por escenarios F7-001 a F7-020.
+- `F7_A4MPets_Cloudflare.postman_environment.json`: environment con URL, credenciales, token y umbrales.
+- `f7-performance-data.csv`: datos por usuario virtual para variar nombres, coordenadas y comentarios.
+- `f7-runner-data.csv`: archivo legado de apoyo si se requiere ejecutar Runner clasico.
 
 ## Preparacion
 
 1. Levantar el stack local.
-2. Levantar Cloudflare Tunnel con el comando definido en el proyecto:
+2. Levantar Cloudflare Tunnel:
 
 ```bash
 npm run dev:cloudflare
 ```
 
-3. Copiar la URL publica generada desde `.runtime/cloudflare-url.txt`.
+3. Copiar la URL publica desde `.runtime/cloudflare-url.txt`.
 4. Importar en Postman:
-   - La coleccion `postman/F7_A4MPets_Load.postman_collection.json`.
-   - El environment `postman/F7_A4MPets_Cloudflare.postman_environment.json`.
-5. Editar el environment:
-   - `base_url`: URL publica de Cloudflare, sin slash final.
+   - `postman/F7_A4MPets_Performance.postman_collection.json`.
+   - `postman/F7_A4MPets_Cloudflare.postman_environment.json`.
+5. Seleccionar el environment `A4MPets F7 Cloudflare`.
+6. Editar variables:
+   - `base_url`: URL Cloudflare sin slash final.
    - `qa_login`: usuario QA existente.
-   - `qa_password`: contrasena del usuario QA.
-6. Ejecutar primero la carpeta `00 - Setup` para obtener `access_token` y crear un `hazard_id` base.
+   - `qa_password`: contrasena QA.
+7. Ejecutar primero `00 - Setup` con Run normal para guardar `access_token` y `hazard_id`.
 
-## Ejecucion Por Caso
+## Ejecucion Performance
 
-Ejecuta cada carpeta con Postman Runner y las iteraciones indicadas:
+Usar Postman Desktop, abrir la coleccion o carpeta, seleccionar `Run`, entrar a la pestana `Performance` y configurar:
 
-| Caso | Carpeta/Request | Iteraciones |
-|---|---|---:|
-| F7-001 | `F7-001 - Health 50 iteraciones` | 50 |
-| F7-002 | `F7-002 - Login 30 iteraciones` | 30 |
-| F7-003 | `F7-003 - Listar peligros 50 iteraciones` | 50 |
-| F7-004 | `F7-004 - Crear mascotas 20 iteraciones` | 20 |
-| F7-005 | `F7-005 - Crear peligros 20 iteraciones` | 20 |
-| F7-006 | `F7-006 - Subir media 10 iteraciones` | 10 |
-| F7-007 | `F7-007 - Planificar ruta 15 iteraciones` | 15 |
-| F7-008 | `F7-008 - Health incremental 10-20-30-50` | 10, 20, 30, 50 |
-| F7-009 | `F7-009 - Burst hazards + health` | 20 para hazards; luego health manual tras 10s |
-| F7-010 | `F7-010 - Crear mascota sin token 20 iteraciones` | 20 |
-| F7-011 | `F7-011 - Rutas dos vs cinco puntos` | 10 por request |
-| F7-012 | `F7-012 - Rutas con y sin filtros` | 10 por request |
-| F7-013 a F7-016 | `F7-013 a F7-016 - Listados 30 iteraciones` | 30 por request/carpeta |
-| F7-017 | `F7-017 - Comentar peligro 15 iteraciones` | 15 |
-| F7-018 | `F7-018 - Cloudflare URL activa despues de 1 hora` | inicio y despues de 1 hora |
-| F7-019/F7-020 | `F7-019 y F7-020 - Consolidacion` | 1 cierre + consolidado manual |
+| Caso | Carpeta | Perfil | VU | Duracion |
+|---|---|---|---:|---|
+| F7-001/F7-002 | `Baseline` | fixed | 1 | 1-2 min |
+| F7-003/F7-004 | `Fixed Read Load` | fixed | 5-10 | 3-5 min |
+| F7-005/F7-007 | `Fixed Write Load` | fixed | 3-5 | 3-5 min |
+| F7-008/F7-010 | `GraphHopper Performance` | fixed | 2-4 | 3-5 min |
+| F7-011 | `Ramp-Up Mixed API` | ramp-up | max 10 | 5 min |
+| F7-012 | `Spike Read Load` | spike | max 20 | 3 min |
+| F7-013 | `Peak Authenticated Mix` | peak | max 10 | 5 min |
+| F7-014 | `Short Endurance` | fixed | 5 | 15-30 min |
+| F7-015 | `Security Under Load` | fixed | 5 | 3 min |
+| F7-016/F7-020 | `Recovery And Analysis Checks` | Run normal o fixed | 1 | cierre |
 
-Cuando uses Runner, activa el environment `A4MPets F7 Cloudflare`. El archivo CSV es opcional porque la coleccion calcula sufijos y coordenadas por iteracion, pero puedes cargar `f7-runner-data.csv` si deseas evidenciar datos controlados.
+Si tu plan de Postman permite data files en performance, carga `f7-performance-data.csv`.
+
+## Umbrales
+
+| Tipo | p95 max | Error max | 5xx |
+|---|---:|---:|---:|
+| Health | 500 ms | 1% | 0 |
+| Login y lecturas | 1500 ms | 1% | 0 |
+| Escrituras y media | 3500 ms | 2% | 0 |
+| GraphHopper/rutas | 8000 ms | 5% | 0 |
+| Sin token | 100% HTTP 401 | N/A | 0 |
+
+La coleccion incluye assertions por request y umbrales de response time por tipo de escenario. Los percentiles p90/p95/p99, RPS y error % se toman del reporte Performance de Postman.
 
 ## Evidencia
 
-Exporta los resultados del Runner por caso o guarda capturas con:
+Para cada escenario guardar:
 
-- Total de iteraciones.
-- Tests pasados/fallidos.
-- Latencia promedio, minima y maxima.
-- Cantidad de errores.
-- Confirmacion de que no hubo respuestas HTTP 500.
+- Perfil de carga, VU y duracion.
+- Requests totales y RPS.
+- Avg, p90, p95 y p99.
+- Error %.
+- Assertions fallidas.
+- Cantidad de HTTP 5xx.
+- Captura o link del run.
+- Observaciones de `Tests vs VU` cuando existan degradaciones.
 
-Si exportas un resultado del Runner en JSON, puedes generar un resumen tecnico con:
-
-```bash
-node scripts/f7-postman-summary.js ruta/al/export-runner.json
-```
-
-Completa el documento:
+Completar:
 
 ```text
 docs/evidencias/F7/reporte_F7_postman_cloudflare.md
 ```
 
-## Notas
+Si exportas resultados JSON compatibles, puedes generar un resumen tecnico con:
 
-- F7 no reemplaza F3: aqui se mide estabilidad y tiempos contra el stack publicado por Cloudflare.
-- F7 no reemplaza F5: aqui no se usa navegador ni UI, solo API HTTP desde Postman.
-- GraphHopper debe estar activo para F7-007, F7-011 y F7-012.
+```bash
+node scripts/f7-postman-summary.js ruta/al/export-runner.json
+```
+
+## Entorno
+
+F7 se interpreta como performance local controlada. El host de referencia es Ubuntu 24.04.4 LTS en laptop Toshiba Satellite C55-B con Intel Core i3-4005U, 6 GiB RAM, Wi-Fi, Docker/GraphHopper local, Postman Desktop y Cloudflare Tunnel.

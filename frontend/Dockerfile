@@ -3,7 +3,7 @@ WORKDIR /app
 COPY pubspec.yaml pubspec.lock ./
 RUN flutter pub get
 COPY . .
-ARG API_BASE_URL=http://localhost:8000/api
+ARG API_BASE_URL=/api
 RUN flutter config --enable-web \
     && flutter build web --release --dart-define=A4M_API_BASE_URL=${API_BASE_URL}
 

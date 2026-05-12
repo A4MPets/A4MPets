@@ -1,0 +1,9 @@
+# Use this workspace to collaborate
+workspace:
+  id: ""
+
+localResources:
+  collections:
+    - ..\collections\A4MPets-F7-Load
+  environments:
+    - ..\environments\A4MPets-F7-Cloudflare.environment.yaml

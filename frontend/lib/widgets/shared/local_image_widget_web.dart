@@ -44,13 +44,20 @@ Widget buildLocalImageWidget({
         if (sourceUri.path.contains('/api/media/') ||
             sourceUri.host == 'localhost' ||
             sourceUri.host == '127.0.0.1') {
-          resolvedSource = sourceUri
-              .replace(
-                scheme: workingUri.scheme,
-                host: workingUri.host,
-                port: workingUri.port,
-              )
-              .toString();
+          if (workingUri.hasAuthority) {
+            resolvedSource = sourceUri
+                .replace(
+                  scheme: workingUri.scheme,
+                  host: workingUri.host,
+                  port: workingUri.port,
+                )
+                .toString();
+          } else {
+            resolvedSource =
+                sourceUri.path +
+                (sourceUri.hasQuery ? '?${sourceUri.query}' : '') +
+                (sourceUri.hasFragment ? '#${sourceUri.fragment}' : '');
+          }
         }
       } catch (_) {
         // Fallback to original source

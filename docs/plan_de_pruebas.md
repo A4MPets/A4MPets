@@ -28,7 +28,7 @@ Los objetivos especificos son verificables y deben revisarse contra evidencia re
 | Confirmar comportamiento visual | Validar que la UI en Flutter web muestre mensajes claros, paneles consistentes, formularios utilizables, marcadores correctos y ausencia de errores visibles. | Capturas por viewport, consola sin errores severos y observaciones manuales. |
 | Confirmar integracion local | Validar que Laravel, Flutter, GraphHopper, Docker y Cloudflare Tunnel funcionen juntos bajo un ambiente controlado. | Health checks, URL de tunel, logs de servicios y evidencia de flujo integrado. |
 | Confirmar tolerancia ante condiciones de fallo | Validar respuestas cuando falta token, hay payload invalido, GraphHopper no responde, se pierde conexion o el usuario intenta modificar recursos ajenos. | Casos fallidos controlados, mensajes de error y ausencia de caidas no manejadas. |
-| Confirmar estabilidad basica | Ejecutar solicitudes repetidas mediante Postman contra el ambiente local expuesto por Cloudflare para observar latencia, errores HTTP y comportamiento del servidor. | Reporte de Postman Runner con iteraciones, tiempos y errores. |
+| Confirmar estabilidad basica | Ejecutar escenarios de performance mediante Postman Desktop contra el ambiente local expuesto por Cloudflare para observar latencia, percentiles, throughput, errores HTTP, usuarios virtuales y recuperacion. | Reporte de Postman Performance con perfil de carga, VU, RPS, avg, p90, p95, p99, error %, assertions y errores 5xx. |
 
 ---
 
@@ -70,7 +70,7 @@ Los objetivos especificos son verificables y deben revisarse contra evidencia re
 | Automatizadas | Caja negra E2E navegador | Simular comportamiento de una persona usuaria real sin depender del codigo interno. | Playwright sobre Flutter web. | El flujo termina con la pantalla, datos y respuestas API esperadas. |
 | Sistema | Integracion local completa | Confirmar que frontend, backend y GraphHopper funcionan al mismo tiempo. | Scripts npm, Docker, navegador, logs. | Flujos P0 funcionan sin errores de consola ni HTTP 5xx inesperados. |
 | Manuales | Funcionales exploratorias | Encontrar problemas de usabilidad, mensajes, estados vacios y flujos no cubiertos por automatizacion. | Navegador, DevTools, capturas. | Cada observacion queda documentada con pasos y evidencia. |
-| No funcionales | Carga manual controlada | Observar comportamiento del backend local expuesto por Cloudflare ante muchas solicitudes repetidas. | Postman Runner, Cloudflare Tunnel. | Se registran latencias, errores, saturacion y comportamiento de recuperacion. |
+| No funcionales | Performance API controlada | Observar comportamiento del backend local expuesto por Cloudflare ante usuarios virtuales, perfiles fixed, ramp-up, spike, peak y endurance corta. | Postman Desktop Performance Testing, Cloudflare Tunnel. | Se registran RPS, avg, p90, p95, p99, error %, 5xx, assertions bajo VU y recuperacion. |
 | Regresion | Reejecucion de P0 y P1 | Confirmar que las correcciones no rompieron flujos criticos. | PHPUnit, Flutter test, Playwright, manual. | No quedan defectos criticos o altos sin decision formal. |
 
 ---
@@ -88,7 +88,7 @@ La estrategia se divide en fases identificables para que el equipo pueda solicit
 | F4 | 2026-05-08 a 2026-05-09 | Sistema integrado local | Levantar stack local, ejecutar flujos desde UI, validar mapa, rutas, reportes y GraphHopper. | Smoke funcional integrado con capturas. |
 | F5 | 2026-05-09 a 2026-05-11 | Caja negra E2E navegador | Ejecutar flujos de usuario en navegador: onboarding, mascotas, reportes, comentarios, rutas, permisos y responsive. | Reporte E2E o matriz manual equivalente si la automatizacion aun no existe. |
 | F6 | 2026-05-11 a 2026-05-12 | Pruebas manuales funcionales | Revisar mensajes, errores, datos limite, viewport movil, permisos de ubicacion, estados vacios y recuperacion visual. | Matriz exploratoria con observaciones y defectos. |
-| F7 | 2026-05-12 a 2026-05-13 | No funcional y carga con Postman + Cloudflare | Ejecutar iteraciones sobre health, login, listados, creacion de recursos, upload y planeacion usando URL Cloudflare. | Reporte de latencia, errores y comportamiento del servidor. |
+| F7 | 2026-05-12 a 2026-05-13 | Performance API con Postman + Cloudflare | Ejecutar escenarios baseline, fixed load, ramp-up, spike, peak, endurance corta, seguridad sin token, GraphHopper y recuperacion usando Postman Desktop Performance Testing contra URL Cloudflare. | Reporte de performance con VU, perfil, duracion, RPS, avg, p90, p95, p99, error %, 5xx, assertions y entorno del host. |
 | F8 | 2026-05-14 | Regresion y cierre QA | Reejecutar P0/P1, hacer retest, consolidar evidencias, clasificar incidencias abiertas y emitir decision de salida. | Informe final con decision Go/No-Go. |
 
 ### 4.1 Regla de clasificacion de casos por contexto
@@ -122,7 +122,7 @@ La cobertura backend debe incluir pruebas unitarias, pruebas de integracion API 
 | Medios | No tiene servicio unitario dedicado en F1; reglas y contratos HTTP se cubren en F3. | `POST /media/upload`, `GET /media/{bucket}/{fileName}`, rechazo por tipo no permitido, payload corrupto o archivo inexistente. | Subir foto de mascota, foto de reporte y vista previa; confirmar que la URL queda visible desde frontend y Cloudflare. |
 | Rutas guardadas | Validar `TravelRouteService`, `TravelRoute`, `RoutePoint`, orden de puntos, `points_json`, eliminacion y pertenencia. | `GET /routes`, `GET /routes/{id}`, `POST /routes`, `PUT /routes/{id}`, `DELETE /routes/{id}`, permisos y payloads invalidos. | Crear ruta desde editor de mapa, editar nombre/puntos, eliminar ruta, seleccionarla para viaje y verificar polilinea. |
 | Planificacion de ruta | Validar `GraphHopperRoutingService` y `NavigationInstructionFormatter` con HTTP fakeado, payload, perfiles, filtros, fallback y errores controlados. | `POST /routes/plan` con dos puntos, multipunto, filtros de nivel de peligro, GraphHopper disponible y GraphHopper no disponible. | Planear ruta desde UI, observar polilinea, instrucciones, distancia, alertas de proximidad y recalculo si cambia la seleccion. |
-| Health y configuracion | No corresponde a F1 unitaria; se cubre en F0/F3/F4 segun ambiente y contrato HTTP. | `GET /health`, arranque con Docker, arranque local y verificacion de respuesta estable. | Smoke F0/F4, Cloudflare Tunnel y monitoreo durante carga manual. |
+| Health y configuracion | No corresponde a F1 unitaria; se cubre en F0/F3/F4 segun ambiente y contrato HTTP. | `GET /health`, arranque con Docker, arranque local y verificacion de respuesta estable. | Smoke F0/F4, Cloudflare Tunnel y monitoreo durante performance F7. |
 | Seguridad y permisos | Validar ownership encapsulado en servicios (`canMutate`) y reglas FormRequest; middleware/token completo se valida en F3. | Repetir mutaciones sin token, con token invalido, con usuario no propietario y con recurso inexistente. | E2E: intentar acciones privadas despues de logout y confirmar que la UI no deja guardar datos protegidos. |
 
 ### 4.3 Mapa detallado de cobertura Frontend Flutter
@@ -221,7 +221,7 @@ La distribucion minima esperada es la siguiente:
 | `npm run frontend` | Levantar Flutter web local. | URL y captura de app. |
 | `npm run graphhopper` | Levantar GraphHopper con Docker Compose. | Estado del contenedor. |
 | `npm run dev:cloudflare` | Levantar backend, frontend runtime y GraphHopper con tunel. | URL publica y logs Cloudflare. |
-| Postman Runner | Ejecutar solicitudes repetidas para carga manual. | Reporte exportado con iteraciones. |
+| Postman Desktop Performance Testing | Ejecutar escenarios de performance con usuarios virtuales, duracion y perfiles fixed, ramp-up, spike y peak. | Reporte del performance run con RPS, avg, p90, p95, p99, error %, assertions y VU. |
 
 ---
 
@@ -235,6 +235,24 @@ La distribucion minima esperada es la siguiente:
 | Cloudflare Tunnel | Usar `cloudflared` mediante `npm run dev:cloudflare`. | `.runtime/cloudflare-url.txt` contiene URL `trycloudflare.com`. |
 | Base de datos | Ambiente local o test DB controlada. | Usuarios QA y datos de prueba no colisionan con ejecuciones previas. |
 | Navegador | Chrome desktop y viewport movil simulado. | DevTools disponible para consola y Network. |
+
+### Entorno de ejecucion F7
+
+Las metricas de F7 deben interpretarse como performance local controlada, no como benchmark productivo. Para esta fase se documenta el host usado para Postman Desktop, Cloudflare Tunnel, Docker/GraphHopper y backend local:
+
+| Categoria | Valor |
+|---|---|
+| Sistema operativo | Ubuntu 24.04.4 LTS Noble Numbat |
+| Kernel | Linux 6.8.0-111-generic x86_64 |
+| Equipo | Laptop Toshiba Satellite C55-B |
+| CPU | Intel Core i3-4005U, 2 nucleos / 4 hilos, hasta 1.70 GHz |
+| Memoria RAM | 6 GiB total, 5.7 GiB disponible aprox. |
+| Almacenamiento | Disco Toshiba 465.76 GiB, ext4, 170.94 GiB usados aprox. |
+| Red activa | Wi-Fi Qualcomm Atheros AR9485 |
+| Docker/red local | Interfaces Docker activas durante la prueba |
+| Pantalla | 1366x768, aunque F7 se ejecuta principalmente por API |
+| Entorno de ejecucion | Sesion SSH/terminal, Postman Desktop, Cloudflare Tunnel, Docker/GraphHopper y backend local |
+| Limitacion relevante | Equipo local de recursos moderados; resultados no equivalen a infraestructura productiva |
 
 ### Datos QA controlados
 
@@ -282,7 +300,7 @@ La distribucion minima esperada es la siguiente:
 | Cloudflare Tunnel cambia la URL publica durante la sesion | Las pruebas externas o de Postman apuntan a una URL vencida. | Registrar URL al inicio de cada ejecucion, validar health antes de cada bloque y actualizar variables de Postman. |
 | GraphHopper no responde | Las pruebas de rutas y viaje quedan bloqueadas. | Separar casos de rutas del resto, registrar bloqueo y continuar con modulos no dependientes. |
 | Datos QA duplicados | Registro, mascotas o reportes fallan por informacion previa. | Usar sufijos con timestamp cuando el caso lo permita y limpiar datos al cerrar fase. |
-| Saturacion del equipo local | La carga con Postman produce errores no atribuibles al codigo. | Documentar hardware, cerrar aplicaciones no necesarias y aumentar iteraciones de forma gradual. |
+| Saturacion del equipo local | La carga con Postman produce errores no atribuibles al codigo o distorsiona p95/p99 por limites de CPU, RAM, Docker, red Wi-Fi o Cloudflare Tunnel. | Documentar hardware/SO del host F7, cerrar aplicaciones no necesarias, empezar con baseline, usar perfiles graduales y separar hallazgos de ambiente de defectos backend. |
 | Cambios de codigo durante la ejecucion | Los resultados dejan de representar una version estable. | Registrar commit antes de empezar y reiniciar fase si cambia la version. |
 | Evidencia incompleta | El resultado no se puede auditar ni repetir. | No cerrar casos sin captura, log, respuesta exportada o reporte de herramienta. |
 | Diferencias desktop/movil | Un flujo aprobado en desktop falla en viewport movil. | Ejecutar smoke minimo en 1366x768 y 390x844 para fases visuales. |
