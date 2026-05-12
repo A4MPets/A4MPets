@@ -47,11 +47,9 @@ class HazardCrudTest extends TestCase
     }
 
     /**
-     * F3-016 extra: POST /api/hazards — el middleware api.token resuelve el usuario
-     * opcionalmente. Sin token, el usuario es invitado y la petición se procesa.
-     * Documentamos el comportamiento real de la API (endpoint permite creación anónima).
+     * F3-016 extra: POST /api/hazards rechaza solicitudes sin token.
      */
-    public function test_create_hazard_without_token_processes_as_guest(): void
+    public function test_create_hazard_without_token_returns_401(): void
     {
         $response = $this->postJson('/api/hazards', [
             'incident_latitude'       => 4.711,
@@ -63,8 +61,9 @@ class HazardCrudTest extends TestCase
             'description'             => 'Reporte sin token',
         ]);
 
-        // El endpoint permite creación como invitado (comportamiento documentado)
-        $this->assertContains($response->status(), [201, 401]);
+        $response->assertStatus(401)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'No autenticado');
     }
 
     /**

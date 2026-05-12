@@ -47,20 +47,22 @@ class PetCrudTest extends TestCase
     }
 
     /**
-     * F3-014 extra: POST /api/pets - el middleware api.token resuelve el usuario
-     * opcionalmente; si no hay token, el usuario es invitado.
-     * Documentamos el comportamiento real de esta ruta.
+     * F3-014 extra: POST /api/pets rechaza solicitudes sin token.
      */
-    public function test_create_pet_without_token_processes_as_guest(): void
+    public function test_create_pet_without_token_returns_401(): void
     {
-        // La ruta está protegida por api.token pero éste no rechaza guests
         $response = $this->postJson('/api/pets', [
-            'name'   => 'Pet invitado',
+            'name'   => 'Pet sin token',
             'status' => 'normal',
         ]);
 
-        // El endpoint acepta la petición como invitado (comportamiento documentado)
-        $this->assertContains($response->status(), [201, 401, 422]);
+        $response->assertStatus(401)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'No autenticado');
+
+        $this->assertDatabaseMissing('pets', [
+            'name' => 'Pet sin token',
+        ]);
     }
 
     /**

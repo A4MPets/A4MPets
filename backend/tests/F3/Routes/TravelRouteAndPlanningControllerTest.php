@@ -89,6 +89,14 @@ class TravelRouteAndPlanningControllerTest extends TestCase
             ->assertStatus(422);
     }
 
+    public function test_routes_index_without_token_returns_401(): void
+    {
+        $this->getJson('/api/routes?per_page=5')
+            ->assertStatus(401)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'No autenticado');
+    }
+
     public function test_route_planning_returns_success_and_validation_error(): void
     {
         $user = User::factory()->create();
@@ -128,6 +136,19 @@ class TravelRouteAndPlanningControllerTest extends TestCase
             ])
             ->assertStatus(422);
 
+    }
+
+    public function test_route_planning_without_token_returns_401(): void
+    {
+        $this->postJson('/api/routes/plan', [
+            'points' => [
+                ['lat' => 4.71, 'lng' => -74.07],
+                ['lat' => 4.72, 'lng' => -74.08],
+            ],
+        ])
+            ->assertStatus(401)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'No autenticado');
     }
 
     public function test_route_planning_returns_502_when_graphhopper_fails(): void

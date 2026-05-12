@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ResolveApiTokenUser
 {
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next, string $mode = 'optional'): Response
     {
         $bearerToken = $request->bearerToken();
 
@@ -32,6 +32,13 @@ class ResolveApiTokenUser
                     $request->attributes->set('api_token_model', $apiToken);
                 }
             }
+        }
+
+        if ($mode === 'required' && ! $request->user()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autenticado',
+            ], 401);
         }
 
         return $next($request);

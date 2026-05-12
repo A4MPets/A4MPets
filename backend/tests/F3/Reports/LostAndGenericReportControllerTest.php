@@ -116,7 +116,19 @@ class LostAndGenericReportControllerTest extends TestCase
             'risk_level_code' => 'invalid-risk',
             'impact_radius_meters' => 30,
         ]);
-        $guestCreate->assertStatus(201)
+        $guestCreate->assertStatus(401)
+            ->assertJsonPath('success', false);
+
+        $this->withHeaders($this->authHeaders($owner))
+            ->postJson('/api/generic-reports', [
+                'latitude' => 4.71,
+                'longitude' => -74.07,
+                'description' => 'Reporte generico autenticado',
+                'reported_date' => '2026-05-08 09:00:00',
+                'risk_level_code' => 'invalid-risk',
+                'impact_radius_meters' => 30,
+            ])
+            ->assertStatus(201)
             ->assertJsonPath('data.risk_level_code', 'undefined');
 
         $report = GenericReport::create([

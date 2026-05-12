@@ -1,0 +1,223 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: f5-e2e.spec.js >> F5 - Caja negra E2E navegador >> F5-001 registro de usuario nuevo desde la interfaz
+- Location: tests\e2e\f5\f5-e2e.spec.js:302:3
+
+# Error details
+
+```
+Error: F5 precondition failed: the Flutter web app responded over HTTP but rendered a blank page. No user flow can be executed from the browser.
+```
+
+# Test source
+
+```ts
+  10  | function installDiagnostics(page) {
+  11  |   const diagnostics = {
+  12  |     consoleErrors: [],
+  13  |     pageErrors: [],
+  14  |     requestFailures: [],
+  15  |     http500: [],
+  16  |   };
+  17  | 
+  18  |   page.on('console', (message) => {
+  19  |     if (message.text().includes('F5 add pet failed')) {
+  20  |       console.log(`[browser] ${message.text()}`);
+  21  |     }
+  22  |     if (message.type() === 'error') {
+  23  |       diagnostics.consoleErrors.push(message.text());
+  24  |     }
+  25  |   });
+  26  |   page.on('pageerror', (error) => diagnostics.pageErrors.push(error.message));
+  27  |   page.on('requestfailed', (request) => {
+  28  |     diagnostics.requestFailures.push({
+  29  |       url: request.url(),
+  30  |       error: request.failure()?.errorText || 'unknown',
+  31  |     });
+  32  |   });
+  33  |   page.on('response', (response) => {
+  34  |     if (response.status() >= 500) {
+  35  |       diagnostics.http500.push({
+  36  |         url: response.url(),
+  37  |         status: response.status(),
+  38  |       });
+  39  |     }
+  40  |   });
+  41  | 
+  42  |   return diagnostics;
+  43  | }
+  44  | 
+  45  | async function attachDiagnostics(testInfo, diagnostics) {
+  46  |   fs.mkdirSync(evidenceDir, { recursive: true });
+  47  |   fs.writeFileSync(
+  48  |     path.join(evidenceDir, `${testInfo.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-diagnostics.json`),
+  49  |     JSON.stringify(diagnostics, null, 2),
+  50  |     'utf8'
+  51  |   );
+  52  |   await testInfo.attach('browser-diagnostics', {
+  53  |     body: JSON.stringify(diagnostics, null, 2),
+  54  |     contentType: 'application/json',
+  55  |   });
+  56  | }
+  57  | 
+  58  | async function openApp(page, testInfo) {
+  59  |   let bodyText = '';
+  60  |   let flutterSurfaceCount = 0;
+  61  | 
+  62  |   for (let attempt = 0; attempt < 3; attempt += 1) {
+  63  |     const url = attempt === 0 ? '/' : `/?f5Reload=${Date.now()}-${attempt}`;
+  64  |     await page.goto(url, { waitUntil: 'domcontentloaded' });
+  65  |     await page
+  66  |       .waitForFunction(() => {
+  67  |         const hasText = (document.body?.innerText || '').trim().length > 0;
+  68  |         const hasSurface = document.querySelector('flutter-view, flt-glass-pane, canvas') !== null;
+  69  |         return hasText || hasSurface;
+  70  |       }, null, { timeout: 30000 })
+  71  |       .catch(() => {});
+  72  |     await page.waitForTimeout(1000 + attempt * 500);
+  73  | 
+  74  |     bodyText = await page.locator('body').innerText({ timeout: 1000 }).catch(() => '');
+  75  |     flutterSurfaceCount = await page.locator('flutter-view, flt-glass-pane, canvas').count();
+  76  |     if (bodyText.trim().length > 0 || flutterSurfaceCount > 0) {
+  77  |       break;
+  78  |     }
+  79  |   }
+  80  | 
+  81  |   let screenshot = null;
+  82  |   let screenshotError = null;
+  83  |   try {
+  84  |     screenshot = await page.screenshot({ fullPage: true, timeout: 1500 });
+  85  |   } catch (error) {
+  86  |     screenshotError = error.message;
+  87  |   }
+  88  | 
+  89  |   await testInfo.attach('initial-render-state', {
+  90  |     body: JSON.stringify(
+  91  |       {
+  92  |         bodyTextLength: bodyText.trim().length,
+  93  |         bodyTextPreview: bodyText.trim().slice(0, 300),
+  94  |         flutterSurfaceCount,
+  95  |         screenshotError,
+  96  |       },
+  97  |       null,
+  98  |       2
+  99  |     ),
+  100 |     contentType: 'application/json',
+  101 |   });
+  102 |   if (screenshot) {
+  103 |     await testInfo.attach('initial-screenshot', {
+  104 |       body: screenshot,
+  105 |       contentType: 'image/png',
+  106 |     });
+  107 |   }
+  108 | 
+  109 |   if (bodyText.trim().length === 0 && flutterSurfaceCount === 0) {
+> 110 |     throw new Error(
+      |           ^ Error: F5 precondition failed: the Flutter web app responded over HTTP but rendered a blank page. No user flow can be executed from the browser.
+  111 |       'F5 precondition failed: the Flutter web app responded over HTTP but rendered a blank page. No user flow can be executed from the browser.'
+  112 |     );
+  113 |   }
+  114 | 
+  115 |   await enableFlutterSemantics(page);
+  116 | }
+  117 | 
+  118 | async function expectVisibleText(page, pattern, options = {}) {
+  119 |   await expectSemanticsText(page, pattern, options);
+  120 | }
+  121 | 
+  122 | async function clickVisibleText(page, pattern, options = {}) {
+  123 |   await clickSemanticsText(page, pattern, options);
+  124 | }
+  125 | 
+  126 | async function fillFirstMatching(page, pattern, value) {
+  127 |   await fillFlutterField(page, pattern, value);
+  128 | }
+  129 | 
+  130 | async function fillAccessibleTextbox(page, namePattern, value) {
+  131 |   await enableFlutterSemantics(page);
+  132 |   const textbox = page.getByRole('textbox', { name: namePattern }).first();
+  133 |   await textbox.scrollIntoViewIfNeeded({ timeout: 10000 }).catch(() => {});
+  134 |   await textbox.click({ timeout: 10000 });
+  135 |   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A');
+  136 |   await page.keyboard.press('Backspace');
+  137 |   await page.keyboard.type(value);
+  138 |   await page.waitForTimeout(250);
+  139 | 
+  140 |   const typedValue = await page
+  141 |     .evaluate(() => {
+  142 |       const active = document.activeElement;
+  143 |       return active && 'value' in active ? active.value : '';
+  144 |     })
+  145 |     .catch(() => '');
+  146 |   if (String(typedValue).includes(value.slice(0, Math.min(value.length, 32)))) {
+  147 |     return;
+  148 |   }
+  149 | 
+  150 |   try {
+  151 |     await textbox.fill(value, { timeout: 5000 });
+  152 |   } catch (_) {
+  153 |     await textbox.click({ timeout: 10000 });
+  154 |     await page.keyboard.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A');
+  155 |     await page.keyboard.press('Backspace');
+  156 |     await page.keyboard.type(value);
+  157 |   }
+  158 |   await page.waitForTimeout(250);
+  159 | }
+  160 | 
+  161 | async function enableFlutterSemantics(page) {
+  162 |   await page.waitForSelector('flutter-view, flt-glass-pane, canvas', { timeout: 90000 });
+  163 |   await page.evaluate(() => {
+  164 |     const placeholder = document.querySelector('flt-semantics-placeholder');
+  165 |     if (!placeholder) {
+  166 |       return;
+  167 |     }
+  168 |     placeholder.focus();
+  169 |     placeholder.dispatchEvent(
+  170 |       new MouseEvent('click', { bubbles: true, cancelable: true, view: window })
+  171 |     );
+  172 |     placeholder.dispatchEvent(
+  173 |       new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true })
+  174 |     );
+  175 |     placeholder.dispatchEvent(
+  176 |       new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true })
+  177 |     );
+  178 |   });
+  179 |   await page.waitForFunction(
+  180 |     () => Array.from(document.querySelectorAll('flt-semantics')).some((node) => {
+  181 |       const text = `${node.textContent || ''}\n${node.getAttribute('aria-label') || ''}`.trim();
+  182 |       const rect = node.getBoundingClientRect();
+  183 |       return text.length > 0 && rect.width > 1 && rect.height > 1;
+  184 |     }),
+  185 |     null,
+  186 |     { timeout: 15000 }
+  187 |   );
+  188 | }
+  189 | 
+  190 | function patternSource(pattern) {
+  191 |   return pattern instanceof RegExp
+  192 |     ? { source: pattern.source, flags: pattern.flags }
+  193 |     : { source: String(pattern).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags: 'i' };
+  194 | }
+  195 | 
+  196 | async function semanticsSnapshot(page) {
+  197 |   return page.evaluate(() =>
+  198 |     Array.from(document.querySelectorAll('flt-semantics'))
+  199 |       .map((node) => {
+  200 |         const rect = node.getBoundingClientRect();
+  201 |         return {
+  202 |           text: `${node.textContent || ''}\n${node.getAttribute('aria-label') || ''}`.trim(),
+  203 |           role: node.getAttribute('role'),
+  204 |           aria: node.getAttribute('aria-label'),
+  205 |           rect: {
+  206 |             x: Math.round(rect.x),
+  207 |             y: Math.round(rect.y),
+  208 |             width: Math.round(rect.width),
+  209 |             height: Math.round(rect.height),
+  210 |           },
+```
