@@ -10,13 +10,14 @@ abstract class AsyncListController<T> extends AsyncNotifier<List<T>> {
   );
 
   Timer? _refreshTimer;
+  Future<List<T>>? _activeLoad;
   bool _isDisposed = false;
 
   @override
   Future<List<T>> build() async {
     _registerRefreshLifecycle();
     unawaited(runInitialSync());
-    return loadItems();
+    return _loadOnce();
   }
 
   /// Loads the current collection from its backing repository.
@@ -31,12 +32,12 @@ abstract class AsyncListController<T> extends AsyncNotifier<List<T>> {
   /// Reloads the collection while keeping previous data visible in the UI.
   Future<void> reload() async {
     state = AsyncLoading<List<T>>().copyWithPrevious(state);
-    state = await AsyncValue.guard(loadItems);
+    state = await AsyncValue.guard(_loadOnce);
   }
 
   Future<void> silentlyRefresh() async {
     try {
-      final List<T> latest = await loadItems();
+      final List<T> latest = await _loadOnce();
       if (!_isDisposed) {
         state = AsyncData<List<T>>(latest);
       }
@@ -69,5 +70,21 @@ abstract class AsyncListController<T> extends AsyncNotifier<List<T>> {
       _refreshTimer?.cancel();
       _refreshTimer = null;
     });
+  }
+
+  Future<List<T>> _loadOnce() {
+    final Future<List<T>>? activeLoad = _activeLoad;
+    if (activeLoad != null) {
+      return activeLoad;
+    }
+
+    final Future<List<T>> nextLoad = loadItems();
+    _activeLoad = nextLoad;
+    nextLoad.whenComplete(() {
+      if (identical(_activeLoad, nextLoad)) {
+        _activeLoad = null;
+      }
+    });
+    return nextLoad;
   }
 }

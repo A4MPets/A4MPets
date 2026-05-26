@@ -168,9 +168,10 @@ class GraphHopperRoutingService
 
         $payload['ch.disable'] = true;
 
+        $routeBounds = $this->routeBounds($points, 0.05);
         $avoidanceAreas = [
-            ...$this->loadHazardAvoidanceAreas($selectedRiskFilters),
-            ...$this->loadGenericReportAvoidanceAreas($selectedRiskFilters),
+            ...$this->loadHazardAvoidanceAreas($selectedRiskFilters, $routeBounds),
+            ...$this->loadGenericReportAvoidanceAreas($selectedRiskFilters, $routeBounds),
         ];
 
         if (count($avoidanceAreas) === 0) {
@@ -191,7 +192,7 @@ class GraphHopperRoutingService
             $polygon = $this->buildCirclePolygon(
                 $area['latitude'],
                 $area['longitude'],
-                max(10.0, $area['impact_radius_meters']),
+                max(25.0, $area['impact_radius_meters'] + 25.0),
                 20
             );
 
@@ -206,7 +207,7 @@ class GraphHopperRoutingService
 
             $priorityRules[] = [
                 'if' => 'in_'.$areaName,
-                'multiply_by' => '0.01',
+                'multiply_by' => 0,
             ];
         }
 
@@ -225,15 +226,18 @@ class GraphHopperRoutingService
      * @param  array<int, string>  $selectedRiskFilters
      * @return array<int, array{latitude: float, longitude: float, impact_radius_meters: float}>
      */
-    private function loadHazardAvoidanceAreas(array $selectedRiskFilters): array
+    private function loadHazardAvoidanceAreas(array $selectedRiskFilters, array $routeBounds): array
     {
         $hazards = HazardReport::query()
+            ->with('riskLevel:id,code')
             ->where('status', '!=', 'archived')
             ->whereNotNull('incident_latitude')
             ->whereNotNull('incident_longitude')
             ->whereNotNull('impact_radius_meters')
+            ->whereBetween('incident_latitude', [$routeBounds['min_lat'], $routeBounds['max_lat']])
+            ->whereBetween('incident_longitude', [$routeBounds['min_lng'], $routeBounds['max_lng']])
             ->orderByDesc('updated_at')
-            ->limit(30)
+            ->limit(100)
             ->get([
                 'incident_latitude',
                 'incident_longitude',
@@ -260,7 +264,7 @@ class GraphHopperRoutingService
      * @param  array<int, string>  $selectedRiskFilters
      * @return array<int, array{latitude: float, longitude: float, impact_radius_meters: float}>
      */
-    private function loadGenericReportAvoidanceAreas(array $selectedRiskFilters): array
+    private function loadGenericReportAvoidanceAreas(array $selectedRiskFilters, array $routeBounds): array
     {
         if (! $this->hazardRoutingRiskFilter->shouldAvoidOtherReports($selectedRiskFilters)) {
             return [];
@@ -270,8 +274,10 @@ class GraphHopperRoutingService
             ->where('impact_radius_meters', '>', 0)
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
+            ->whereBetween('latitude', [$routeBounds['min_lat'], $routeBounds['max_lat']])
+            ->whereBetween('longitude', [$routeBounds['min_lng'], $routeBounds['max_lng']])
             ->orderByDesc('updated_at')
-            ->limit(30)
+            ->limit(100)
             ->get([
                 'latitude',
                 'longitude',
@@ -286,6 +292,23 @@ class GraphHopperRoutingService
                 'impact_radius_meters' => (float) $report->impact_radius_meters,
             ])
             ->all();
+    }
+
+    /**
+     * @param  array<int, array{lat: float|int|string, lng: float|int|string}>  $points
+     * @return array{min_lat: float, max_lat: float, min_lng: float, max_lng: float}
+     */
+    private function routeBounds(array $points, float $marginDegrees): array
+    {
+        $latitudes = array_map(static fn (array $point): float => (float) $point['lat'], $points);
+        $longitudes = array_map(static fn (array $point): float => (float) $point['lng'], $points);
+
+        return [
+            'min_lat' => min($latitudes) - $marginDegrees,
+            'max_lat' => max($latitudes) + $marginDegrees,
+            'min_lng' => min($longitudes) - $marginDegrees,
+            'max_lng' => max($longitudes) + $marginDegrees,
+        ];
     }
 
     private function mapTravelModeToProfiles(string $travelMode): array

@@ -1,0 +1,1950 @@
+A 4 M P E T S
+Requisitos Funcionales de A4MPets
+Definir de forma verificable las capacidades funcionales que el sistema A4MPets debe ofrecer a usuarios y operadores para
+gestionar autenticación, mascotas, rutas, reportes, comentarios, viajes, sincronización y navegación asistida.
+Contexto
+A4MPets es un sistema compuesto por una aplicación Flutter y
+un backend Laravel que soporta operación offline-first,
+persistencia local, sincronización bidireccional, planeación de
+rutas con GraphHopper, reportes georreferenciados,
+comentarios unificados y asistencia de viaje con audio.
+Generado
+28 de abril de 2026 a las 11:56 p. m.
+Propósito del documento
+Definir de forma verificable las capacidades funcionales que el sistema A4MPets debe ofrecer a usuarios y operadores para gestionar autenticación, mascotas, rutas,
+reportes, comentarios, viajes, sincronización y navegación asistida.
+Contexto del sistema
+A4MPets es un sistema compuesto por una aplicación Flutter y un backend Laravel que soporta operación offline-first, persistencia local, sincronización
+bidireccional, planeación de rutas con GraphHopper, reportes georreferenciados, comentarios unificados y asistencia de viaje con audio.
+Glosario
+Término 	Definición
+Peligro 	Reporte georreferenciado de riesgo para mascotas con radio de afectación, riesgo, categoría y evidencia opcional.
+Reporte genérico 	Reporte tipo otro que puede tener o no riesgo para mascotas y cuyo radio de afectación impacta el análisis de rutas.
+
+-- 1 of 15 --
+
+Término 	Definición
+Sincronización 	Proceso de intercambio de datos entre almacenamiento local del frontend y servicios API del backend.
+Viaje 	Ejecución guiada de una ruta seleccionada con seguimiento de ubicación, puntos de control, alertas y audio.
+Trazabilidad 	Relación explícita entre el requisito y los módulos, pantallas, servicios o endpoints que lo soportan.
+Tabla de requisitos
+RF-001 	Registro de usuario 	El sistema debe
+permitir que un
+usuario cree una
+cuenta
+proporcionando los
+datos requeridos
+por el formulario de
+registro y debe
+persistir el nuevo
+usuario para uso
+posterior del
+sistema.
+Alta 	Necesidad del
+usuario de acceder
+a funciones
+personalizadas y
+sincronizadas.
+Prueba 	Frontend/AuthPanels
++
+Backend/AuthControll
++ API POST
+/api/auth/register
+RF-002 	Inicio de sesión 	El sistema debe
+permitir que un
+usuario autenticado
+inicie sesión con sus
+credenciales válidas
+y obtenga acceso a
+sus datos
+personales y
+sincronizados.
+Alta 	Necesidad del
+usuario de
+recuperar su
+contexto persistido
+entre sesiones.
+Prueba 	Frontend/AuthPanels
++
+Repository/UserLocalR
++
+Backend/AuthControll
++ API POST
+/api/auth/login
+RF-003 	Validación de
+credenciales
+El sistema debe
+rechazar intentos de
+inicio de sesión con
+credenciales
+inválidas e informar
+el fallo mediante
+retroalimentación
+verificable en la
+interfaz.
+Alta 	Necesidad de
+control de acceso
+confiable.
+Prueba 	Frontend/AuthPanels
++
+Backend/AuthControll
++ API POST
+/api/auth/login
+RF-004 	Sesión persistida 	El sistema debe
+conservar
+localmente el
+estado autenticado
+del usuario para
+restablecer su
+sesión al reiniciar la
+aplicación mientras
+el token siga siendo
+válido.
+Alta 	Necesidad de
+continuidad de uso
+y experiencia fluida.
+Prueba 	Frontend/LocalUserPro
++
+LocalDatabaseManage
++
+AuthController::me
++ API GET
+/api/auth/me
+RF-005 	Uso básico como
+invitado
+El sistema debe
+permitir que la
+aplicación arranque
+y muestre el mapa
+principal aun
+cuando no exista un
+usuario autenticado,
+conservando las
+restricciones
+funcionales
+correspondientes.
+Media 	Necesidad de
+exploración inicial
+sin fricción.
+Prueba 	Frontend/main.dart
++ MapPage +
+LocalUserProfile
+guest state
+ID 	Título 	Requisito 	Prioridad 	Fuente /
+Justificación
+Verificación 	Trazabilidad
+
+-- 2 of 15 --
+
+RF-006 	Consulta de perfil 	El sistema debe
+recuperar y mostrar
+la información del
+perfil del usuario
+autenticado cuando
+este abra el menú
+de perfil.
+Alta 	Necesidad del
+usuario de revisar
+su identidad y datos
+actuales.
+Prueba 	Frontend/ProfileMenu
++
+Backend/AuthControll
++ API GET
+/api/auth/me
+RF-007 	Edición de perfil 	El sistema debe
+permitir que el
+usuario actualice
+sus datos de perfil
+mediante el
+formulario
+correspondiente y
+refleje los cambios
+en la interfaz tras
+confirmarse la
+operación.
+Alta 	Necesidad del
+usuario de
+mantener sus datos
+personales
+actualizados.
+Prueba 	Frontend/ProfileMenu
++
+Backend/AuthControll
++ API PUT
+/api/auth/profile
+RF-008 	Cambio de avatar 	El sistema debe
+permitir que el
+usuario seleccione y
+actualice su imagen
+de perfil utilizando
+el flujo de carga de
+medios soportado
+por la plataforma.
+Media 	Necesidad de
+personalización del
+perfil.
+Prueba 	Frontend/ProfileMenu
++
+LocalMediaStorageSer
++ MediaController
++
+AuthController::update
+RF-009 	Cierre de sesión 	El sistema debe
+permitir que el
+usuario cierre su
+sesión y debe
+limpiar el estado
+autenticado local
+para impedir el
+acceso posterior a
+información
+protegida.
+Alta 	Necesidad de
+control explícito de
+sesión.
+Prueba 	Frontend/ProfileMenu
++
+Repository/UserLocalR
++
+Backend/AuthControll
++ API POST
+/api/auth/logout
+RF-010 	Errores de
+autenticación
+visibles
+El sistema debe
+mostrar mensajes
+de error de
+autenticación
+cuando falle el
+registro, el inicio de
+sesión, la
+recuperación de
+perfil o el cierre de
+sesión.
+Alta 	Necesidad de
+comprensión del
+resultado de las
+operaciones de
+acceso.
+Prueba 	Frontend/AuthPanels
++ ProfileMenuPanel
++
+Repository/UserLocalR
+auth flows
+RF-011 	Listado de mascotas 	El sistema debe
+listar las mascotas
+del usuario dentro
+del panel de gestión
+correspondiente,
+incluyendo registros
+locales aún no
+sincronizados.
+Alta 	Necesidad de
+consultar
+rápidamente las
+mascotas
+administradas.
+Prueba 	Frontend/PetManagem
++ PetsController +
+LocalDatabaseManage
++ API GET /api/pets
+RF-012 	Creación de
+mascota
+El sistema debe
+permitir crear una
+mascota nueva con
+los campos
+requeridos y
+almacenarla
+localmente para uso
+inmediato.
+Alta 	Necesidad de
+registrar mascotas
+para gestión y
+viajes.
+Prueba 	Frontend/AddPetPane
++
+PetsController::addPet
++
+Repository/UserLocalR
++ API POST
+/api/pets
+ID 	Título 	Requisito 	Prioridad 	Fuente /
+Justificación
+Verificación 	Trazabilidad
+
+-- 3 of 15 --
+
+RF-013 	Edición de mascota 	El sistema debe
+permitir modificar la
+información de una
+mascota existente y
+reflejar el cambio en
+el listado de
+mascotas.
+Alta 	Necesidad de
+mantenimiento de
+información de
+mascotas.
+Prueba 	Frontend/AddPetPane
+edit mode +
+PetsController::update
++ API PUT
+/api/pets/{pet}
+RF-014 	Eliminación de
+mascota
+El sistema debe
+permitir eliminar
+una mascota
+existente desde el
+panel de gestión y
+retirarla de la
+colección visible de
+mascotas.
+Alta 	Necesidad de retirar
+registros obsoletos
+o incorrectos.
+Prueba 	Frontend/PetManagem
++
+PetsController::deleteP
++
+Backend/PetController
++ API DELETE
+/api/pets/{pet}
+RF-015 	Validación de
+formulario de
+mascota
+El sistema debe
+impedir el guardado
+de una mascota
+cuando falten
+campos obligatorios
+o existan valores
+inválidos en su
+formulario.
+Alta 	Necesidad de
+consistencia de
+datos de mascotas.
+Prueba 	Frontend/AddPetPane
+validation +
+Backend/Pet
+request validation
+RF-016 	Imagen local de
+mascota
+El sistema debe
+permitir seleccionar
+una imagen para
+una mascota y
+conservar una
+referencia utilizable
+para
+previsualización
+local y
+sincronización
+posterior.
+Media 	Necesidad de
+identificación visual
+de mascotas.
+Prueba 	Frontend/LocalMediaS
++
+PetManagementPanel
++
+SyncMediaResolver
+RF-017 	Uso inmediato de
+mascota sin
+sincronizar
+El sistema debe
+permitir que una
+mascota recién
+creada localmente
+sea seleccionable
+de inmediato en el
+flujo de inicio de
+viaje sin esperar
+confirmación del
+backend.
+Alta 	Necesidad de
+operación offline-
+first en calle.
+Prueba 	Frontend/MapPageAu
++ MapPageTrip +
+PetsController local
+reload
+RF-018 	Selección múltiple
+de mascotas en
+viaje
+El sistema debe
+permitir seleccionar
+una o varias
+mascotas para
+asociarlas con un
+viaje antes de
+iniciarlo.
+Media 	Necesidad de
+soporte para paseos
+con múltiples
+mascotas.
+Prueba 	Frontend/_TripPetSele
++ MapPageTrip
+selected pet IDs
+RF-019 	Sincronización de
+mascotas
+El sistema debe
+enviar y recuperar
+cambios de
+mascotas entre el
+almacenamiento
+local y el backend
+mediante el proceso
+de sincronización
+de datos del
+usuario.
+Alta 	Necesidad de
+consistencia entre
+dispositivos y
+sesiones.
+Prueba 	Frontend/UserDataSyn
++
+Backend/PetService::sy
++ API POST
+/api/pets/sync
+ID 	Título 	Requisito 	Prioridad 	Fuente /
+Justificación
+Verificación 	Trazabilidad
+
+-- 4 of 15 --
+
+RF-020 	Acceso a mascotas
+desde perfil
+El sistema debe
+permitir abrir el
+panel de gestión de
+mascotas desde el
+menú de perfil del
+usuario.
+Media 	Necesidad de
+navegación
+coherente de la
+información del
+usuario.
+Prueba 	Frontend/ProfileMenu
++ MapPageAuth
+panel routing
+RF-021 	Listado de rutas 	El sistema debe
+listar las rutas
+guardadas del
+usuario dentro del
+panel de gestión de
+rutas, incluyendo
+registros
+disponibles
+localmente.
+Alta 	Necesidad de
+reutilizar trayectos
+frecuentes.
+Prueba 	Frontend/ManageRou
++ RoutesController
++ API GET
+/api/routes
+RF-022 	Creación de ruta 	El sistema debe
+permitir crear una
+ruta nueva a partir
+de puntos definidos
+en el mapa y
+almacenarla
+localmente para uso
+inmediato.
+Alta 	Necesidad de
+planear recorridos
+personalizados.
+Prueba 	Frontend/AddRoutePa
++
+RoutesController::addR
++ API POST
+/api/routes
+RF-023 	Edición de nombre
+de ruta
+El sistema debe
+permitir actualizar el
+nombre de una ruta
+existente sin alterar
+sus puntos salvo
+que el usuario los
+modifique
+explícitamente.
+Media 	Necesidad de
+mantener rutas
+identificables.
+Prueba 	Frontend/RouteManag
++
+RoutesController::upda
++ API PUT
+/api/routes/{route}
+RF-024 	Adición de puntos a
+ruta en mapa
+El sistema debe
+permitir que el
+usuario agregue
+puntos a una ruta
+tocando el mapa
+cuando se
+encuentre en modo
+de edición de ruta.
+Alta 	Necesidad de
+construir rutas
+directamente sobre
+el contexto
+geográfico.
+Prueba 	Frontend/MapWidget
+route point
+selection +
+MapPageRoutes
+route editor
+RF-025 	Movimiento de
+puntos de ruta
+El sistema debe
+permitir mover
+puntos existentes
+de una ruta
+mediante
+interacción directa
+sobre el mapa
+durante la edición.
+Media 	Necesidad de ajuste
+fino de rutas.
+Prueba 	Frontend/MapWidget
+drag handlers +
+MapPageRoutes
+route editor
+RF-026 	Eliminación de ruta 	El sistema debe
+permitir eliminar
+una ruta guardada y
+retirarla del listado
+visible del usuario.
+Alta 	Necesidad de retirar
+trayectos obsoletos
+o erróneos.
+Prueba 	Frontend/ManageRou
+delete +
+RoutesController::dele
++ API DELETE
+/api/routes/{route}
+RF-027 	Visualización de
+ruta en mapa
+El sistema debe
+mostrar en el mapa
+la ruta seleccionada
+mediante su
+polilínea
+correspondiente.
+Alta 	Necesidad de
+comprender
+visualmente el
+recorrido.
+Prueba 	Frontend/MapWidget
+routePolylinePoints
++ MapPageRoutes
+_showRouteOnMap
+ID 	Título 	Requisito 	Prioridad 	Fuente /
+Justificación
+Verificación 	Trazabilidad
+
+-- 5 of 15 --
+
+RF-028 	Persistencia local de
+ruta recién creada
+El sistema debe
+permitir que una
+ruta recién creada
+quede disponible
+para selección
+inmediata en el
+flujo de viaje antes
+de sincronizarse con
+el backend.
+Alta 	Necesidad de
+operación local
+inmediata en
+movilidad.
+Prueba 	Frontend/MapPageTrip
++ RoutesController
+reload +
+Repository/UserLocalR
+RF-029 	Validación mínima
+de ruta
+El sistema debe
+impedir el inicio de
+un viaje con una
+ruta que tenga
+menos de dos
+puntos válidos.
+Alta 	Necesidad de evitar
+viajes sin trayecto
+navegable.
+Prueba 	Frontend/MapPageTrip
++ RouteRecord
+points validation
+RF-030 	Edición de ruta
+desde viaje
+El sistema debe
+permitir editar la
+ruta seleccionada
+desde el panel de
+preparación de viaje
+y devolver la
+selección
+actualizada al
+mismo flujo.
+Media 	Necesidad de
+corregir la ruta sin
+abandonar la
+preparación del
+viaje.
+Prueba 	Frontend/MapPageTrip
++ MapPageRoutes
++
+AddRoutePanelConten
+edit mode
+RF-031 	Planeación de ruta
+asistida
+El sistema debe
+calcular una
+polilínea de
+navegación a partir
+de puntos de ruta y
+ubicación actual
+utilizando el servicio
+de planeación
+configurado.
+Alta 	Necesidad de
+navegación guiada
+sobre trayectos
+guardados.
+Prueba 	Frontend/OsmRouting
++
+Backend/RoutePlannin
++
+GraphHopperRoutingS
++ API POST
+/api/routes/plan
+RF-032 	Soporte de
+transporte en
+planeación
+El sistema debe
+permitir que la
+planeación de rutas
+considere el medio
+de transporte
+seleccionado para el
+viaje.
+Alta 	Necesidad de
+adaptar la
+navegación al
+contexto del
+recorrido.
+Prueba 	Frontend/MapPageTrip
+selected transport +
+OsmRoutingService
++
+Backend/RoutePlannin
+RF-033 	Persistencia del
+transporte preferido
+El sistema debe
+recordar el último
+medio de
+transporte
+seleccionado y
+reutilizarlo al abrir
+de nuevo el flujo de
+viaje.
+Media 	Necesidad de
+continuidad de
+preferencias del
+usuario.
+Prueba 	Frontend/trip_transpo
++ MapPageTrip
+RF-034 	Selección de filtros
+de riesgo para ruta
+El sistema debe
+permitir elegir qué
+niveles de riesgo
+deben evitarse al
+planear una ruta de
+viaje.
+Alta 	Necesidad de
+control detallado
+sobre la evitación
+de peligros.
+Prueba 	Frontend/_TripStartPan
++
+HazardRiskFiltering
++
+Backend/GraphHoppe
+RF-035 	Tratamiento de
+riesgo indefinido
+El sistema debe
+considerar los
+peligros clasificados
+como no definido
+dentro del grupo de
+riesgo alto al filtrar
+la evitación de
+rutas.
+Alta 	Regla funcional
+definida para
+proteger a las
+mascotas ante
+incertidumbre.
+Prueba 	Frontend/HazardRiskF
++
+Backend/HazardRoutin
++
+GraphHopperRoutingS
+ID 	Título 	Requisito 	Prioridad 	Fuente /
+Justificación
+Verificación 	Trazabilidad
+
+-- 6 of 15 --
+
+RF-036 	Visualización de
+segmentos de
+riesgo en ruta
+El sistema debe
+colorear segmentos
+de la ruta según su
+interacción con
+peligros y reportes
+que afecten el
+recorrido.
+Media 	Necesidad de
+explicar al usuario el
+impacto del riesgo
+sobre la ruta.
+Prueba 	Frontend/RouteHazard
++
+ColoredRouteSegmen
++ MapWidget
+RF-037 	Sincronización de
+rutas
+El sistema debe
+sincronizar altas,
+modificaciones y
+eliminaciones de
+rutas entre
+almacenamiento
+local y backend.
+Alta 	Necesidad de
+conservar rutas
+entre sesiones y
+dispositivos.
+Prueba 	Frontend/UserDataSyn
++
+Backend/TravelRouteS
++ API POST
+/api/routes/sync
+RF-038 	Selección de ruta
+para viaje
+El sistema debe
+permitir seleccionar
+una ruta existente
+desde el panel de
+inicio de viaje para
+usarla como base
+del trayecto activo.
+Alta 	Necesidad de iniciar
+navegación sobre
+un trayecto
+conocido.
+Prueba 	Frontend/_TripRouteSe
++
+MapPageTrip::_selectTr
+RF-039 	Inicio de viaje 	El sistema debe
+iniciar un viaje
+cuando el usuario
+confirme una ruta
+válida y debe abrir
+el panel de viaje
+activo
+correspondiente.
+Alta 	Necesidad de pasar
+de la preparación a
+la ejecución del
+recorrido.
+Prueba 	Frontend/MapPageTrip
++
+_TripActivePanelConte
+RF-040 	Finalización manual
+de viaje
+El sistema debe
+permitir terminar
+manualmente un
+viaje en curso
+mediante una
+confirmación
+explícita del usuario.
+Media 	Necesidad de
+abortar o cerrar
+recorridos por
+decisión del usuario.
+Prueba 	Frontend/MapPageTrip
++ trip confirmation
+dialog
+RF-041 	Finalización
+automática por
+llegada
+El sistema debe
+finalizar el viaje
+cuando detecte que
+el usuario ha
+completado todos
+los puntos de
+control de la ruta
+activa.
+Alta 	Necesidad de cierre
+automático del
+recorrido al alcanzar
+el destino.
+Prueba 	Frontend/TripWaypoin
++
+MapPageTrip::_finishTr
+RF-042 	Recalculo dinámico
+de ruta
+El sistema debe
+recalcular la
+polilínea del viaje
+activo cuando las
+condiciones de
+ubicación lo
+requieran y exista
+un próximo
+conjunto de
+waypoints
+pendiente.
+Alta 	Necesidad de
+mantener guía útil
+durante desvíos o
+avances.
+Prueba 	Frontend/TripRerouteC
++
+MapPageTrip::_maybe
+RF-043 	Seguimiento de
+waypoints
+El sistema debe
+consumir y retirar
+del viaje los puntos
+de control ya
+alcanzados por el
+usuario.
+Alta 	Necesidad de
+progreso real del
+trayecto.
+Prueba 	Frontend/TripWaypoin
++ MapPageTrip
+ID 	Título 	Requisito 	Prioridad 	Fuente /
+Justificación
+Verificación 	Trazabilidad
+
+-- 7 of 15 --
+
+RF-044 	Aviso de giro a 100
+metros
+El sistema debe
+emitir un aviso de
+audio cuando el
+usuario esté
+aproximadamente a
+100 metros de una
+maniobra audible
+de la ruta.
+Media 	Necesidad de
+anticipación
+suficiente en
+trayectos urbanos.
+Prueba 	Frontend/NavigationA
+farApproach +
+NavigationAudioMess
++
+AudioFeedbackService
+RF-045 	Aviso de giro a 30
+metros
+El sistema debe
+emitir un aviso de
+audio cuando el
+usuario esté
+aproximadamente a
+30 metros de una
+maniobra audible
+de la ruta.
+Alta 	Necesidad de guía
+cercana al cambio
+de dirección.
+Prueba 	Frontend/NavigationA
+approach +
+AudioFeedbackService
+RF-046 	Aviso de giro
+inmediato
+El sistema debe
+emitir un aviso de
+audio de ejecución
+inmediata cuando el
+usuario llegue al
+punto de maniobra
+de la ruta.
+Alta 	Necesidad de
+navegación precisa
+en tiempo real.
+Prueba 	Frontend/NavigationA
+immediate +
+AudioFeedbackService
+RF-047 	Aviso de waypoint
+intermedio
+El sistema debe
+reproducir un
+sonido de
+confirmación
+cuando el usuario
+complete un punto
+de control
+intermedio que no
+sea el destino final.
+Media 	Necesidad de
+retroalimentación
+de progreso parcial
+durante el
+recorrido.
+Prueba 	Frontend/MapPageTrip
++
+TripWaypointProgress
++
+AudioFeedbackService
+RF-048 	Aviso sonoro de
+llegada
+El sistema debe
+reproducir un
+sonido y un
+mensaje de voz
+cuando el usuario
+llegue al destino del
+viaje.
+Alta 	Necesidad de cierre
+claro del recorrido
+guiado.
+Prueba 	Frontend/MapPageTrip
++
+AudioFeedbackService
+RF-049 	Cambio de
+transporte durante
+viaje
+El sistema debe
+permitir modificar el
+medio de
+transporte desde el
+panel de viaje activo
+y aplicar esa
+preferencia al
+comportamiento de
+planeación
+posterior.
+Media 	Necesidad de
+ajustar la
+navegación cuando
+cambia el contexto
+del recorrido.
+Prueba 	Frontend/_TripActiveP
++ MapPageTrip
+transport change
+handler
+RF-050 	Persistencia de viaje
+listo para edición
+El sistema debe
+permitir volver
+desde paneles
+auxiliares de
+selección o edición
+al panel principal de
+inicio de viaje
+conservando la
+selección realizada.
+Media 	Necesidad de
+continuidad del
+flujo de preparación
+del viaje.
+Prueba 	Frontend/MapPageTrip
++ route/pet selector
+flows
+ID 	Título 	Requisito 	Prioridad 	Fuente /
+Justificación
+Verificación 	Trazabilidad
+
+-- 8 of 15 --
+
+RF-051 	Obtención de
+ubicación actual
+El sistema debe
+obtener la ubicación
+actual del
+dispositivo para
+mostrarla en el
+mapa y usarla en la
+lógica de viaje y
+reportes.
+Alta 	Necesidad de
+georreferenciación
+de todas las
+funciones de
+campo.
+Prueba 	Frontend/MapWidget
+geolocation +
+Geolocator
+integration
+RF-052 	Actualización
+continua de
+ubicación
+El sistema debe
+actualizar la
+ubicación del
+usuario mientras la
+aplicación esté en
+uso y reportar los
+cambios relevantes
+a la lógica de viaje y
+proximidad.
+Alta 	Necesidad de
+seguimiento
+continuo en calle.
+Prueba 	Frontend/MapWidget
+position stream +
+MapPageTrip::_handle
+RF-053 	Actualización de
+orientación con
+brújula
+El sistema debe
+actualizar la
+orientación del
+ícono del usuario
+usando brújula en
+dispositivos móviles
+cuando la
+plataforma lo
+soporte, incluso si el
+usuario está
+detenido.
+Media 	Necesidad de
+interpretar
+correctamente la
+dirección real del
+dispositivo.
+Prueba 	Frontend/MapWidget
+compass tracking +
+flutter_compass
+integration
+RF-054 	Centrado manual
+del mapa
+El sistema debe
+permitir recentrar el
+mapa sobre la
+ubicación actual del
+usuario mediante
+un control explícito
+de interfaz.
+Media 	Necesidad de
+recuperar contexto
+espacial
+rápidamente.
+Prueba 	Frontend/MapWidget
+my_location control
+RF-055 	Modo de ubicación
+de desarrollo
+El sistema debe
+permitir activar un
+modo de
+modificación de
+ubicación de
+desarrollo para
+pruebas cuando el
+control
+correspondiente
+esté disponible.
+Baja 	Necesidad interna
+de validación de
+escenarios
+geográficos.
+Prueba 	Frontend/MapWidget
+custom location
+mode + developer
+marker
+RF-056 	Apertura de panel
+de configuración
+El sistema debe
+permitir abrir un
+panel de
+configuración de
+mapa desde el
+control de ajustes
+del mapa principal.
+Media 	Necesidad de
+ajustar visualización
+y preferencias del
+recorrido.
+Prueba 	Frontend/MapWidget
+settings control +
+HazardLayersPanel
++ MapPageHazards
+RF-057 	Cambio de tema
+visual
+El sistema debe
+permitir alternar
+entre tema claro y
+oscuro desde la
+configuración de
+mapa y aplicar el
+cambio a la interfaz
+actual.
+Media 	Necesidad de
+adaptación visual al
+contexto de uso.
+Prueba 	Frontend/ThemeProvid
++
+HazardLayersPanel
++ main.dart
+ID 	Título 	Requisito 	Prioridad 	Fuente /
+Justificación
+Verificación 	Trazabilidad
+
+-- 9 of 15 --
+
+RF-058 	Bloqueo vertical en
+móvil
+El sistema debe
+mantener la
+aplicación en
+orientación vertical
+sobre dispositivos
+móviles soportados.
+Media 	Necesidad de
+consistencia
+operativa en campo.
+Prueba 	Frontend/main.dart
++ AndroidManifest
+orientation config
+RF-059 	Panel selector de
+reportes
+El sistema debe
+permitir abrir un
+panel de selección
+del tipo de reporte
+y ofrecer las
+opciones de peligro,
+mascota perdida,
+mascota encontrada
+y reporte genérico.
+Alta 	Necesidad de crear
+diferentes reportes
+desde un único
+punto de entrada.
+Prueba 	Frontend/ReportTypeS
++ MapPageReports
+RF-060 	Selector de
+ubicación de
+reporte
+El sistema debe
+permitir elegir la
+ubicación de un
+reporte usando la
+posición actual o
+una selección
+manual sobre el
+mapa.
+Alta 	Necesidad de
+georreferenciación
+exacta de
+incidentes.
+Prueba 	Frontend/LocationPick
++ MapWidget
+report selection
+mode +
+MapPageReports
+RF-061 	Creación de peligro 	El sistema debe
+permitir registrar un
+peligro con
+ubicación,
+categoría, duración
+estimada, nivel de
+riesgo y descripción.
+Alta 	Necesidad de
+reportar situaciones
+de riesgo para
+mascotas.
+Prueba 	Frontend/HazardRepo
++
+Backend/HazardRepor
++ API POST
+/api/hazards
+RF-062 	Foto opcional en
+peligro
+El sistema debe
+permitir adjuntar
+evidencia
+fotográfica opcional
+a un reporte de
+peligro.
+Media 	Necesidad de
+enriquecer el
+contexto del
+incidente reportado.
+Prueba 	Frontend/HazardRepo
++ MediaController
++
+HazardReportControlle
+RF-063 	Validación de
+formulario de
+peligro
+El sistema debe
+impedir el envío de
+un peligro cuando
+falten datos
+obligatorios del
+formulario o existan
+valores inválidos.
+Alta 	Necesidad de
+integridad de los
+reportes de riesgo.
+Prueba 	Frontend/HazardRepo
+validation +
+Backend hazard
+request validation
+RF-064 	Cierre del panel de
+peligro al guardar
+El sistema debe
+cerrar el flujo de
+reporte de peligro
+inmediatamente
+después de un
+guardado local
+exitoso para evitar
+duplicaciones por
+reintentos
+manuales.
+Alta 	Necesidad
+detectada durante
+uso real con
+conectividad
+variable.
+Prueba 	Frontend/MapPageHa
++
+LocalDataProviders
+hazard save flow
+RF-065 	Visualización de
+detalles de peligro
+El sistema debe
+mostrar el detalle
+completo de un
+peligro
+seleccionado,
+incluyendo datos
+descriptivos y
+evidencia
+disponible.
+Alta 	Necesidad de
+inspeccionar el
+contexto antes de
+actuar.
+Prueba 	Frontend/HazardDetai
++ MapPageHazards
+detail routing
+ID 	Título 	Requisito 	Prioridad 	Fuente /
+Justificación
+Verificación 	Trazabilidad
+
+-- 10 of 15 --
+
+RF-066 	Comentarios sobre
+peligro
+El sistema debe
+permitir listar y
+publicar
+comentarios
+asociados a un
+peligro
+seleccionado.
+Alta 	Necesidad de
+validar o discutir la
+vigencia del riesgo
+reportado.
+Prueba 	Frontend/HazardCom
++
+Backend/HazardRepor
+comments
+endpoints + API
+/api/hazards/{id}/com
+RF-067 	Comentarios
+rápidos de
+confirmación
+El sistema debe
+ofrecer acciones
+rápidas para
+publicar
+comentarios de
+confirmación o
+desmentido sobre
+un peligro sin exigir
+redacción manual
+completa.
+Media 	Necesidad de
+agilizar la
+retroalimentación
+de campo.
+Prueba 	Frontend/HazardCom
+quick comment
+actions
+RF-068 	Visibilidad por nivel
+de riesgo
+El sistema debe
+permitir activar o
+desactivar la
+visualización de
+círculos de peligro
+por nivel de riesgo
+bajo, medio y alto.
+Media 	Necesidad de filtrar
+el ruido visual del
+mapa.
+Prueba 	Frontend/HazardLayer
++ MapPage visible
+hazard circles
+RF-069 	Eliminación de
+peligro
+El sistema debe
+permitir eliminar un
+peligro existente y
+retirarlo tanto del
+backend como del
+almacenamiento
+local visible para el
+usuario.
+Media 	Necesidad de
+corregir reportes
+incorrectos.
+Prueba 	Frontend/HazardDetai
+debug delete flow +
+Backend/HazardRepor
++ local purge
+RF-070 	Sincronización de
+peligros
+El sistema debe
+sincronizar peligros
+y sus comentarios
+entre
+almacenamiento
+local y backend,
+incluyendo altas,
+actualizaciones,
+eliminaciones y
+comentarios.
+Alta 	Necesidad de
+colaboración y
+consistencia de
+reportes de riesgo.
+Prueba 	Frontend/UserDataSyn
++
+Backend/HazardRepor
++
+ReportCommentServic
++ API POST
+/api/hazards/sync
+RF-071 	Creación de reporte
+de mascota perdida
+El sistema debe
+permitir registrar un
+reporte de mascota
+perdida con
+ubicación,
+descripción,
+teléfono de
+contacto y
+fotografía
+obligatoria.
+Alta 	Necesidad de
+localizar mascotas
+extraviadas con
+información
+suficiente.
+Prueba 	Frontend/LostPetRepo
++
+Backend/LostPetRepo
++ API POST
+/api/lost-pet-
+reports
+RF-072 	Validación de
+reporte de mascota
+perdida
+El sistema debe
+bloquear el envío
+de un reporte de
+mascota perdida
+cuando falten el
+teléfono o la
+fotografía
+requeridos.
+Alta 	Regla funcional
+acordada para
+asegurar utilidad
+del reporte.
+Prueba 	Frontend/LostPetRepo
+validation +
+Backend lost pet
+request validation
+ID 	Título 	Requisito 	Prioridad 	Fuente /
+Justificación
+Verificación 	Trazabilidad
+
+-- 11 of 15 --
+
+RF-073 	Detalle de reporte
+de mascota perdida
+El sistema debe
+mostrar el detalle
+de un reporte de
+mascota perdida
+seleccionado desde
+el mapa o desde su
+flujo
+correspondiente.
+Media 	Necesidad de
+consultar
+información antes
+de actuar sobre el
+reporte.
+Prueba 	Frontend/LostPetDeta
++ MapPageReports
+RF-074 	Comentarios en
+mascota perdida
+El sistema debe
+permitir listar y
+publicar
+comentarios en un
+reporte de mascota
+perdida.
+Media 	Necesidad de
+colaboración en el
+seguimiento del
+reporte.
+Prueba 	Frontend/HazardCom
+shared comments +
+Backend/LostPetRepo
+comments
+endpoints
+RF-075 	Eliminación de
+reporte de mascota
+perdida
+El sistema debe
+permitir eliminar un
+reporte de mascota
+perdida y dejar de
+mostrarlo en la
+interfaz tras la
+operación.
+Media 	Necesidad de cerrar
+o corregir
+publicaciones.
+Prueba 	Frontend/LostPetDeta
+delete flow +
+Backend/LostPetRepo
++ API DELETE
+/api/lost-pet-
+reports/{id}
+RF-076 	Sincronización de
+reportes de
+mascota perdida
+El sistema debe
+sincronizar reportes
+de mascota perdida
+y sus comentarios
+entre
+almacenamiento
+local y backend.
+Alta 	Necesidad de
+continuidad de
+información entre
+clientes.
+Prueba 	Frontend/UserDataSyn
++
+Backend/LostPetRepo
++
+ReportCommentServic
+RF-077 	Creación de reporte
+de mascota
+encontrada
+El sistema debe
+permitir registrar un
+reporte de mascota
+encontrada con la
+información
+definida por su
+formulario y su
+ubicación.
+Alta 	Necesidad de
+reportar hallazgos
+de mascotas y
+facilitar su
+recuperación.
+Prueba 	Frontend/FoundPetRe
++
+Backend/FoundPetRep
++ API POST
+/api/found-pet-
+reports
+RF-078 	Detalle de reporte
+de mascota
+encontrada
+El sistema debe
+mostrar el detalle
+completo de un
+reporte de mascota
+encontrada
+seleccionado por el
+usuario.
+Media 	Necesidad de
+revisar datos del
+hallazgo.
+Prueba 	Frontend/FoundPetDe
++ MapPageReports
+RF-079 	Comentarios en
+mascota encontrada
+El sistema debe
+permitir listar y
+publicar
+comentarios
+asociados a un
+reporte de mascota
+encontrada.
+Media 	Necesidad de
+coordinar
+información
+adicional sobre el
+hallazgo.
+Prueba 	Frontend/HazardCom
+shared comments +
+Backend/FoundPetRep
+comments
+endpoints
+RF-080 	Sincronización de
+reportes de
+mascota encontrada
+El sistema debe
+sincronizar reportes
+de mascota
+encontrada y sus
+comentarios entre
+almacenamiento
+local y backend.
+Alta 	Necesidad de
+preservar la
+información
+colaborativa del
+reporte.
+Prueba 	Frontend/UserDataSyn
++
+Backend/FoundPetRep
++
+ReportCommentServic
+ID 	Título 	Requisito 	Prioridad 	Fuente /
+Justificación
+Verificación 	Trazabilidad
+
+-- 12 of 15 --
+
+RF-081 	Creación de reporte
+genérico
+El sistema debe
+permitir registrar un
+reporte genérico
+con ubicación,
+descripción y nivel
+de riesgo
+correspondiente.
+Alta 	Necesidad de cubrir
+incidentes no
+clasificados por
+otros flujos
+especializados.
+Prueba 	Frontend/GenericRepo
++
+Backend/GenericRepo
++ API POST
+/api/generic-reports
+RF-082 	Peligro para
+mascotas en
+reporte genérico
+El sistema debe
+permitir indicar si
+un reporte genérico
+representa un
+peligro para
+mascotas mediante
+un control explícito
+en el formulario.
+Alta 	Necesidad de
+diferenciar reportes
+informativos de
+reportes que
+afectan rutas.
+Prueba 	Frontend/GenericRepo
+pet danger
+checkbox +
+GenericReportService
+RF-083 	Radio de afectación
+condicional
+El sistema debe
+solicitar el radio de
+afectación de un
+reporte genérico
+únicamente cuando
+el usuario indique
+que el reporte
+representa un
+peligro para
+mascotas.
+Alta 	Necesidad de no
+sobredimensionar
+reportes no
+peligrosos.
+Prueba 	Frontend/GenericRepo
+conditional impact
+radius UI
+RF-084 	Radio nulo cuando
+no hay peligro
+El sistema debe
+registrar el radio de
+afectación de un
+reporte genérico
+como cero cuando
+el usuario no lo
+marque como
+peligro para
+mascotas.
+Alta 	Regla funcional
+definida para evitar
+impacto indebido
+sobre rutas.
+Prueba 	Frontend/GenericRepo
++
+GenericReportRecord
+impact radius +
+Backend/GenericRepo
+RF-085 	Visualización del
+radio genérico
+El sistema debe
+dibujar en el mapa
+el radio de
+afectación de un
+reporte genérico
+cuando su valor sea
+mayor que cero.
+Alta 	Necesidad de
+representar
+visualmente el área
+afectada por el
+reporte.
+Prueba 	Frontend/MapWidget
+generic report
+circles +
+MapPageReports
+RF-086 	Reporte genérico
+afecta rutas
+El sistema debe
+considerar el radio
+de afectación de un
+reporte genérico
+durante el análisis y
+evitación de rutas
+cuando dicho radio
+sea mayor que cero.
+Alta 	Necesidad de
+proteger a las
+mascotas frente a
+riesgos no
+categorizados como
+peligro clásico.
+Prueba 	Frontend/RouteHazard
++
+Backend/GraphHoppe
+generic report
+filtering
+RF-087 	Detalle de reporte
+genérico
+El sistema debe
+mostrar el detalle
+completo de un
+reporte genérico
+seleccionado desde
+el mapa.
+Media 	Necesidad de
+consultar contexto
+ampliado del
+reporte.
+Prueba 	Frontend/GenericRepo
++ MapPageReports
+RF-088 	Comentarios en
+reporte genérico
+El sistema debe
+permitir listar y
+publicar
+comentarios sobre
+un reporte genérico.
+Media 	Necesidad de
+validación
+comunitaria de este
+tipo de reporte.
+Prueba 	Frontend/HazardCom
+shared comments +
+Backend/GenericRepo
+comments
+endpoints
+ID 	Título 	Requisito 	Prioridad 	Fuente /
+Justificación
+Verificación 	Trazabilidad
+
+-- 13 of 15 --
+
+RF-089 	Eliminación de
+reporte genérico
+El sistema debe
+permitir eliminar un
+reporte genérico y
+dejar de mostrarlo
+en el mapa y en sus
+paneles asociados.
+Media 	Necesidad de
+corrección o cierre
+de publicaciones.
+Prueba 	Frontend/GenericRepo
+delete flow +
+Backend/GenericRepo
++ API DELETE
+/api/generic-
+reports/{id}
+RF-090 	Sincronización de
+reportes genéricos
+El sistema debe
+sincronizar reportes
+genéricos y sus
+comentarios entre
+el almacenamiento
+local y el backend.
+Alta 	Necesidad de
+continuidad y
+consistencia de
+reportes tipo otro.
+Prueba 	Frontend/UserDataSyn
++
+Backend/GenericRepo
++
+ReportCommentServic
+RF-091 	Comentarios
+unificados por tipo
+de reporte
+El sistema debe usar
+un modelo
+funcional común de
+comentarios para
+peligros, reportes
+de mascota perdida,
+reportes de
+mascota encontrada
+y reportes
+genéricos.
+Media 	Necesidad de
+consistencia de
+interacción entre
+dominios de
+reporte.
+Prueba 	Frontend/HazardCom
+shared subject type
++
+Backend/ReportComm
++ report comment
+endpoints
+RF-092 	Alerta de
+proximidad a
+peligro
+El sistema debe
+mostrar una alerta
+centrada cuando el
+usuario entre al
+radio de afectación
+de un peligro
+visible.
+Alta 	Necesidad de
+advertencia
+temprana durante el
+desplazamiento.
+Prueba 	Frontend/MapPageRe
+proximity evaluation
++
+_ProximityAlertCard
+RF-093 	Alerta de
+proximidad a
+reporte genérico
+riesgoso
+El sistema debe
+mostrar una alerta
+centrada cuando el
+usuario entre al
+radio de afectación
+de un reporte
+genérico con
+impacto mayor que
+cero.
+Alta 	Necesidad de
+advertir sobre
+riesgos
+provenientes de
+reportes tipo otro.
+Prueba 	Frontend/MapPageRe
+proximity evaluation
+over generic reports
+RF-094 	Cierre automático
+de alerta por salida
+de zona
+El sistema debe
+cerrar la alerta de
+proximidad cuando
+el usuario abandone
+la zona de
+afectación que
+provocó la
+advertencia.
+Media 	Necesidad de
+mantener
+coherencia entre
+contexto espacial y
+alerta visible.
+Prueba 	Frontend/MapPageRe
+active proximity
+alert lifecycle
+RF-095 	Acceso a
+comentarios desde
+alerta
+El sistema debe
+permitir que el
+usuario abra
+directamente el
+panel de
+comentarios del
+elemento cercano
+desde la alerta de
+proximidad.
+Media 	Necesidad de
+acción inmediata
+sobre la advertencia
+recibida.
+Prueba 	Frontend/_ProximityA
++ MapPageReports
+open comments
+flow
+RF-096 	Alerta sonora de
+proximidad
+El sistema debe
+reproducir un
+sonido y un
+mensaje de voz
+cuando se active
+una alerta de
+proximidad a un
+peligro o reporte
+riesgoso.
+Media 	Necesidad de
+advertencia
+multimodal durante
+el desplazamiento.
+Prueba 	Frontend/AudioFeedb
++ MapPageReports
+ID 	Título 	Requisito 	Prioridad 	Fuente /
+Justificación
+Verificación 	Trazabilidad
+
+-- 14 of 15 --
+
+RF-097 	Configuración
+global de audio
+El sistema debe
+permitir habilitar o
+deshabilitar
+globalmente la
+retroalimentación
+de audio para
+navegación, alertas
+y llegada.
+Media 	Necesidad de
+adaptación a
+preferencias y
+contexto del
+usuario.
+Prueba 	Frontend/audio_feedb
++
+HazardLayersPanel
+audio toggle
+RF-098 	Carga de medios al
+backend
+El sistema debe
+permitir cargar
+archivos de imagen
+asociados a perfiles,
+mascotas o reportes
+mediante el servicio
+de medios del
+backend.
+Media 	Necesidad de
+persistir evidencia
+visual fuera del
+almacenamiento
+local.
+Prueba 	Frontend/BackendApiC
+media upload +
+Backend/MediaContro
++ API POST
+/api/media/upload
+RF-099 	Recuperación
+pública de medios
+El sistema debe
+permitir recuperar
+archivos de medios
+almacenados a
+través del endpoint
+público configurado
+para buckets
+autorizados.
+Media 	Necesidad de
+mostrar imágenes
+persistidas en
+perfiles y reportes.
+Prueba 	Backend/MediaContro
++ API GET
+/api/media/{bucket}/{f
+RF-100 	Monitoreo de salud
+del backend
+El sistema debe
+exponer un
+endpoint de salud
+que permita
+verificar
+operativamente la
+disponibilidad
+básica del backend.
+Baja 	Necesidad de
+monitoreo técnico
+del entorno de
+servicios.
+Prueba 	Backend/routes/api.ph
++ API GET
+/api/health
+Documento elaborado bajo criterios de claridad, consistencia, verificabilidad y trazabilidad alineados con la definición de requisito empleada en RUP.
+ID 	Título 	Requisito 	Prioridad 	Fuente /
+Justificación
+Verificación 	Trazabilidad
+
+-- 15 of 15 --
+

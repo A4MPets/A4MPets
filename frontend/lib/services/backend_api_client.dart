@@ -18,6 +18,7 @@ class BackendApiClient {
 
   List<String> get baseUrls {
     final List<String> urls = <String>[
+      if (workingBaseUrl != null && workingBaseUrl!.isNotEmpty) workingBaseUrl!,
       ..._splitConfiguredBaseUrls(configuredApiBaseUrl),
       'http://127.0.0.1:8000/api',
       if (!kIsWeb) 'http://10.0.2.2:8000/api',
@@ -52,7 +53,7 @@ class BackendApiClient {
     String path, {
     required Object body,
     String? bearerToken,
-    Duration timeout = const Duration(seconds: 30),
+    Duration timeout = const Duration(seconds: 5),
   }) async {
     http.Response? lastServerError;
     for (final String baseUrl in baseUrls) {
@@ -81,7 +82,7 @@ class BackendApiClient {
   Future<http.Response?> getWithFallback(
     String path, {
     String? bearerToken,
-    Duration timeout = const Duration(seconds: 30),
+    Duration timeout = const Duration(seconds: 5),
   }) async {
     http.Response? lastServerError;
     for (final String baseUrl in baseUrls) {
@@ -110,7 +111,7 @@ class BackendApiClient {
     String path, {
     required Object body,
     String? bearerToken,
-    Duration timeout = const Duration(seconds: 30),
+    Duration timeout = const Duration(seconds: 5),
   }) async {
     http.Response? lastServerError;
     for (final String baseUrl in baseUrls) {
@@ -139,7 +140,7 @@ class BackendApiClient {
   Future<http.Response?> deleteWithFallback(
     String path, {
     String? bearerToken,
-    Duration timeout = const Duration(seconds: 30),
+    Duration timeout = const Duration(seconds: 5),
   }) async {
     http.Response? lastServerError;
     for (final String baseUrl in baseUrls) {

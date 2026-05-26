@@ -17,7 +17,7 @@ class FoundPetReportsController
   UserLocalRepository get _repository => ref.read(userLocalRepositoryProvider);
 
   @override
-  Duration get refreshInterval => const Duration(seconds: 3);
+  Duration get refreshInterval => const Duration(seconds: 60);
 
   @override
   Future<List<FoundPetReportRecord>> loadItems() {

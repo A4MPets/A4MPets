@@ -94,6 +94,7 @@ class NavigationAudioProgress {
 
     if (distanceMeters <= approachThresholdMeters &&
         !spokenApproachKeys.contains(maneuverKey) &&
+        !spokenFarApproachKeys.contains(maneuverKey) &&
         !spokenImmediateKeys.contains(maneuverKey)) {
       return NavigationAudioCue(
         instruction: primaryInstruction,

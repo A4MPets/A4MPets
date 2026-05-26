@@ -22,8 +22,6 @@ class HazardReportService
     public function paginate(array $filters): LengthAwarePaginator
     {
         $query = HazardReport::with([
-            'comments',
-            'comments.user',
             'riskLevel',
             'category',
             'estimatedDuration',

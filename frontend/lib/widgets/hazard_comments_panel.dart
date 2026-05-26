@@ -59,6 +59,7 @@ class _ReportCommentsPanelContentState
   static const String _denyHazardText = 'No veo que haya peligro en este area';
 
   late final TextEditingController _commentController;
+  Future<List<ReportCommentRecord>>? _hazardCommentsFuture;
   bool _isSending = false;
   String? _sendErrorText;
 
@@ -69,12 +70,34 @@ class _ReportCommentsPanelContentState
   void initState() {
     super.initState();
     _commentController = TextEditingController();
+    if (_showsQuickHazardActions) {
+      _reloadHazardComments();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ReportCommentsPanelContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.subjectType != oldWidget.subjectType ||
+        widget.reportId != oldWidget.reportId) {
+      if (_showsQuickHazardActions) {
+        _reloadHazardComments();
+      } else {
+        _hazardCommentsFuture = null;
+      }
+    }
   }
 
   @override
   void dispose() {
     _commentController.dispose();
     super.dispose();
+  }
+
+  void _reloadHazardComments() {
+    _hazardCommentsFuture = ref
+        .read(userLocalRepositoryProvider)
+        .getHazardComments(widget.reportId);
   }
 
   Future<void> _sendComment([String? presetText]) async {
@@ -143,6 +166,9 @@ class _ReportCommentsPanelContentState
       }
 
       _commentController.clear();
+      if (_showsQuickHazardActions) {
+        setState(_reloadHazardComments);
+      }
     } catch (_) {
       if (!mounted) {
         return;
@@ -204,45 +230,25 @@ class _ReportCommentsPanelContentState
 
   @override
   Widget build(BuildContext context) {
-    final List<ReportCommentRecord> comments = _currentComments();
+    final Future<List<ReportCommentRecord>>? hazardCommentsFuture =
+        _hazardCommentsFuture;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
-          child: PanelScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (comments.isEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppPalette.cardBackground(widget.isDarkMode),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Text(
-                      'Todavía no hay comentarios para este reporte.',
-                      style: TextStyle(
-                        color: AppPalette.textPrimary(widget.isDarkMode),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                if (comments.isNotEmpty)
-                  ...comments.map(
-                    (ReportCommentRecord comment) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _CommentTile(
-                        isDarkMode: widget.isDarkMode,
-                        comment: comment,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
+          child: _showsQuickHazardActions && hazardCommentsFuture != null
+              ? FutureBuilder<List<ReportCommentRecord>>(
+                  future: hazardCommentsFuture,
+                  builder: (BuildContext context, snapshot) {
+                    return _buildCommentsList(
+                      snapshot.data ?? const <ReportCommentRecord>[],
+                      isLoading:
+                          snapshot.connectionState != ConnectionState.done,
+                    );
+                  },
+                )
+              : _buildCommentsList(_currentComments()),
         ),
         if (_showsQuickHazardActions) ...[
           const SizedBox(height: 10),
@@ -397,6 +403,56 @@ class _ReportCommentsPanelContentState
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCommentsList(
+    List<ReportCommentRecord> comments, {
+    bool isLoading = false,
+  }) {
+    return PanelScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (isLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 18),
+              child: Center(
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
+          if (!isLoading && comments.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppPalette.cardBackground(widget.isDarkMode),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Text(
+                'Todavía no hay comentarios para este reporte.',
+                style: TextStyle(
+                  color: AppPalette.textPrimary(widget.isDarkMode),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          if (comments.isNotEmpty)
+            ...comments.map(
+              (ReportCommentRecord comment) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _CommentTile(
+                  isDarkMode: widget.isDarkMode,
+                  comment: comment,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

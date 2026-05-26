@@ -378,7 +378,8 @@ extension _MapPageAuthAndProfileState on _MapPageState {
         return PetDetailsPanelContent(
           pet: pet,
           isDarkMode: isDarkMode,
-          onEditPressed: () => _openEditPetPanel(isDarkMode, pet),
+          onEditPressed: (PetRecord currentPet) =>
+              _openEditPetPanel(isDarkMode, currentPet),
           onMarkedFound: _closeCurrentPanel,
         );
       },

@@ -19,7 +19,7 @@ Route::prefix('auth')->group(function (): void {
 
 Route::prefix('hazards')->group(function (): void {
     Route::get('/', [HazardReportController::class, 'index']);
-    Route::post('/', [HazardReportController::class, 'store'])->middleware('api.token:required');
+    Route::post('/', [HazardReportController::class, 'store'])->middleware('api.token');
     Route::get('/{hazardReport}', [HazardReportController::class, 'show']);
     Route::get('/{hazardReport}/comments', [HazardReportController::class, 'comments']);
 });
@@ -38,7 +38,7 @@ Route::prefix('found-pet-reports')->group(function (): void {
 
 Route::prefix('generic-reports')->group(function (): void {
     Route::get('/', [GenericReportController::class, 'index']);
-    Route::post('/', [GenericReportController::class, 'store'])->middleware('api.token:required');
+    Route::post('/', [GenericReportController::class, 'store'])->middleware('api.token');
     Route::get('/{genericReport}', [GenericReportController::class, 'show']);
     Route::get('/{genericReport}/comments', [GenericReportController::class, 'comments']);
 });
@@ -52,6 +52,7 @@ Route::prefix('pets')->group(function (): void {
 
 Route::prefix('routes')->group(function (): void {
     Route::get('/', [TravelRouteController::class, 'index'])->middleware('api.token:required');
+    Route::post('/plan', [RoutePlanningController::class, 'plan'])->middleware('api.token');
     Route::get('/{route}', [TravelRouteController::class, 'show']);
 });
 
@@ -96,7 +97,6 @@ Route::middleware('api.token:required')->group(function (): void {
     });
 
     Route::prefix('routes')->group(function (): void {
-        Route::post('/plan', [RoutePlanningController::class, 'plan']);
         Route::post('/', [TravelRouteController::class, 'store']);
         Route::put('/{route}', [TravelRouteController::class, 'update']);
         Route::delete('/{route}', [TravelRouteController::class, 'destroy']);

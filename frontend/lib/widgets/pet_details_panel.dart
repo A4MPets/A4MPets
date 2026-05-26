@@ -11,7 +11,7 @@ import 'shared/panel_scroll_view.dart';
 class PetDetailsPanelContent extends ConsumerWidget {
   final bool isDarkMode;
   final PetRecord pet;
-  final VoidCallback onEditPressed;
+  final ValueChanged<PetRecord> onEditPressed;
   final VoidCallback onMarkedFound;
 
   const PetDetailsPanelContent({
@@ -25,6 +25,13 @@ class PetDetailsPanelContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final Color textColor = AppPalette.textPrimary(isDarkMode);
+    final List<PetRecord> pets =
+        ref.watch(myPetsControllerProvider).asData?.value ??
+        const <PetRecord>[];
+    final PetRecord currentPet = pets.firstWhere(
+      (PetRecord item) => item.id == pet.id,
+      orElse: () => pet,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -38,14 +45,16 @@ class PetDetailsPanelContent extends ConsumerWidget {
                   aspectRatio: 1.15,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(14),
-                    child: pet.photoPath == null || pet.photoPath!.isEmpty
+                    child:
+                        currentPet.photoPath == null ||
+                            currentPet.photoPath!.isEmpty
                         ? const _PetFallback()
                         : ExpandableImage(
-                            source: pet.photoPath!,
+                            source: currentPet.photoPath!,
                             isDarkMode: isDarkMode,
-                            title: pet.displayName,
+                            title: currentPet.displayName,
                             child: buildLocalImageWidget(
-                              source: pet.photoPath,
+                              source: currentPet.photoPath,
                               fit: BoxFit.cover,
                               fallback: const _PetFallback(),
                               errorBuilder: (_, _, _) => const _PetFallback(),
@@ -55,14 +64,14 @@ class PetDetailsPanelContent extends ConsumerWidget {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  pet.displayName,
+                  currentPet.displayName,
                   style: TextStyle(
                     color: textColor,
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                if (pet.isLost) ...[
+                if (currentPet.isLost) ...[
                   const SizedBox(height: 6),
                   const Text(
                     'Mascota perdida',
@@ -76,27 +85,27 @@ class PetDetailsPanelContent extends ConsumerWidget {
                 const SizedBox(height: 14),
                 _InfoRow(
                   label: 'Paseos completados',
-                  value: '${pet.totalWalks}',
+                  value: '${currentPet.totalWalks}',
                 ),
                 _InfoRow(
                   label: 'Fecha de registro',
-                  value: _formatDate(pet.registeredAt),
+                  value: _formatDate(currentPet.registeredAt),
                 ),
-                if (pet.adoptionDate != null)
+                if (currentPet.adoptionDate != null)
                   _InfoRow(
                     label: 'Fecha de adopción',
-                    value: _formatDate(pet.adoptionDate!),
+                    value: _formatDate(currentPet.adoptionDate!),
                   ),
-                if (pet.birthDate != null)
+                if (currentPet.birthDate != null)
                   _InfoRow(
                     label: 'Fecha de nacimiento',
-                    value: _formatDate(pet.birthDate!),
+                    value: _formatDate(currentPet.birthDate!),
                   ),
               ],
             ),
           ),
         ),
-        if (pet.isLost) ...[
+        if (currentPet.isLost) ...[
           const SizedBox(height: 10),
           SizedBox(
             height: 46,
@@ -104,7 +113,7 @@ class PetDetailsPanelContent extends ConsumerWidget {
               onPressed: () async {
                 await ref
                     .read(myPetsControllerProvider.notifier)
-                    .markPetFound(petId: pet.id);
+                    .markPetFound(petId: currentPet.id);
                 await ref
                     .read(lostPetReportsControllerProvider.notifier)
                     .reload();
@@ -129,7 +138,7 @@ class PetDetailsPanelContent extends ConsumerWidget {
         SizedBox(
           height: 46,
           child: OutlinedButton(
-            onPressed: onEditPressed,
+            onPressed: () => onEditPressed(currentPet),
             style: OutlinedButton.styleFrom(
               foregroundColor: textColor,
               side: BorderSide(color: AppPalette.border(isDarkMode)),

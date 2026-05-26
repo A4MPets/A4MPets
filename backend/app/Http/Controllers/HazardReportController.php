@@ -29,7 +29,7 @@ class HazardReportController extends Controller
         return response()->json([
             'success' => true,
             'data' => array_map(
-                fn (HazardReport $hazard) => $this->hazardResponseFormatter->formatHazard($hazard),
+                fn (HazardReport $hazard) => $this->hazardResponseFormatter->formatHazard($hazard, includeComments: false),
                 $hazards->items()
             ),
             'pagination' => [

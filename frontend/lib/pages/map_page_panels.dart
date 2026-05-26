@@ -257,13 +257,6 @@ extension _MapPagePanelsState on _MapPageState {
           genericReportsValue.isLoading;
     }
 
-    if (panel.isReportHazardPanel ||
-        panel.isLostPetReportPanel ||
-        panel.isFoundPetReportPanel ||
-        panel.isGenericReportPanel) {
-      loading = loading || _isUserLocationLoading;
-    }
-
     return loading;
   }
 }

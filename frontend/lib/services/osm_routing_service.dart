@@ -13,10 +13,14 @@ class OsmRoutingService {
     defaultValue: 'http://localhost:8000/api',
   );
 
+  static String? _workingApiBaseUrl;
+
   OsmRoutingService();
 
   List<String> get _apiBaseUrls {
     final List<String> urls = <String>[
+      if (_workingApiBaseUrl != null && _workingApiBaseUrl!.isNotEmpty)
+        _workingApiBaseUrl!,
       ..._splitConfiguredBaseUrls(_configuredApiBaseUrl),
       'http://127.0.0.1:8000/api',
       if (!kIsWeb) 'http://10.0.2.2:8000/api',
@@ -39,7 +43,6 @@ class OsmRoutingService {
     List<String> hazardRiskFilters = const <String>[],
     String travelMode = 'walking',
     Map<String, Object?>? tripConfig,
-    String? bearerToken,
   }) async {
     if (waypoints.length < 2) {
       return PlannedRouteResult(
@@ -83,14 +86,13 @@ class OsmRoutingService {
               headers: <String, String>{
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
-                if (bearerToken != null && bearerToken.isNotEmpty)
-                  'Authorization': 'Bearer $bearerToken',
               },
               body: jsonEncode(payload),
             )
             .timeout(const Duration(seconds: 8));
 
         if (current.statusCode < 500) {
+          _workingApiBaseUrl = baseUrl;
           response = current;
           break;
         }

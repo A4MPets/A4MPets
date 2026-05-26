@@ -28,9 +28,9 @@ class HazardResponseFormatter
     /**
      * @return array<string, mixed>
      */
-    public function formatHazard(HazardReport $hazard): array
+    public function formatHazard(HazardReport $hazard, bool $includeComments = true): array
     {
-        return [
+        $data = [
             'id' => $hazard->id,
             'incident_latitude' => $hazard->incident_latitude,
             'incident_longitude' => $hazard->incident_longitude,
@@ -45,7 +45,12 @@ class HazardResponseFormatter
             'reported_by_username' => $hazard->reported_by_username,
             'user_id' => $hazard->user_id,
             'status' => $hazard->status,
-            'comments_json' => $hazard->comments_json,
         ];
+
+        if ($includeComments) {
+            $data['comments_json'] = $hazard->comments_json;
+        }
+
+        return $data;
     }
 }

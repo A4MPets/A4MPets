@@ -490,28 +490,26 @@ extension _MapPageRoutesState on _MapPageState {
     }
 
     try {
-      final LocalUserProfile profile = await ref
-          .read(sessionStoreProvider)
-          .getLocalUserProfile();
+      final bool shouldApplyHazardAvoidance = _isTripNavigationContext;
       final PlannedRouteResult routeResult = await _routingService
           .buildRoadRoute(
             waypoints: waypoints,
-            hazardRiskFilters: _selectedTripHazardRiskFilters.toList(
-              growable: false,
-            ),
+            hazardRiskFilters: shouldApplyHazardAvoidance
+                ? _selectedTripHazardRiskFilters.toList(growable: false)
+                : const <String>[],
             travelMode: _selectedTripTransport == _TripTransportMethod.vehicle
                 ? 'vehicle'
                 : 'walking',
-            tripConfig: <String, Object?>{
-              'selected_pet_ids': _selectedTripPetIds.toList(growable: false),
-              'selected_route_id': _selectedTripRoute?.id,
-              'transport_method': _selectedTripTransport.name,
-              'hazard_risk_filters': _selectedTripHazardRiskFilters.toList(
-                growable: false,
-              ),
-            },
-            bearerToken: profile.isAuthenticated == true
-                ? profile.accessToken
+            tripConfig: shouldApplyHazardAvoidance
+                ? <String, Object?>{
+                    'selected_pet_ids': _selectedTripPetIds.toList(
+                      growable: false,
+                    ),
+                    'selected_route_id': _selectedTripRoute?.id,
+                    'transport_method': _selectedTripTransport.name,
+                    'hazard_risk_filters': _selectedTripHazardRiskFilters
+                        .toList(growable: false),
+                  }
                 : null,
           );
       if (!mounted || requestVersion != _routePolylineRequestVersion) {
@@ -546,24 +544,26 @@ extension _MapPageRoutesState on _MapPageState {
 
   Future<void> _addCurrentLocationPoint() async {
     try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
+      LatLng? currentLocation = _latestUserLocation;
+      if (currentLocation == null) {
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+        }
+        if (permission == LocationPermission.denied ||
+            permission == LocationPermission.deniedForever) {
+          return;
+        }
+        final Position pos = await Geolocator.getCurrentPosition();
+        currentLocation = LatLng(pos.latitude, pos.longitude);
       }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        return;
-      }
-      final Position pos = await Geolocator.getCurrentPosition();
       if (!mounted) {
         return;
       }
+      final LatLng resolvedLocation = currentLocation;
       late final List<LatLng> updated;
       _updatePageState(() {
-        updated = <LatLng>[
-          ..._draftRoutePoints,
-          LatLng(pos.latitude, pos.longitude),
-        ];
+        updated = <LatLng>[..._draftRoutePoints, resolvedLocation];
         _draftRoutePoints = updated;
       });
       _refreshDraftRoutePolyline(updated);

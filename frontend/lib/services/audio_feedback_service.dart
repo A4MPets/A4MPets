@@ -48,7 +48,7 @@ class AudioFeedbackService {
   }
 
   Future<void> speakNavigation(String message) async {
-    await _enqueueSpeech(message, clearQueue: false, stopCurrent: false);
+    await _enqueueSpeech(message, clearQueue: true, stopCurrent: false);
   }
 
   Future<void> playDangerAlertWithSpeech(String message) async {

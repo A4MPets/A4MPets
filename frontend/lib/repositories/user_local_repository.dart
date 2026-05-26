@@ -422,6 +422,14 @@ class UserLocalRepository {
     await _postComment('/hazards/$hazardId/comments', comment);
   }
 
+  Future<List<HazardCommentRecord>> getHazardComments(int hazardId) {
+    return _getList(
+      '/hazards/$hazardId/comments',
+      (Map<String, Object?> map) =>
+          HazardCommentRecord.fromMap(Map<String, dynamic>.from(map)),
+    );
+  }
+
   Future<void> deleteHazardReport({
     required int hazardId,
     String? remoteId,

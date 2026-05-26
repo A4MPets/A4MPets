@@ -401,14 +401,17 @@ extension _MapPageTripState on _MapPageState {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: _TripArrivalPanelContent(
-              isDarkMode: isDarkMode,
-              onAcknowledge: () {
-                Navigator.of(dialogContext).pop();
-                _acknowledgeTripArrival();
-              },
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 360),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: _TripArrivalPanelContent(
+                isDarkMode: isDarkMode,
+                onAcknowledge: () {
+                  Navigator.of(dialogContext).pop();
+                  _acknowledgeTripArrival();
+                },
+              ),
             ),
           ),
         );
