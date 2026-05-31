@@ -208,6 +208,29 @@ Objetivo: Ejecutar flujos completos de usuario en el navegador simulando el comp
 
 ---
 
+## Fase F5M - E2E manual focalizado en puntos debiles
+
+Objetivo: Ejecutar manualmente desde navegador los flujos con mayor riesgo real de fallo visible para una persona usuaria: bloqueo de invitados, aislamiento entre cuentas, planificacion de rutas, persistencia de sesion, impacto de peligros en rutas, fotos y recuperacion ante errores.
+
+La matriz detallada de ejecucion esta en `docs/casos_e2e_manuales_puntos_debiles.md`. Las evidencias deben guardarse en `docs/evidencias/e2e-manual-puntos-debiles/`.
+
+| ID | Descripcion | Precondiciones | Pasos detallados | Datos de entrada | Resultado esperado | Resultado real |
+|---|---|---|---|---|---|---|
+| E2E-001 | Verificar que un invitado no puede crear un reporte de tipo Otro desde la interfaz | Aplicacion abierta sin sesion activa | 1. Abrir Reportar. 2. Elegir Otro. 3. Marcar ubicacion. 4. Escribir descripcion unica. 5. Enviar. 6. Verificar resultado visible. | Descripcion unica: Reporte Otro Invitado QA | La app pide iniciar sesion o bloquea el envio; no aparece marcador ni exito de creacion | Pendiente |
+| E2E-002 | Verificar que un invitado no puede crear un reporte de peligro desde la interfaz | Aplicacion abierta sin sesion activa | 1. Abrir Reportar. 2. Elegir Peligro. 3. Marcar ubicacion. 4. Completar descripcion. 5. Enviar. 6. Verificar mapa. | Descripcion unica: Peligro Invitado QA | La app pide iniciar sesion o bloquea el envio; no aparece marcador ni circulo nuevo | Pendiente |
+| E2E-003 | Verificar que un usuario nuevo no ve rutas de otro usuario | Usuario A con ruta creada y usuario B nuevo | 1. Usuario A crea ruta unica. 2. Cierra sesion. 3. Usuario B inicia sesion. 4. Abre Gestionar Rutas. 5. Revisa selector de Iniciar Viaje. | Ruta Privada A QA | Usuario B no ve ni puede seleccionar la ruta de usuario A | Pendiente |
+| E2E-004 | Verificar que un usuario nuevo no ve mascotas de otro usuario | Usuario A con mascota creada y usuario B nuevo | 1. Usuario A crea mascota unica. 2. Cierra sesion. 3. Usuario B inicia sesion. 4. Abre Gestionar Mascotas. | Mascota Privada A QA | Usuario B no ve ni puede abrir la mascota de usuario A | Pendiente |
+| E2E-005 | Verificar que un usuario autenticado puede planificar un viaje despues de crear una ruta | Usuario autenticado, GraphHopper activo | 1. Crear ruta. 2. Abrir Iniciar Viaje. 3. Seleccionar ruta. 4. Esperar planificacion. 5. Confirmar inicio. | Ruta E2E QA | Se dibuja la ruta, se muestran datos de viaje y se puede iniciar viaje | Pendiente |
+| E2E-006 | Verificar que la sesion y las rutas persisten tras recargar la aplicacion | Usuario autenticado con ruta creada | 1. Crear ruta. 2. Recargar navegador. 3. Confirmar sesion activa. 4. Seleccionar ruta. 5. Planificar viaje. | Ruta Persistencia QA | La sesion sigue activa, la ruta sigue disponible y el viaje planifica | Pendiente |
+| E2E-007 | Verificar que un reporte generico marcado como peligro para mascotas muestra impacto visible | Usuario autenticado | 1. Crear reporte Otro. 2. Activar peligro para mascotas. 3. Elegir radio. 4. Guardar. 5. Revisar mapa y detalle. | Reporte Otro Peligro QA | Marcador y circulo/radio de impacto aparecen y el detalle conserva la informacion | Pendiente |
+| E2E-008 | Verificar que los filtros de peligro producen una senal visible al planificar ruta | Usuario autenticado con ruta y peligro cercano | 1. Crear peligro cercano. 2. Seleccionar ruta. 3. Activar filtros Medio/Alto. 4. Observar planificacion. | Ruta con peligro cercano QA | La app muestra ruta planificada y una senal visible de que considera peligros | Pendiente |
+| E2E-009 | Verificar que marcar una mascota perdida como encontrada limpia estado y marcador | Usuario autenticado con mascota perdida | 1. Crear mascota. 2. Reportarla perdida. 3. Confirmar marcador. 4. Marcar como encontrada. 5. Revisar mapa y detalle. | Mascota Perdida QA | La mascota vuelve a normal y el marcador de perdida desaparece | Pendiente |
+| E2E-010 | Verificar que la foto de una mascota persiste despues de recargar | Usuario autenticado e imagen valida | 1. Crear mascota con foto. 2. Ver foto. 3. Recargar. 4. Abrir detalle. | Imagen PNG/JPG valida | La foto sigue visible y no aparece rota ni reemplazada sin aviso | Pendiente |
+| E2E-011 | Verificar que la UI rechaza archivo no imagen y permite reintentar con imagen valida | Usuario autenticado, archivo invalido e imagen valida | 1. Intentar subir TXT/PDF en campo de foto. 2. Observar bloqueo. 3. Subir imagen valida. 4. Guardar. | TXT/PDF e imagen valida | El archivo invalido no se acepta o se informa; luego se puede subir imagen valida | Pendiente |
+| E2E-012 | Verificar recuperacion visible ante error de red al enviar reporte | Usuario autenticado, formulario lleno | 1. Llenar reporte. 2. Cortar red o detener backend. 3. Enviar. 4. Restaurar servicio. 5. Reintentar. | Reporte con descripcion unica | La app muestra error claro, conserva datos y permite reintento | Pendiente |
+
+---
+
 ## Fase F6 - Pruebas manuales funcionales
 
 Objetivo: Revisar manualmente mensajes de la interfaz, comportamiento ante errores, datos limite, viewport movil, permisos de ubicacion, estados vacios y recuperacion visual para encontrar problemas de usabilidad y flujos no cubiertos por la automatizacion.
