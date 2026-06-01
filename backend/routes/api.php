@@ -22,6 +22,7 @@ Route::prefix('hazards')->group(function (): void {
     Route::post('/', [HazardReportController::class, 'store'])->middleware('api.token');
     Route::get('/{hazardReport}', [HazardReportController::class, 'show']);
     Route::get('/{hazardReport}/comments', [HazardReportController::class, 'comments']);
+    Route::post('/{hazardReport}/comments', [HazardReportController::class, 'storeComment'])->middleware('api.token');
 });
 
 Route::prefix('lost-pet-reports')->group(function (): void {
@@ -66,7 +67,6 @@ Route::middleware('api.token:required')->group(function (): void {
     Route::prefix('hazards')->group(function (): void {
         Route::put('/{hazardReport}', [HazardReportController::class, 'update']);
         Route::delete('/{hazardReport}', [HazardReportController::class, 'destroy']);
-        Route::post('/{hazardReport}/comments', [HazardReportController::class, 'storeComment']);
     });
 
     Route::prefix('lost-pet-reports')->group(function (): void {

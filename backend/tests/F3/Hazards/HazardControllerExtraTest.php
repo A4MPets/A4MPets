@@ -76,4 +76,23 @@ class HazardControllerExtraTest extends TestCase
             'risk_level_code' => 'high',
         ])->assertStatus(422);
     }
+
+    public function test_guest_can_add_anonymous_hazard_comment(): void
+    {
+        $hazard = HazardReport::factory()->create();
+
+        $this->postJson("/api/hazards/{$hazard->id}/comments", [
+            'comment_text' => 'Comentario anonimo de peligro',
+            'is_anonymous' => true,
+        ])
+            ->assertStatus(201)
+            ->assertJsonPath('data.user_id', null)
+            ->assertJsonPath('data.author_username', 'Anonimo')
+            ->assertJsonPath('data.is_anonymous', true)
+            ->assertJsonPath('data.comment_text', 'Comentario anonimo de peligro');
+
+        $this->getJson("/api/hazards/{$hazard->id}/comments")
+            ->assertStatus(200)
+            ->assertJsonCount(1, 'data');
+    }
 }

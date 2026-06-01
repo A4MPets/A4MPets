@@ -48,6 +48,28 @@ void main() {
       expect(map['is_anonymous'], isFalse);
       expect(map['created_at'], equals(now));
     });
+
+    test(
+      'fromMap acepta anonimato como entero o texto desde API normalizada',
+      () {
+        final ReportCommentRecord numericComment =
+            ReportCommentRecord.fromMap(<String, dynamic>{
+              'author_username': 'QA Front',
+              'is_anonymous': 0,
+              'comment_text': 'Comentario visible',
+              'created_at': now,
+            });
+        final ReportCommentRecord textComment =
+            ReportCommentRecord.fromMap(<String, dynamic>{
+              'is_anonymous': 'true',
+              'comment_text': 'Comentario anonimo',
+              'created_at': now,
+            });
+
+        expect(numericComment.isAnonymous, isFalse);
+        expect(textComment.isAnonymous, isTrue);
+      },
+    );
   });
 
   group('LostPetReportRecord (F2-014-extra-lost)', () {

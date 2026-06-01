@@ -419,7 +419,19 @@ class UserLocalRepository {
     required int hazardId,
     required HazardCommentRecord comment,
   }) async {
-    await _postComment('/hazards/$hazardId/comments', comment);
+    final LocalUserProfile profile = await sessionStore.getLocalUserProfile();
+    final String? token =
+        profile.isAuthenticated &&
+            profile.accessToken != null &&
+            profile.accessToken!.isNotEmpty
+        ? profile.accessToken
+        : null;
+    await _postComment(
+      '/hazards/$hazardId/comments',
+      comment,
+      bearerToken: token,
+      requireToken: false,
+    );
   }
 
   Future<List<HazardCommentRecord>> getHazardComments(int hazardId) {
@@ -621,8 +633,14 @@ class UserLocalRepository {
     );
   }
 
-  Future<void> _postComment(String path, ReportCommentRecord comment) async {
-    final String token = await _requireToken();
+  Future<void> _postComment(
+    String path,
+    ReportCommentRecord comment, {
+    String? bearerToken,
+    bool requireToken = true,
+  }) async {
+    final String? token =
+        bearerToken ?? (requireToken ? await _requireToken() : null);
     await _send(
       () => _apiClient.postWithFallback(
         path,

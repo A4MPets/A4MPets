@@ -17,10 +17,29 @@ class ReportCommentRecord {
     return ReportCommentRecord(
       authorUsername: map['author_username'] as String? ?? 'Anonimo',
       authorAvatarUrl: map['author_avatar_url'] as String?,
-      isAnonymous: (map['is_anonymous'] as bool?) ?? true,
+      isAnonymous: _parseBool(map['is_anonymous'], fallback: true),
       commentText: map['comment_text'] as String? ?? '',
       createdAt: _parseCreatedAt(map['created_at']),
     );
+  }
+
+  static bool _parseBool(Object? value, {required bool fallback}) {
+    if (value is bool) {
+      return value;
+    }
+    if (value is num) {
+      return value != 0;
+    }
+    if (value is String) {
+      final String normalized = value.trim().toLowerCase();
+      if (<String>{'1', 'true', 'yes', 'si', 'sí'}.contains(normalized)) {
+        return true;
+      }
+      if (<String>{'0', 'false', 'no'}.contains(normalized)) {
+        return false;
+      }
+    }
+    return fallback;
   }
 
   static DateTime _parseCreatedAt(Object? value) {
