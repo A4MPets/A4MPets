@@ -94,7 +94,7 @@ class HazardReportController extends Controller
 
     public function destroy(HazardReport $hazardReport): JsonResponse
     {
-        if (! $this->hazardReportService->canMutate(request()->user()?->id, $hazardReport)) {
+        if (! $this->hazardReportService->canDelete(request()->user()?->id)) {
             return response()->json([
                 'success' => false,
                 'message' => 'No autorizado',

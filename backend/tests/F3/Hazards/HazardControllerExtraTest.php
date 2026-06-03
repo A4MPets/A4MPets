@@ -95,4 +95,17 @@ class HazardControllerExtraTest extends TestCase
             ->assertStatus(200)
             ->assertJsonCount(1, 'data');
     }
+
+    public function test_authenticated_user_can_delete_anonymous_hazard(): void
+    {
+        $user = User::factory()->create();
+        $hazard = HazardReport::factory()->create(['user_id' => null]);
+
+        $this->withHeaders($this->authHeaders($user))
+            ->deleteJson("/api/hazards/{$hazard->id}")
+            ->assertStatus(200)
+            ->assertJsonPath('success', true);
+
+        $this->assertDatabaseMissing('hazard_reports', ['id' => $hazard->id]);
+    }
 }

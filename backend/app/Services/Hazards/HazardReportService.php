@@ -76,6 +76,11 @@ class HazardReportService
         return $userId !== null && (int) $hazardReport->user_id === (int) $userId;
     }
 
+    public function canDelete(?int $userId): bool
+    {
+        return $userId !== null;
+    }
+
     /**
      * @param  array<string, mixed>  $validated
      * @return array{conflict: bool, hazard: HazardReport}

@@ -94,6 +94,39 @@ class HazardDetailsPanelContent extends StatelessWidget {
                     photoSource: hazard.evidencePhotoUrl,
                     isDarkMode: isDarkMode,
                   ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Reportado por: ${hazard.reportedByUsername}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppPalette.textMutedDark,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (onDebugDelete != null && debugDeleteLabel != null) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 44,
+                      child: OutlinedButton(
+                        onPressed: onDebugDelete,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppPalette.dangerRed,
+                          side: const BorderSide(color: AppPalette.dangerRed),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          debugDeleteLabel!,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -116,39 +149,6 @@ class HazardDetailsPanelContent extends StatelessWidget {
               'Ver comentarios',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
             ),
-          ),
-        ),
-        if (onDebugDelete != null && debugDeleteLabel != null) ...[
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 44,
-            child: OutlinedButton(
-              onPressed: onDebugDelete,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppPalette.dangerRed,
-                side: const BorderSide(color: AppPalette.dangerRed),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                debugDeleteLabel!,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-        ],
-        const SizedBox(height: 8),
-        Text(
-          'Reportado por: ${hazard.reportedByUsername}',
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: AppPalette.textMutedDark,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
           ),
         ),
       ],

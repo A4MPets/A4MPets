@@ -64,6 +64,8 @@ class HazardServicesTest extends TestCase
         $this->assertSame(1, $hazard->comments()->count());
         $this->assertTrue($service->canMutate($user->id, $hazard));
         $this->assertFalse($service->canMutate(null, $hazard));
+        $this->assertTrue($service->canDelete($user->id));
+        $this->assertFalse($service->canDelete(null));
 
         $result = $service->update($hazard, [
             'risk_level_code' => 'low',

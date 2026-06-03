@@ -305,12 +305,18 @@ extension _MapPageHazardsState on _MapPageState {
       isHazardDetailsPanel: true,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
+        final bool isAuthenticated = ref.watch(localUserProfileProvider).when(
+          data: (LocalUserProfile profile) => profile.isAuthenticated,
+          loading: () => false,
+          error: (_, __) => false,
+        );
+
         return HazardDetailsPanelContent(
           isDarkMode: isDarkMode,
           hazard: hazard,
           onViewComments: () => _openHazardCommentsPanel(isDarkMode, hazard),
-          debugDeleteLabel: kIsWeb && kDebugMode ? 'Borrar peligro' : null,
-          onDebugDelete: kIsWeb && kDebugMode
+          debugDeleteLabel: isAuthenticated ? 'Borrar peligro' : null,
+          onDebugDelete: isAuthenticated
               ? _confirmAndDeleteSelectedDebugItem
               : null,
         );

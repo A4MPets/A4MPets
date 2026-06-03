@@ -240,12 +240,15 @@ class _ReportHazardPanelContentState
       }
 
       widget.onReported();
-    } catch (_) {
+    } on Object catch (error) {
       if (!mounted) {
         return;
       }
       setState(() {
-        _saveErrorText = 'No se pudo guardar el reporte. Intenta nuevamente.';
+        final String rawError = error.toString();
+        _saveErrorText = rawError.isNotEmpty
+            ? rawError.replaceFirst('Exception: ', '')
+            : 'No se pudo guardar el reporte. Intenta nuevamente.';
       });
     } finally {
       if (mounted) {

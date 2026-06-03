@@ -719,10 +719,10 @@ extension _MapPageReportsState on _MapPageState {
           report: report,
           pet: pet,
           onViewComments: () => _openLostPetCommentsPanel(isDarkMode, report),
-          debugDeleteLabel: kIsWeb && kDebugMode
+          debugDeleteLabel: kDebugMode
               ? 'Borrar mascota perdida'
               : null,
-          onDebugDelete: kIsWeb && kDebugMode
+          onDebugDelete: kDebugMode
               ? _confirmAndDeleteSelectedDebugItem
               : null,
         );
@@ -772,10 +772,10 @@ extension _MapPageReportsState on _MapPageState {
               : () =>
                     _openLostPetDetailsPanel(isDarkMode, matchedLostPetReport),
           onViewComments: () => _openFoundPetCommentsPanel(isDarkMode, report),
-          debugDeleteLabel: kIsWeb && kDebugMode
+          debugDeleteLabel: kDebugMode
               ? 'Borrar mascota encontrada'
               : null,
-          onDebugDelete: kIsWeb && kDebugMode
+          onDebugDelete: kDebugMode
               ? _confirmAndDeleteSelectedDebugItem
               : null,
         );
@@ -806,8 +806,8 @@ extension _MapPageReportsState on _MapPageState {
           report: report,
           onViewComments: () =>
               _openGenericReportCommentsPanel(isDarkMode, report),
-          debugDeleteLabel: kIsWeb && kDebugMode ? 'Borrar reporte' : null,
-          onDebugDelete: kIsWeb && kDebugMode
+          debugDeleteLabel: kDebugMode ? 'Borrar reporte' : null,
+          onDebugDelete: kDebugMode
               ? _confirmAndDeleteSelectedDebugItem
               : null,
         );
@@ -1095,7 +1095,7 @@ extension _MapPageReportsState on _MapPageState {
             ),
           ),
           content: Text(
-            'Esta acción es solo para debug. ¿Deseas continuar?',
+            'Esta accion no se puede deshacer. Deseas continuar?',
             style: TextStyle(color: AppPalette.dialogBody(isDarkMode)),
           ),
           actions: <Widget>[
@@ -1188,7 +1188,7 @@ extension _MapPageReportsState on _MapPageState {
         _evaluateProximityAlerts(_latestUserLocation!);
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registro borrado en modo debug.')),
+        const SnackBar(content: Text('Registro borrado.')),
       );
     } catch (error) {
       if (!mounted) {
