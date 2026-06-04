@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>A4MPets - 100 preguntas técnicas sobre código e implementación</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm; }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      color: #172033;
+      line-height: 1.42;
+      font-size: 10.4pt;
+      margin: 0;
+    }
+    .cover {
+      min-height: 92vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      page-break-after: always;
+    }
+    h1 {
+      font-size: 29pt;
+      margin: 0 0 14px;
+      color: #102f62;
+      line-height: 1.08;
+    }
+    .subtitle {
+      font-size: 13.5pt;
+      color: #46556f;
+      margin: 0 0 28px;
+    }
+    .meta {
+      border-top: 2px solid #102f62;
+      padding-top: 16px;
+      color: #33415c;
+      font-size: 10.5pt;
+    }
+    h2 {
+      font-size: 16.5pt;
+      color: #102f62;
+      border-bottom: 1px solid #cfd7e6;
+      padding-bottom: 5px;
+      margin: 24px 0 12px;
+      page-break-after: avoid;
+    }
+    .qa {
+      break-inside: avoid;
+      page-break-inside: avoid;
+      margin: 0 0 10px;
+      padding: 8px 10px;
+      border-left: 4px solid #2563eb;
+      background: #f7f9fd;
+      border-radius: 4px;
+    }
+    .q {
+      font-weight: 700;
+      color: #13213a;
+      margin-bottom: 4px;
+    }
+    .a {
+      margin: 0;
+      color: #26344d;
+    }
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      background: #eef2f8;
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+    .note {
+      background: #fff8e6;
+      border-left: 4px solid #d89b00;
+      padding: 10px;
+      margin: 16px 0;
+      break-inside: avoid;
+    }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <h1>A4MPets<br>100 preguntas técnicas sobre código e implementación</h1>
+    <p class="subtitle">Guía de sustentación orientada a defensa técnica: rutas, controladores, servicios, modelos, migraciones, providers, clientes HTTP, Docker, GraphHopper y pruebas.</p>
+    <div class="meta">
+      <p><strong>Proyecto:</strong> A4MPets</p>
+      <p><strong>Enfoque:</strong> preguntas directas sobre código real del repositorio.</p>
+      <p><strong>Stack observado:</strong> Laravel, Flutter, Riverpod, SQLite, Docker Compose, GraphHopper, PHPUnit, Flutter Test y Playwright.</p>
+      <p><strong>Fecha:</strong> 3 de junio de 2026</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Rutas API y controladores Laravel</h2>
+
+    <div class="qa"><div class="q">1. ¿Dónde se declaran los endpoints HTTP principales del backend?</div><p class="a">En <code>backend/routes/api.php</code>. Ahí se agrupan rutas por prefijos como <code>auth</code>, <code>hazards</code>, <code>pets</code>, <code>routes</code>, <code>lost-pet-reports</code>, <code>found-pet-reports</code> y <code>generic-reports</code>.</p></div>
+    <div class="qa"><div class="q">2. ¿Por qué se usa <code>Route::prefix('hazards')</code>?</div><p class="a">Para agrupar todas las operaciones de peligros bajo una misma raíz REST: listado, creación, detalle, comentarios, edición y eliminación. Esto mejora legibilidad y mantiene una convención de recursos.</p></div>
+    <div class="qa"><div class="q">3. ¿Qué diferencia hay entre <code>GET /api/hazards</code> y <code>GET /api/hazards/{hazardReport}</code>?</div><p class="a"><code>index</code> devuelve una lista paginada y formatea peligros sin comentarios completos por eficiencia. <code>show</code> carga relaciones y devuelve el detalle del peligro seleccionado.</p></div>
+    <div class="qa"><div class="q">4. ¿Cómo funciona el route model binding en <code>{hazardReport}</code>?</div><p class="a">Laravel resuelve automáticamente el parámetro de ruta contra el modelo <code>HazardReport</code>. Si el ID no existe, responde 404 sin que el controlador tenga que buscarlo manualmente.</p></div>
+    <div class="qa"><div class="q">5. ¿Qué método del controlador crea un peligro?</div><p class="a"><code>HazardReportController::store</code>. Recibe un <code>StoreHazardRequest</code>, pasa datos validados a <code>HazardReportService::store</code> y responde 201 con el peligro formateado.</p></div>
+    <div class="qa"><div class="q">6. ¿Por qué <code>store</code> recibe <code>$request->user()?->id</code>?</div><p class="a">Porque la creación de peligros soporta usuario opcional. Si hay token válido, se asocia el reporte al usuario; si no, puede quedar como anónimo dependiendo de la ruta y middleware.</p></div>
+    <div class="qa"><div class="q">7. ¿Qué hace <code>HazardReportController::comments</code>?</div><p class="a">Carga comentarios y usuario asociado, luego transforma cada comentario con <code>ReportCommentFormatter::formatComment</code>. Devuelve un arreglo limpio en <code>data</code>.</p></div>
+    <div class="qa"><div class="q">8. ¿Qué hace <code>HazardReportController::storeComment</code>?</div><p class="a">Valida el payload con <code>StoreReportCommentRequest</code> y llama a <code>ReportCommentService::storeComment</code> pasando el modelo de peligro, el usuario resuelto y los datos validados.</p></div>
+    <div class="qa"><div class="q">9. ¿Por qué el endpoint de comentarios de peligros usa <code>api.token</code> sin <code>:required</code>?</div><p class="a">Porque permite comentarios anónimos si no hay token, pero si el token existe el middleware resuelve el usuario y el comentario queda asociado a ese usuario.</p></div>
+    <div class="qa"><div class="q">10. ¿Qué endpoint requiere token obligatorio para rutas guardadas?</div><p class="a"><code>GET /api/routes</code> usa <code>api.token:required</code>, porque las rutas guardadas son datos privados de una cuenta.</p></div>
+    <div class="qa"><div class="q">11. ¿Qué método maneja planificación de rutas?</div><p class="a"><code>RoutePlanningController::plan</code>. Valida puntos, filtros y modo de viaje, invoca <code>GraphHopperRoutingService::planRoute</code> y devuelve coordenadas, distancia, duración e instrucciones.</p></div>
+    <div class="qa"><div class="q">12. ¿Por qué <code>RoutePlanningController::plan</code> devuelve 502 al fallar?</div><p class="a">Porque el fallo suele depender de un servicio externo o de integración con GraphHopper. Un 502 expresa que el backend no pudo completar la operación por dependencia aguas abajo.</p></div>
+    <div class="qa"><div class="q">13. ¿Dónde se valida que una ruta planificada tenga mínimo dos puntos?</div><p class="a">En <code>RoutePlanningController::plan</code>, con la regla <code>'points' => 'required|array|min:2'</code>.</p></div>
+    <div class="qa"><div class="q">14. ¿Cómo se restringen coordenadas inválidas en planificación?</div><p class="a">Con reglas de validación: latitud entre -90 y 90, longitud entre -180 y 180. Eso evita enviar coordenadas absurdas a GraphHopper.</p></div>
+    <div class="qa"><div class="q">15. ¿Qué ventaja tiene usar controladores pequeños?</div><p class="a">El controlador se enfoca en HTTP, validación y respuesta. La lógica compleja queda en servicios, lo que facilita pruebas unitarias y mantenimiento.</p></div>
+  </section>
+
+  <section>
+    <h2>Middleware, autenticación y permisos</h2>
+
+    <div class="qa"><div class="q">16. ¿Qué clase resuelve el usuario desde un token API?</div><p class="a"><code>App\Http\Middleware\ResolveApiTokenUser</code>. Lee el bearer token, calcula su SHA-256, busca el registro <code>ApiToken</code> y establece el usuario autenticado en Laravel.</p></div>
+    <div class="qa"><div class="q">17. ¿Por qué se calcula <code>hash('sha256', $bearerToken)</code>?</div><p class="a">Porque en base de datos se guarda el hash del token, no el token plano. Esto reduce impacto si la base se expone accidentalmente.</p></div>
+    <div class="qa"><div class="q">18. ¿Cómo se maneja expiración de tokens?</div><p class="a">El middleware verifica que <code>expires_at</code> sea nulo o futuro. Si el token expiró, no establece usuario.</p></div>
+    <div class="qa"><div class="q">19. ¿Qué hace <code>Auth::setUser($user)</code> en el middleware?</div><p class="a">Registra el usuario autenticado en el contexto actual de Laravel, de modo que <code>$request->user()</code> funcione en controladores y FormRequests.</p></div>
+    <div class="qa"><div class="q">20. ¿Para qué sirve el parámetro <code>$mode = 'optional'</code>?</div><p class="a">Permite reutilizar el middleware en dos modos: opcional, donde el usuario se resuelve si hay token, y requerido, donde se devuelve 401 si no se resolvió usuario.</p></div>
+    <div class="qa"><div class="q">21. ¿Qué diferencia concreta hay entre <code>api.token</code> y <code>api.token:required</code>?</div><p class="a"><code>api.token</code> permite continuar sin usuario; <code>api.token:required</code> bloquea la petición con 401 si no existe un token válido.</p></div>
+    <div class="qa"><div class="q">22. ¿Dónde se actualiza <code>last_used_at</code> del token?</div><p class="a">En <code>ResolveApiTokenUser</code>, cuando encuentra un token válido. Se usa <code>forceFill</code> y <code>save</code> para registrar uso reciente.</p></div>
+    <div class="qa"><div class="q">23. ¿Por qué las rutas de edición y eliminación están en un grupo con token requerido?</div><p class="a">Porque modifican datos persistidos y deben estar asociadas a una identidad. Luego los servicios aplican reglas de propiedad o permiso.</p></div>
+    <div class="qa"><div class="q">24. ¿Dónde se decide si un usuario puede actualizar un peligro?</div><p class="a">En <code>HazardReportService::canMutate</code>, llamado desde <code>HazardReportController::update</code> antes de aplicar cambios.</p></div>
+    <div class="qa"><div class="q">25. ¿Qué respuesta se devuelve si un usuario no puede mutar un peligro?</div><p class="a">El controlador devuelve JSON con <code>success=false</code>, mensaje <code>No autorizado</code> y código HTTP 403.</p></div>
+    <div class="qa"><div class="q">26. ¿Por qué no basta con verificar permisos en Flutter?</div><p class="a">Porque un atacante podría llamar la API directamente. La autorización real debe ejecutarse en Laravel, no solo ocultando botones en la interfaz.</p></div>
+    <div class="qa"><div class="q">27. ¿Cómo se conserva el modelo de usuario en la petición?</div><p class="a">El middleware define <code>$request->setUserResolver(static fn () => $user)</code>, por eso los controladores pueden usar <code>$request->user()</code>.</p></div>
+    <div class="qa"><div class="q">28. ¿Qué mejora haría a seguridad de tokens?</div><p class="a">Agregar rate limiting, rotación/revocación granular, scopes por token, expiraciones cortas configurables y auditoría de accesos fallidos.</p></div>
+  </section>
+
+  <section>
+    <h2>Modelos Eloquent y persistencia</h2>
+
+    <div class="qa"><div class="q">29. ¿Qué campos permite asignar masivamente <code>HazardReport</code>?</div><p class="a">Los definidos en <code>$fillable</code>: coordenadas, radio, catálogos, descripción, fechas, usuario, estado, IDs local/remoto y timestamps de sincronización.</p></div>
+    <div class="qa"><div class="q">30. ¿Para qué sirve <code>$casts</code> en <code>HazardReport</code>?</div><p class="a">Convierte valores a tipos esperados: floats para coordenadas/radio, enteros para IDs y objetos fecha para campos temporales.</p></div>
+    <div class="qa"><div class="q">31. ¿Qué hace <code>$appends</code> en <code>HazardReport</code>?</div><p class="a">Agrega atributos calculados al JSON: <code>risk_level_code</code>, <code>category_code</code>, <code>estimated_duration_code</code> y <code>comments_json</code>.</p></div>
+    <div class="qa"><div class="q">32. ¿Cómo se obtiene <code>risk_level_code</code>?</div><p class="a">Con el accessor <code>getRiskLevelCodeAttribute</code>, leyendo la relación <code>riskLevel</code> y devolviendo su <code>code</code>, o <code>undefined</code> como fallback.</p></div>
+    <div class="qa"><div class="q">33. ¿Qué hace <code>setRiskLevelCodeAttribute</code>?</div><p class="a">Normaliza el código recibido y traduce el código al <code>risk_level_id</code> usando <code>HazardRiskLevel::idByCode</code>.</p></div>
+    <div class="qa"><div class="q">34. ¿Por qué <code>setCategoryCodeAttribute</code> transforma <code>aggressive_animals</code>?</div><p class="a">Mantiene compatibilidad con una categoría anterior, migrándola a <code>possible_rabies_vectors</code>. Es una decisión de normalización de dominio.</p></div>
+    <div class="qa"><div class="q">35. ¿Qué relación define <code>HazardReport::comments()</code>?</div><p class="a">Una relación <code>MorphMany</code> hacia <code>ReportComment</code>, ordenada por <code>commented_at</code> y luego por <code>id</code>.</p></div>
+    <div class="qa"><div class="q">36. ¿Qué devuelve <code>getCommentsJsonAttribute</code>?</div><p class="a">Un JSON con autor, avatar, anonimato, texto y fecha en milisegundos. Sirve para que el frontend pueda reconstruir comentarios en sus modelos.</p></div>
+    <div class="qa"><div class="q">37. ¿Qué hace <code>scopeNearby</code>?</div><p class="a">Filtra peligros dentro de un rango aproximado usando deltas de latitud/longitud. Es una aproximación simple, no una consulta geoespacial exacta.</p></div>
+    <div class="qa"><div class="q">38. ¿Por qué <code>scopeNearby</code> no reemplaza PostGIS?</div><p class="a">Porque usa grados aproximados y no índices espaciales reales. PostGIS permitiría distancias y geometrías más precisas y eficientes.</p></div>
+    <div class="qa"><div class="q">39. ¿Qué hace <code>resolvesConflictWith</code>?</div><p class="a">Implementa una regla <code>last write wins</code>: gana el peligro con <code>last_modified_at</code> más reciente o igual.</p></div>
+    <div class="qa"><div class="q">40. ¿Qué modelo representa comentarios unificados?</div><p class="a"><code>ReportComment</code>. Incluye <code>commentable_type</code>, <code>commentable_id</code>, autor, anonimato, texto, fecha y hash de contenido.</p></div>
+    <div class="qa"><div class="q">41. ¿Qué relación define <code>ReportComment::commentable()</code>?</div><p class="a">Una relación <code>MorphTo</code>, que permite que un comentario pertenezca a un peligro, reporte perdido, reporte encontrado o reporte genérico.</p></div>
+    <div class="qa"><div class="q">42. ¿Qué hace <code>ReportComment::makeContentHash</code>?</div><p class="a">Genera un SHA-256 usando tipo, ID, usuario, autor, avatar, anonimato, texto y timestamp normalizado. Se usa para deduplicación.</p></div>
+    <div class="qa"><div class="q">43. ¿Por qué se normaliza el timestamp a segundos en el hash?</div><p class="a">Para evitar que diferencias de milisegundos generen hashes distintos para comentarios equivalentes recibidos desde distintas fuentes.</p></div>
+    <div class="qa"><div class="q">44. ¿Qué problema resuelve <code>fillable</code>?</div><p class="a">Evita asignación masiva de campos no permitidos. Solo los atributos definidos pueden llenarse mediante métodos como <code>create</code> o <code>update</code>.</p></div>
+  </section>
+
+  <section>
+    <h2>Servicios de dominio y comentarios</h2>
+
+    <div class="qa"><div class="q">45. ¿Por qué existe <code>ReportCommentService</code>?</div><p class="a">Centraliza creación, sincronización, deduplicación y normalización de comentarios. Así los controladores no duplican reglas.</p></div>
+    <div class="qa"><div class="q">46. ¿Qué hace <code>storeComment</code> en <code>ReportCommentService</code>?</div><p class="a">Determina autor/anonimato, parsea fecha, arma payload polimórfico, genera hash y usa <code>updateOrCreate</code> para persistir.</p></div>
+    <div class="qa"><div class="q">47. ¿Cuándo se guarda <code>user_id</code> en un comentario?</div><p class="a">Solo si existe usuario y el comentario no es anónimo. Si no hay usuario o se marca anónimo, <code>user_id</code> queda nulo.</p></div>
+    <div class="qa"><div class="q">48. ¿Qué valor toma <code>author_name</code> si no se envía?</div><p class="a">Si hay usuario y no es anónimo, usa el nombre del usuario. Si no, usa <code>Anonimo</code>.</p></div>
+    <div class="qa"><div class="q">49. ¿Qué hace <code>syncComments</code>?</div><p class="a">Recorre comentarios recibidos, descarta entradas inválidas o vacías, normaliza autor y fecha, detecta existentes por hash o equivalencia, crea o actualiza y luego poda duplicados.</p></div>
+    <div class="qa"><div class="q">50. ¿Qué hace <code>findEquivalentComment</code>?</div><p class="a">Busca un comentario con mismo tipo, ID, autor, anonimato, texto, usuario y fecha dentro del mismo segundo. Sirve como segunda barrera contra duplicados.</p></div>
+    <div class="qa"><div class="q">51. ¿Por qué <code>pruneDuplicateComments</code> construye una clave compuesta?</div><p class="a">Para detectar duplicados por datos semánticos del comentario aunque existan IDs o hashes diferentes por sincronizaciones anteriores.</p></div>
+    <div class="qa"><div class="q">52. ¿Qué método parsea fechas en comentarios?</div><p class="a"><code>parseCommentTimestamp</code>. Acepta <code>Carbon</code>, enteros/milisegundos, strings numéricos y strings parseables por Carbon.</p></div>
+    <div class="qa"><div class="q">53. ¿Qué riesgo hay en usar <code>Carbon::parse</code> con strings libres?</div><p class="a">Puede aceptar formatos ambiguos. En producción convendría exigir ISO 8601 o timestamp controlado para reducir interpretaciones inesperadas.</p></div>
+    <div class="qa"><div class="q">54. ¿Qué clase formatea comentarios para la API?</div><p class="a"><code>ReportCommentFormatter</code>, que expone campos como ID, tipo, usuario, autor, avatar, anonimato, texto y fecha ISO.</p></div>
+  </section>
+
+  <section>
+    <h2>GraphHopperRoutingService e implementación de rutas</h2>
+
+    <div class="qa"><div class="q">55. ¿Qué clase encapsula la comunicación con GraphHopper?</div><p class="a"><code>App\Services\GraphHopperRoutingService</code>. Construye payload, maneja perfiles, filtros de peligro, fallback de URLs, timeouts y respuesta de ruta.</p></div>
+    <div class="qa"><div class="q">56. ¿Qué hace <code>resolveBaseUrls</code>?</div><p class="a">Construye una lista de URLs posibles: la configurada, <code>http://graphhopper:8989</code> para Docker y <code>http://127.0.0.1:8989</code> para local, evitando duplicados.</p></div>
+    <div class="qa"><div class="q">57. ¿Por qué hay fallback entre varias URLs de GraphHopper?</div><p class="a">Porque el sistema puede ejecutarse en Docker o local. El fallback aumenta tolerancia cuando cambia el entorno de ejecución.</p></div>
+    <div class="qa"><div class="q">58. ¿Qué timeout usa la petición a GraphHopper?</div><p class="a">Usa <code>Http::timeout(20)</code>, lo que evita que Laravel quede esperando indefinidamente si GraphHopper no responde.</p></div>
+    <div class="qa"><div class="q">59. ¿Cómo se convierten puntos del frontend al formato de GraphHopper?</div><p class="a">El backend recibe <code>lat</code> y <code>lng</code>, pero GraphHopper espera pares <code>[lng, lat]</code>. <code>buildPayload</code> hace esa conversión.</p></div>
+    <div class="qa"><div class="q">60. ¿Por qué se envía <code>points_encoded=false</code>?</div><p class="a">Para recibir coordenadas explícitas en JSON en lugar de una polilínea codificada. Eso simplifica consumo desde Flutter.</p></div>
+    <div class="qa"><div class="q">61. ¿Qué hace <code>mapTravelModeToProfiles</code>?</div><p class="a">Mapea valores como <code>walking</code> o <code>foot</code> al perfil <code>foot</code>, y valores como <code>car</code> o <code>driving</code> al perfil <code>car</code>.</p></div>
+    <div class="qa"><div class="q">62. ¿Qué ocurre si el modo de viaje no es reconocido?</div><p class="a">El servicio usa <code>car</code> como fallback. Es una decisión conservadora, aunque podría validarse más estrictamente.</p></div>
+    <div class="qa"><div class="q">63. ¿Por qué se agrega <code>ch.disable=true</code> al evitar peligros?</div><p class="a">Porque el <code>custom_model</code> de GraphHopper no es compatible con speed mode basado en Contraction Hierarchies. Desactivarlo permite aplicar reglas personalizadas.</p></div>
+    <div class="qa"><div class="q">64. ¿Cómo se limita la consulta de peligros considerados para rutas?</div><p class="a">Se calcula un bounding box alrededor de los puntos con <code>routeBounds</code> y se consulta solo peligros dentro de ese rango, con límite de 100.</p></div>
+    <div class="qa"><div class="q">65. ¿Qué hace <code>buildCirclePolygon</code>?</div><p class="a">Genera un polígono aproximado circular alrededor de una coordenada usando radio terrestre y segmentos. Ese polígono se usa como área de evitación.</p></div>
+    <div class="qa"><div class="q">66. ¿Por qué el radio se calcula con <code>impact_radius_meters + 25</code> y mínimo 25?</div><p class="a">Agrega margen de seguridad y evita áreas de evitación demasiado pequeñas para que el motor de rutas pueda considerarlas.</p></div>
+    <div class="qa"><div class="q">67. ¿Qué se devuelve si GraphHopper responde sin <code>paths</code>?</div><p class="a">Se registra el intento como <code>sin paths</code> y se prueba otra combinación de perfil/URL. Si todas fallan, se lanza <code>RuntimeException</code>.</p></div>
+    <div class="qa"><div class="q">68. ¿Qué clase normaliza instrucciones de navegación?</div><p class="a"><code>NavigationInstructionFormatter</code>, invocada desde <code>GraphHopperRoutingService</code> para convertir instrucciones del motor al formato usado por la app.</p></div>
+  </section>
+
+  <section>
+    <h2>Frontend: cliente HTTP, repositorio y providers</h2>
+
+    <div class="qa"><div class="q">69. ¿Qué clase centraliza llamadas HTTP en Flutter?</div><p class="a"><code>BackendApiClient</code>. Expone métodos <code>getWithFallback</code>, <code>postWithFallback</code>, <code>putWithFallback</code> y <code>deleteWithFallback</code>.</p></div>
+    <div class="qa"><div class="q">70. ¿Cómo obtiene el frontend la URL base de API?</div><p class="a">Usa <code>String.fromEnvironment('A4M_API_BASE_URL')</code> con valor por defecto <code>http://localhost:8000/api</code>, además de fallbacks locales.</p></div>
+    <div class="qa"><div class="q">71. ¿Para qué sirve <code>BackendApiClient.workingBaseUrl</code>?</div><p class="a">Recuerda la última URL que funcionó, para intentar primero esa base en peticiones futuras y reducir fallos de conexión en entornos variables.</p></div>
+    <div class="qa"><div class="q">72. ¿Por qué <code>baseUrls</code> incluye <code>10.0.2.2</code> solo cuando no es web?</div><p class="a">Porque <code>10.0.2.2</code> es el alias del host desde emulador Android. En web no aplica.</p></div>
+    <div class="qa"><div class="q">73. ¿Qué hace <code>jsonHeaders</code>?</div><p class="a">Construye headers <code>Content-Type</code>, <code>Accept</code> y, si existe token, <code>Authorization: Bearer ...</code>.</p></div>
+    <div class="qa"><div class="q">74. ¿Por qué los métodos con fallback retornan errores 4xx inmediatamente?</div><p class="a">Porque un 4xx indica problema de cliente o permisos, no de disponibilidad del servidor. No tiene sentido probar otra URL si el contrato respondió.</p></div>
+    <div class="qa"><div class="q">75. ¿Qué clase abstrae operaciones de usuario y datos en Flutter?</div><p class="a"><code>UserLocalRepository</code>. Coordina <code>SessionStore</code>, <code>GuestDataStore</code> y <code>BackendApiClient</code>.</p></div>
+    <div class="qa"><div class="q">76. ¿Qué hace <code>getUserProfile</code> cuando falla <code>/auth/me</code>?</div><p class="a">Devuelve el perfil cacheado. Así evita cerrar abruptamente la sesión visual por una falla temporal de red.</p></div>
+    <div class="qa"><div class="q">77. ¿Qué ocurre después de registrar usuario?</div><p class="a"><code>register</code> guarda el perfil autenticado, migra mascotas y rutas invitadas a la cuenta y luego limpia datos de invitado.</p></div>
+    <div class="qa"><div class="q">78. ¿Qué hace <code>_requireToken</code>?</div><p class="a">Lee el perfil local y lanza excepción si no hay usuario autenticado con token. Se usa para acciones privadas.</p></div>
+    <div class="qa"><div class="q">79. ¿Por qué <code>addCommentToHazard</code> no exige token?</div><p class="a">Porque los comentarios de peligros pueden ser anónimos. Si hay sesión, envía token; si no, envía comentario sin autorización.</p></div>
+    <div class="qa"><div class="q">80. ¿Qué hace <code>_normalizeMap</code>?</div><p class="a">Convierte booleans a 0/1, fechas ISO a milisegundos, transforma listas <code>comments</code> en <code>comments_json</code> y agrega defaults de sincronización.</p></div>
+    <div class="qa"><div class="q">81. ¿Qué riesgo introduce convertir booleans a 0/1?</div><p class="a">Los modelos Dart deben aceptar ambos formatos. Por eso <code>ReportCommentRecord</code> parsea <code>is_anonymous</code> como bool, número o texto.</p></div>
+    <div class="qa"><div class="q">82. ¿Qué provider controla la lista de peligros?</div><p class="a"><code>hazardReportsControllerProvider</code>, definido como <code>AsyncNotifierProvider</code> y respaldado por <code>HazardReportsController</code>.</p></div>
+    <div class="qa"><div class="q">83. ¿Por qué <code>HazardReportsController</code> extiende <code>AsyncListController</code>?</div><p class="a">Para reutilizar lógica de carga, recarga y refresco periódico de listas asíncronas. En peligros define intervalo de 60 segundos.</p></div>
+    <div class="qa"><div class="q">84. ¿Qué hace <code>addHazardReport</code> en el provider?</div><p class="a">Llama al repositorio para crear el peligro y luego ejecuta <code>reload()</code>, de modo que la UI vea datos actualizados.</p></div>
+  </section>
+
+  <section>
+    <h2>Modelos Dart, parseo y serialización</h2>
+
+    <div class="qa"><div class="q">85. ¿Qué modelo Dart representa un peligro?</div><p class="a"><code>HazardReportRecord</code>. Contiene ID, UUID local, estado, coordenadas, radio, categoría, descripción, duración, riesgo, foto, autor, comentarios y fechas.</p></div>
+    <div class="qa"><div class="q">86. ¿Cómo parsea comentarios <code>HazardReportRecord</code>?</div><p class="a">Lee <code>comments_json</code>, lo decodifica con <code>jsonDecode</code> y transforma cada elemento en <code>HazardCommentRecord</code>, alias de <code>ReportCommentRecord</code>.</p></div>
+    <div class="qa"><div class="q">87. ¿Qué fallback usa <code>HazardReportRecord</code> si no hay <code>local_uuid</code>?</div><p class="a">Genera un identificador tipo <code>legacy-{id}</code> o basado en tiempo, para mantener compatibilidad con registros antiguos.</p></div>
+    <div class="qa"><div class="q">88. ¿Qué hace <code>ReportCommentRecord._parseCreatedAt</code>?</div><p class="a">Acepta milisegundos numéricos, strings numéricos o strings ISO. Si no puede parsear, usa <code>DateTime.now()</code>.</p></div>
+    <div class="qa"><div class="q">89. ¿Qué hace <code>ReportCommentRecord._parseBool</code>?</div><p class="a">Acepta bool, número o texto como <code>true</code>, <code>false</code>, <code>1</code>, <code>0</code>, <code>yes</code>, <code>no</code>, <code>si</code> o <code>sí</code>. Evita fallos por diferencias de formato.</p></div>
+    <div class="qa"><div class="q">90. ¿Por qué los modelos tienen <code>toMap</code>?</div><p class="a">Para serializar datos hacia almacenamiento local, pruebas o payloads internos. Mantiene simetría parcial con <code>fromMap</code>.</p></div>
+    <div class="qa"><div class="q">91. ¿Qué hacen los métodos de etiquetas como <code>riskLabelFromCode</code>?</div><p class="a">Traducen códigos técnicos como <code>low</code>, <code>medium</code> o <code>high</code> a textos de UI como Bajo, Medio y Alto.</p></div>
+  </section>
+
+  <section>
+    <h2>Docker, ejecución y configuración</h2>
+
+    <div class="qa"><div class="q">92. ¿Qué instala el <code>backend/Dockerfile</code>?</div><p class="a">Parte de <code>php:8.4-cli</code>, instala dependencias como git, unzip, curl, SQLite dev y compila <code>pdo_sqlite</code>. También copia vendor desde una etapa Composer.</p></div>
+    <div class="qa"><div class="q">93. ¿Por qué el Dockerfile usa una etapa <code>composer:2 AS vendor</code>?</div><p class="a">Para instalar dependencias PHP en una etapa separada y copiar <code>vendor</code> al contenedor final, simplificando el runtime.</p></div>
+    <div class="qa"><div class="q">94. ¿Qué hace <code>a4mpets-media.ini</code> en el Dockerfile?</div><p class="a">Configura <code>post_max_size = 0</code> y <code>upload_max_filesize = 0</code>. Es una decisión específica para manejo de medios, aunque debería revisarse para producción.</p></div>
+    <div class="qa"><div class="q">95. ¿Qué valida <code>backend/docker/entrypoint.sh</code> antes de arrancar?</div><p class="a">Verifica que <code>APP_KEY</code> exista. Si la base es SQLite, crea el archivo, luego ejecuta migraciones y arranca <code>php artisan serve</code>.</p></div>
+    <div class="qa"><div class="q">96. ¿Qué riesgo hay en ejecutar migraciones automáticamente al arrancar?</div><p class="a">En producción puede aplicar cambios no deseados durante despliegue. Lo ideal es un pipeline controlado con backup y revisión previa.</p></div>
+    <div class="qa"><div class="q">97. ¿Qué servicio de Docker provee ruteo?</div><p class="a"><code>graphhopper</code>, definido en <code>docker-compose.yml</code>. Monta el mapa PBF, la configuración y un volumen de cache de grafo.</p></div>
+  </section>
+
+  <section>
+    <h2>Pruebas y validación técnica</h2>
+
+    <div class="qa"><div class="q">98. ¿Qué prueba backend cubre comentarios anónimos de peligro?</div><p class="a"><code>HazardControllerExtraTest::test_guest_can_add_anonymous_hazard_comment</code>. Verifica POST sin token, autor <code>Anonimo</code>, <code>user_id</code> nulo y consulta posterior.</p></div>
+    <div class="qa"><div class="q">99. ¿Qué prueba frontend cubre el parseo flexible de <code>is_anonymous</code>?</div><p class="a">En <code>frontend/test/models/report_records_extra_test.dart</code>, una prueba valida que <code>ReportCommentRecord.fromMap</code> acepte anonimato como entero o texto.</p></div>
+    <div class="qa"><div class="q">100. Si el jurado pide demostrar que la implementación es verificable, ¿qué comandos mostraría?</div><p class="a">Mostraría <code>php artisan test</code> o filtros de PHPUnit para backend, <code>flutter test</code> para modelos/providers/widgets, <code>npm run test:e2e:f5</code> para Playwright y pruebas HTTP reales contra endpoints como <code>/api/health</code>, <code>/api/hazards</code> y <code>/api/routes/plan</code>.</p></div>
+  </section>
+
+  <section>
+    <h2>Nota para sustentación técnica</h2>
+    <div class="note">
+      En defensa de código, conviene responder mencionando archivo, clase y método. Una respuesta fuerte no solo dice “funciona”, sino “funciona porque esta ruta llama a este controlador, este controlador delega en este servicio, este modelo persiste estos campos, y esta prueba lo verifica”.
+    </div>
+  </section>
+</body>
+</html>
