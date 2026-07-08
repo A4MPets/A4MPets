@@ -8,9 +8,7 @@ class SessionStore {
   Future<LocalUserProfile> getLocalUserProfile() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String? raw = prefs.getString(_profileKey);
-    if (raw == null || raw.isEmpty) {
-      return LocalUserProfile.guest();
-    }
+    if (raw == null || raw.isEmpty) return LocalUserProfile.guest();
 
     try {
       return LocalUserProfile.fromJson(raw);
@@ -22,16 +20,12 @@ class SessionStore {
   Future<void> saveLocalUserProfile(LocalUserProfile profile) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final bool saved = await prefs.setString(_profileKey, profile.toJson());
-    if (!saved) {
-      throw Exception('No se pudo guardar la sesion local.');
-    }
+    if (!saved) throw Exception('No se pudo guardar la sesion local.');
   }
 
   Future<void> clearUserSessionData() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final bool removed = await prefs.remove(_profileKey);
-    if (!removed && prefs.containsKey(_profileKey)) {
-      throw Exception('No se pudo borrar la sesion local.');
-    }
+    if (!removed && prefs.containsKey(_profileKey)) throw Exception('No se pudo borrar la sesion local.');
   }
 }

@@ -1,0 +1,4 @@
+storeFile=../release/a4mpets-upload-keystore.jks
+storePassword=change-me
+keyAlias=a4mpets
+keyPassword=change-me

@@ -25,13 +25,8 @@ class PetDetailsPanelContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final Color textColor = AppPalette.textPrimary(isDarkMode);
-    final List<PetRecord> pets =
-        ref.watch(myPetsControllerProvider).asData?.value ??
-        const <PetRecord>[];
-    final PetRecord currentPet = pets.firstWhere(
-      (PetRecord item) => item.id == pet.id,
-      orElse: () => pet,
-    );
+    final List<PetRecord> pets = ref.watch(myPetsControllerProvider).asData?.value ?? const <PetRecord>[];
+    final PetRecord currentPet = pets.firstWhere((PetRecord item) => item.id == pet.id, orElse: () => pet);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -45,9 +40,7 @@ class PetDetailsPanelContent extends ConsumerWidget {
                   aspectRatio: 1.15,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(14),
-                    child:
-                        currentPet.photoPath == null ||
-                            currentPet.photoPath!.isEmpty
+                    child: currentPet.photoPath == null || currentPet.photoPath!.isEmpty
                         ? const _PetFallback()
                         : ExpandableImage(
                             source: currentPet.photoPath!,
@@ -65,42 +58,22 @@ class PetDetailsPanelContent extends ConsumerWidget {
                 const SizedBox(height: 14),
                 Text(
                   currentPet.displayName,
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: TextStyle(color: textColor, fontSize: 20, fontWeight: FontWeight.w800),
                 ),
                 if (currentPet.isLost) ...[
                   const SizedBox(height: 6),
                   const Text(
                     'Mascota perdida',
-                    style: TextStyle(
-                      color: AppPalette.reportYellow,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: TextStyle(color: AppPalette.reportYellow, fontSize: 14, fontWeight: FontWeight.w800),
                   ),
                 ],
                 const SizedBox(height: 14),
-                _InfoRow(
-                  label: 'Paseos completados',
-                  value: '${currentPet.totalWalks}',
-                ),
-                _InfoRow(
-                  label: 'Fecha de registro',
-                  value: _formatDate(currentPet.registeredAt),
-                ),
+                _InfoRow(label: 'Paseos completados', value: '${currentPet.totalWalks}'),
+                _InfoRow(label: 'Fecha de registro', value: _formatDate(currentPet.registeredAt)),
                 if (currentPet.adoptionDate != null)
-                  _InfoRow(
-                    label: 'Fecha de adopción',
-                    value: _formatDate(currentPet.adoptionDate!),
-                  ),
+                  _InfoRow(label: 'Fecha de adopción', value: _formatDate(currentPet.adoptionDate!)),
                 if (currentPet.birthDate != null)
-                  _InfoRow(
-                    label: 'Fecha de nacimiento',
-                    value: _formatDate(currentPet.birthDate!),
-                  ),
+                  _InfoRow(label: 'Fecha de nacimiento', value: _formatDate(currentPet.birthDate!)),
               ],
             ),
           ),
@@ -111,26 +84,17 @@ class PetDetailsPanelContent extends ConsumerWidget {
             height: 46,
             child: ElevatedButton(
               onPressed: () async {
-                await ref
-                    .read(myPetsControllerProvider.notifier)
-                    .markPetFound(petId: currentPet.id);
-                await ref
-                    .read(lostPetReportsControllerProvider.notifier)
-                    .reload();
+                await ref.read(myPetsControllerProvider.notifier).markPetFound(petId: currentPet.id);
+                await ref.read(lostPetReportsControllerProvider.notifier).reload();
                 onMarkedFound();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppPalette.reportYellow,
                 foregroundColor: AppPalette.charcoal,
                 elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text(
-                'Ya se encontro',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
-              ),
+              child: const Text('Ya se encontro', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
             ),
           ),
         ],
@@ -142,14 +106,9 @@ class PetDetailsPanelContent extends ConsumerWidget {
             style: OutlinedButton.styleFrom(
               foregroundColor: textColor,
               side: BorderSide(color: AppPalette.border(isDarkMode)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text(
-              'Editar',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
-            ),
+            child: const Text('Editar', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
           ),
         ),
       ],
@@ -178,20 +137,12 @@ class _InfoRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: AppPalette.textMutedDark,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
+            style: const TextStyle(color: AppPalette.textMutedDark, fontSize: 12, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 3),
           Text(
             value,
-            style: const TextStyle(
-              color: AppPalette.charcoal,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-            ),
+            style: const TextStyle(color: AppPalette.charcoal, fontSize: 14, fontWeight: FontWeight.w700),
           ),
         ],
       ),

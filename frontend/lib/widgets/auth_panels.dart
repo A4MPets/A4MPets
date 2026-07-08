@@ -5,30 +5,18 @@ class LoginPanelContent extends StatefulWidget {
   final VoidCallback onSwitchToRegister;
   final Future<void> Function(String login, String password)? onSubmit;
 
-  const LoginPanelContent({
-    super.key,
-    required this.isDarkMode,
-    required this.onSwitchToRegister,
-    this.onSubmit,
-  });
+  const LoginPanelContent({super.key, required this.isDarkMode, required this.onSwitchToRegister, this.onSubmit});
 
   @override
   State<LoginPanelContent> createState() => _LoginPanelContentState();
 }
 
 class _LoginPanelContentState extends State<LoginPanelContent> {
-  late final TextEditingController _loginController;
-  late final TextEditingController _passwordController;
+  final TextEditingController _loginController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   bool _isSubmitting = false;
   bool _browserAutofillEnabled = false;
   String? _errorText;
-
-  @override
-  void initState() {
-    super.initState();
-    _loginController = TextEditingController();
-    _passwordController = TextEditingController();
-  }
 
   @override
   void dispose() {
@@ -38,11 +26,8 @@ class _LoginPanelContentState extends State<LoginPanelContent> {
   }
 
   Future<void> _submit() async {
-    final Future<void> Function(String login, String password)? onSubmit =
-        widget.onSubmit;
-    if (onSubmit == null) {
-      return;
-    }
+    final Future<void> Function(String login, String password)? onSubmit = widget.onSubmit;
+    if (onSubmit == null) return;
 
     final String loginValue = _loginController.text.trim();
     final String passwordValue = _passwordController.text;
@@ -69,12 +54,8 @@ class _LoginPanelContentState extends State<LoginPanelContent> {
     try {
       await onSubmit(loginValue, passwordValue);
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _errorText = _friendlyError(error);
-      });
+      if (!mounted) return;
+      setState(() => _errorText = _friendlyError(error));
     } finally {
       if (mounted) {
         setState(() {
@@ -86,9 +67,7 @@ class _LoginPanelContentState extends State<LoginPanelContent> {
 
   @override
   Widget build(BuildContext context) {
-    final Color primaryText = widget.isDarkMode
-        ? const Color(0xFFAAAAAA)
-        : const Color(0xFF404040);
+    final Color primaryText = widget.isDarkMode ? const Color(0xFFAAAAAA) : const Color(0xFF404040);
 
     return AutofillGroup(
       child: Column(
@@ -98,16 +77,12 @@ class _LoginPanelContentState extends State<LoginPanelContent> {
             isDarkMode: widget.isDarkMode,
             controller: _loginController,
             hintText: 'Usuario o correo',
-            autofillHints: _browserAutofillEnabled
-                ? const [AutofillHints.username]
-                : null,
+            autofillHints: _browserAutofillEnabled ? const [AutofillHints.username] : null,
             textInputAction: TextInputAction.next,
             enableSuggestions: false,
             autocorrect: false,
             onTap: () {
-              if (_browserAutofillEnabled) {
-                return;
-              }
+              if (_browserAutofillEnabled) return;
               setState(() {
                 _browserAutofillEnabled = true;
               });
@@ -120,16 +95,12 @@ class _LoginPanelContentState extends State<LoginPanelContent> {
             controller: _passwordController,
             hintText: 'Contraseña',
             obscureText: true,
-            autofillHints: _browserAutofillEnabled
-                ? const [AutofillHints.password]
-                : null,
+            autofillHints: _browserAutofillEnabled ? const [AutofillHints.password] : null,
             textInputAction: TextInputAction.done,
             enableSuggestions: false,
             autocorrect: false,
             onTap: () {
-              if (_browserAutofillEnabled) {
-                return;
-              }
+              if (_browserAutofillEnabled) return;
               setState(() {
                 _browserAutofillEnabled = true;
               });
@@ -142,17 +113,10 @@ class _LoginPanelContentState extends State<LoginPanelContent> {
             children: [
               Text(
                 '¿No tienes una cuenta?',
-                style: TextStyle(
-                  color: primaryText,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(color: primaryText, fontSize: 14, fontWeight: FontWeight.w700),
               ),
               const SizedBox(width: 4),
-              _InlineLinkText(
-                text: 'Regístrate',
-                onTap: widget.onSwitchToRegister,
-              ),
+              _InlineLinkText(text: 'Regístrate', onTap: widget.onSwitchToRegister),
             ],
           ),
           const SizedBox(height: 20),
@@ -160,71 +124,31 @@ class _LoginPanelContentState extends State<LoginPanelContent> {
             label: _isSubmitting ? 'Ingresando...' : 'Iniciar Sesión',
             onPressed: _isSubmitting ? null : _submit,
           ),
-          if (_errorText != null) ...[
-            const SizedBox(height: 8),
-            const _InlineErrorText(),
-            const SizedBox(height: 2),
-            Text(
-              _errorText!,
-              style: const TextStyle(
-                color: Color(0xFFD7263D),
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+          if (_errorText != null) _AuthErrorBlock(_errorText!),
         ],
       ),
     );
-  }
-
-  String _friendlyError(Object error) {
-    final String raw = error.toString();
-    if (raw.startsWith('Exception: ')) {
-      return raw.substring('Exception: '.length).trim();
-    }
-    return raw;
   }
 }
 
 class RegisterPanelContent extends StatefulWidget {
   final bool isDarkMode;
   final VoidCallback onSwitchToLogin;
-  final Future<void> Function(
-    String username,
-    String email,
-    String password,
-    String passwordConfirmation,
-  )?
-  onSubmit;
+  final Future<void> Function(String username, String email, String password, String passwordConfirmation)? onSubmit;
 
-  const RegisterPanelContent({
-    super.key,
-    required this.isDarkMode,
-    required this.onSwitchToLogin,
-    this.onSubmit,
-  });
+  const RegisterPanelContent({super.key, required this.isDarkMode, required this.onSwitchToLogin, this.onSubmit});
 
   @override
   State<RegisterPanelContent> createState() => _RegisterPanelContentState();
 }
 
 class _RegisterPanelContentState extends State<RegisterPanelContent> {
-  late final TextEditingController _usernameController;
-  late final TextEditingController _emailController;
-  late final TextEditingController _passwordController;
-  late final TextEditingController _passwordConfirmationController;
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _passwordConfirmationController = TextEditingController();
   bool _isSubmitting = false;
   String? _errorText;
-
-  @override
-  void initState() {
-    super.initState();
-    _usernameController = TextEditingController();
-    _emailController = TextEditingController();
-    _passwordController = TextEditingController();
-    _passwordConfirmationController = TextEditingController();
-  }
 
   @override
   void dispose() {
@@ -236,17 +160,10 @@ class _RegisterPanelContentState extends State<RegisterPanelContent> {
   }
 
   Future<void> _submit() async {
-    final Future<void> Function(
-      String username,
-      String email,
-      String password,
-      String passwordConfirmation,
-    )?
-    onSubmit = widget.onSubmit;
+    final Future<void> Function(String username, String email, String password, String passwordConfirmation)? onSubmit =
+        widget.onSubmit;
 
-    if (onSubmit == null) {
-      return;
-    }
+    if (onSubmit == null) return;
 
     final String username = _usernameController.text.trim();
     final String email = _emailController.text.trim();
@@ -303,12 +220,8 @@ class _RegisterPanelContentState extends State<RegisterPanelContent> {
     try {
       await onSubmit(username, email, password, passwordConfirmation);
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _errorText = _friendlyError(error);
-      });
+      if (!mounted) return;
+      setState(() => _errorText = _friendlyError(error));
     } finally {
       if (mounted) {
         setState(() {
@@ -320,9 +233,7 @@ class _RegisterPanelContentState extends State<RegisterPanelContent> {
 
   @override
   Widget build(BuildContext context) {
-    final Color primaryText = widget.isDarkMode
-        ? const Color(0xFFAAAAAA)
-        : const Color(0xFF404040);
+    final Color primaryText = widget.isDarkMode ? const Color(0xFFAAAAAA) : const Color(0xFF404040);
 
     return AutofillGroup(
       child: Column(
@@ -332,10 +243,7 @@ class _RegisterPanelContentState extends State<RegisterPanelContent> {
             isDarkMode: widget.isDarkMode,
             controller: _usernameController,
             hintText: 'Nombre de Usuario',
-            autofillHints: const [
-              AutofillHints.newUsername,
-              AutofillHints.username,
-            ],
+            autofillHints: const [AutofillHints.newUsername, AutofillHints.username],
             textInputAction: TextInputAction.next,
           ),
           const SizedBox(height: 12),
@@ -372,17 +280,10 @@ class _RegisterPanelContentState extends State<RegisterPanelContent> {
             children: [
               Text(
                 '¿Ya tienes una cuenta?',
-                style: TextStyle(
-                  color: primaryText,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(color: primaryText, fontSize: 14, fontWeight: FontWeight.w700),
               ),
               const SizedBox(width: 4),
-              _InlineLinkText(
-                text: 'Iniciar Sesión',
-                onTap: widget.onSwitchToLogin,
-              ),
+              _InlineLinkText(text: 'Iniciar Sesión', onTap: widget.onSwitchToLogin),
             ],
           ),
           const SizedBox(height: 20),
@@ -390,19 +291,7 @@ class _RegisterPanelContentState extends State<RegisterPanelContent> {
             label: _isSubmitting ? 'Registrando...' : 'Registrarse',
             onPressed: _isSubmitting ? null : _submit,
           ),
-          if (_errorText != null) ...[
-            const SizedBox(height: 8),
-            const _InlineErrorText(),
-            const SizedBox(height: 2),
-            Text(
-              _errorText!,
-              style: const TextStyle(
-                color: Color(0xFFD7263D),
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+          if (_errorText != null) _AuthErrorBlock(_errorText!),
         ],
       ),
     );
@@ -412,13 +301,33 @@ class _RegisterPanelContentState extends State<RegisterPanelContent> {
     final RegExp emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
     return emailRegex.hasMatch(value);
   }
+}
 
-  String _friendlyError(Object error) {
-    final String raw = error.toString();
-    if (raw.startsWith('Exception: ')) {
-      return raw.substring('Exception: '.length).trim();
-    }
-    return raw;
+String _friendlyError(Object error) {
+  final String raw = error.toString();
+  if (raw.startsWith('Exception: ')) return raw.substring('Exception: '.length).trim();
+  return raw;
+}
+
+class _AuthErrorBlock extends StatelessWidget {
+  final String errorText;
+
+  const _AuthErrorBlock(this.errorText);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 8),
+        const _InlineErrorText(),
+        const SizedBox(height: 2),
+        Text(
+          errorText,
+          style: const TextStyle(color: Color(0xFFD7263D), fontSize: 12, fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
   }
 }
 
@@ -429,11 +338,7 @@ class _InlineErrorText extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Text(
       'Error',
-      style: TextStyle(
-        color: Color(0xFFD7263D),
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-      ),
+      style: TextStyle(color: Color(0xFFD7263D), fontSize: 11, fontWeight: FontWeight.w700),
     );
   }
 }
@@ -467,13 +372,9 @@ class _AuthTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color fieldBackground = isDarkMode
-        ? const Color(0xFF404040)
-        : const Color(0xFFFFFFFF);
+    final Color fieldBackground = isDarkMode ? const Color(0xFF404040) : const Color(0xFFFFFFFF);
 
-    final Color textColor = isDarkMode
-        ? const Color(0xFFAAAAAA)
-        : const Color(0xFF404040);
+    final Color textColor = isDarkMode ? const Color(0xFFAAAAAA) : const Color(0xFF404040);
 
     return TextField(
       controller: controller,
@@ -485,32 +386,15 @@ class _AuthTextField extends StatelessWidget {
       onTap: onTap,
       enableSuggestions: enableSuggestions,
       autocorrect: autocorrect,
-      style: TextStyle(
-        color: textColor,
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-      ),
+      style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w500),
       decoration: InputDecoration(
         hintText: hintText,
-        hintStyle: const TextStyle(
-          color: Color(0xFFAAAAAA),
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-        ),
+        hintStyle: const TextStyle(color: Color(0xFFAAAAAA), fontSize: 14, fontWeight: FontWeight.w500),
         filled: true,
         fillColor: fieldBackground,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 12,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Color(0xFF5984BC), width: 1),
@@ -533,11 +417,7 @@ class _InlineLinkText extends StatelessWidget {
       borderRadius: BorderRadius.circular(4),
       child: Text(
         text,
-        style: const TextStyle(
-          color: Color(0xFF5984BC),
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-        ),
+        style: const TextStyle(color: Color(0xFF5984BC), fontSize: 14, fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -559,14 +439,9 @@ class _PrimaryActionButton extends StatelessWidget {
           backgroundColor: const Color(0xFF5984BC),
           foregroundColor: const Color(0xFFFFFFFF),
           elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
-        child: Text(
-          label,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-        ),
+        child: Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
       ),
     );
   }

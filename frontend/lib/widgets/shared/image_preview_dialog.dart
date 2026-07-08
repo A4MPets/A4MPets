@@ -10,9 +10,7 @@ Future<void> showImagePreviewDialog(
   String? title,
 }) {
   final String imageSource = source.trim();
-  if (imageSource.isEmpty) {
-    return Future<void>.value();
-  }
+  if (imageSource.isEmpty) return Future<void>.value();
 
   return showDialog<void>(
     context: context,
@@ -29,25 +27,14 @@ class ExpandableImage extends StatelessWidget {
   final String? title;
   final Widget child;
 
-  const ExpandableImage({
-    super.key,
-    required this.source,
-    required this.isDarkMode,
-    required this.child,
-    this.title,
-  });
+  const ExpandableImage({super.key, required this.source, required this.isDarkMode, required this.child, this.title});
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => showImagePreviewDialog(
-          context,
-          source: source,
-          isDarkMode: isDarkMode,
-          title: title,
-        ),
+        onTap: () => showImagePreviewDialog(context, source: source, isDarkMode: isDarkMode, title: title),
         child: child,
       ),
     );
@@ -96,11 +83,7 @@ class _ImagePreviewDialogBody extends StatelessWidget {
                   shape: const CircleBorder(),
                   child: IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(
-                      Icons.close,
-                      color: AppPalette.charcoal,
-                      size: 30,
-                    ),
+                    icon: const Icon(Icons.close, color: AppPalette.charcoal, size: 30),
                     tooltip: 'Cerrar',
                   ),
                 ),
@@ -118,12 +101,6 @@ class _PreviewFallback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Icon(
-        Icons.broken_image_outlined,
-        color: AppPalette.iconGray,
-        size: 48,
-      ),
-    );
+    return const Center(child: Icon(Icons.broken_image_outlined, color: AppPalette.iconGray, size: 48));
   }
 }

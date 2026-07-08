@@ -49,11 +49,7 @@ class LocationPickerWidget extends StatelessWidget {
                   color: AppPalette.primaryBlue.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(
-                  Icons.place_rounded,
-                  color: AppPalette.primaryBlue,
-                  size: 20,
-                ),
+                child: const Icon(Icons.place_rounded, color: AppPalette.primaryBlue, size: 20),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -62,11 +58,7 @@ class LocationPickerWidget extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -97,13 +89,8 @@ class LocationPickerWidget extends StatelessWidget {
                   onPressed: onStartSelection,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppPalette.primaryBlue,
-                    side: const BorderSide(
-                      color: AppPalette.primaryBlue,
-                      width: 1,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    side: const BorderSide(color: AppPalette.primaryBlue, width: 1),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   icon: const Icon(Icons.place_rounded, size: 16),
                   label: const Text(
@@ -121,9 +108,7 @@ class LocationPickerWidget extends StatelessWidget {
                   onPressed: onUseCurrentLocation,
                   style: TextButton.styleFrom(
                     foregroundColor: textColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   icon: const Icon(Icons.my_location_rounded, size: 16),
                   label: const Text(
@@ -140,10 +125,7 @@ class LocationPickerWidget extends StatelessWidget {
                   children: [
                     SizedBox(width: double.infinity, child: markOnMapButton),
                     const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: useCurrentLocationButton,
-                    ),
+                    SizedBox(width: double.infinity, child: useCurrentLocationButton),
                   ],
                 );
               }
@@ -161,11 +143,7 @@ class LocationPickerWidget extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               errorText!,
-              style: const TextStyle(
-                color: AppPalette.dangerRed,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(color: AppPalette.dangerRed, fontSize: 12, fontWeight: FontWeight.w600),
             ),
           ],
         ],
@@ -207,10 +185,7 @@ class _LocationStatusChip extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(999),
-      ),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(999)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -219,11 +194,7 @@ class _LocationStatusChip extends StatelessWidget {
           Flexible(
             child: Text(
               label,
-              style: TextStyle(
-                color: color,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700),
             ),
           ),
         ],

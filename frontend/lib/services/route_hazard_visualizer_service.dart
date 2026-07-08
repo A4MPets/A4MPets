@@ -24,8 +24,7 @@ class RouteHazardVisualizerService {
     List<GenericReportRecord> genericReports = const <GenericReportRecord>[],
     List<String> hazardRiskFilters = HazardRiskFiltering.allRoutingFilters,
   }) {
-    final Set<String> selectedRiskFilters =
-        HazardRiskFiltering.normalizeSelectedFilters(hazardRiskFilters);
+    final Set<String> selectedRiskFilters = HazardRiskFiltering.normalizeSelectedFilters(hazardRiskFilters);
     final List<_RouteAvoidanceZone> avoidanceZones = <_RouteAvoidanceZone>[
       ...hazards
           .where((HazardReportRecord hazard) {
@@ -44,9 +43,7 @@ class RouteHazardVisualizerService {
       ...genericReports
           .where((GenericReportRecord report) {
             return report.impactRadiusMeters > 0 &&
-                HazardRiskFiltering.shouldConsiderOtherReports(
-                  selectedFilters: selectedRiskFilters,
-                );
+                HazardRiskFiltering.shouldConsiderOtherReports(selectedFilters: selectedRiskFilters);
           })
           .map(
             (GenericReportRecord report) => _RouteAvoidanceZone(
@@ -57,14 +54,10 @@ class RouteHazardVisualizerService {
           ),
     ];
 
-    if (routePolyline.length < 2) {
-      return <ColoredRouteSegment>[];
-    }
+    if (routePolyline.length < 2) return <ColoredRouteSegment>[];
 
     final List<ColoredRouteSegment> segments = [];
-    final List<Color> resolvedSegmentColors = segmentColors.isEmpty
-        ? <Color>[_safeColor]
-        : segmentColors;
+    final List<Color> resolvedSegmentColors = segmentColors.isEmpty ? <Color>[_safeColor] : segmentColors;
     final List<int> waypointBreakIndices = _resolveWaypointBreakIndices(
       routePolyline: routePolyline,
       routeWaypoints: routeWaypoints,
@@ -74,18 +67,10 @@ class RouteHazardVisualizerService {
     for (int i = 0; i < routePolyline.length - 1; i++) {
       final LatLng start = routePolyline[i];
       final LatLng end = routePolyline[i + 1];
-      final int legIndex = _resolveLegIndex(
-        polylineIndex: i,
-        waypointBreakIndices: waypointBreakIndices,
-      );
-      final Color legColor =
-          resolvedSegmentColors[legIndex % resolvedSegmentColors.length];
+      final int legIndex = _resolveLegIndex(polylineIndex: i, waypointBreakIndices: waypointBreakIndices);
+      final Color legColor = resolvedSegmentColors[legIndex % resolvedSegmentColors.length];
 
-      final bool segmentHasHazard = _segmentIntersectsHazard(
-        start: start,
-        end: end,
-        avoidanceZones: avoidanceZones,
-      );
+      final bool segmentHasHazard = _segmentIntersectsHazard(start: start, end: end, avoidanceZones: avoidanceZones);
 
       segments.add(
         ColoredRouteSegment(
@@ -103,32 +88,19 @@ class RouteHazardVisualizerService {
     required List<LatLng> routePolyline,
     required List<LatLng> routeWaypoints,
   }) {
-    if (routeWaypoints.length < 2) {
-      return <int>[0, routePolyline.length - 1];
-    }
+    if (routeWaypoints.length < 2) return <int>[0, routePolyline.length - 1];
 
     final Distance distanceCalculator = const Distance();
     final List<int> breakIndices = <int>[0];
     int searchStartIndex = 0;
 
-    for (
-      int waypointIndex = 1;
-      waypointIndex < routeWaypoints.length - 1;
-      waypointIndex++
-    ) {
+    for (int waypointIndex = 1; waypointIndex < routeWaypoints.length - 1; waypointIndex++) {
       final LatLng waypoint = routeWaypoints[waypointIndex];
       int bestPolylineIndex = searchStartIndex;
       double bestDistance = double.infinity;
 
-      for (
-        int polylineIndex = searchStartIndex;
-        polylineIndex < routePolyline.length;
-        polylineIndex++
-      ) {
-        final double candidateDistance = distanceCalculator.distance(
-          waypoint,
-          routePolyline[polylineIndex],
-        );
+      for (int polylineIndex = searchStartIndex; polylineIndex < routePolyline.length; polylineIndex++) {
+        final double candidateDistance = distanceCalculator.distance(waypoint, routePolyline[polylineIndex]);
         if (candidateDistance < bestDistance) {
           bestDistance = candidateDistance;
           bestPolylineIndex = polylineIndex;
@@ -143,24 +115,13 @@ class RouteHazardVisualizerService {
     return breakIndices;
   }
 
-  static int _resolveLegIndex({
-    required int polylineIndex,
-    required List<int> waypointBreakIndices,
-  }) {
-    if (waypointBreakIndices.length < 2) {
-      return 0;
-    }
+  static int _resolveLegIndex({required int polylineIndex, required List<int> waypointBreakIndices}) {
+    if (waypointBreakIndices.length < 2) return 0;
 
-    for (
-      int legIndex = 0;
-      legIndex < waypointBreakIndices.length - 1;
-      legIndex++
-    ) {
+    for (int legIndex = 0; legIndex < waypointBreakIndices.length - 1; legIndex++) {
       final int start = waypointBreakIndices[legIndex];
       final int end = waypointBreakIndices[legIndex + 1];
-      if (polylineIndex >= start && polylineIndex < end) {
-        return legIndex;
-      }
+      if (polylineIndex >= start && polylineIndex < end) return legIndex;
     }
 
     return waypointBreakIndices.length - 2;
@@ -176,16 +137,10 @@ class RouteHazardVisualizerService {
       final LatLng hazardPoint = LatLng(zone.latitude, zone.longitude);
 
       // Calcular distancia del hazard al segmento de línea
-      final double distanceToSegment = _distancePointToLineSegment(
-        point: hazardPoint,
-        lineStart: start,
-        lineEnd: end,
-      );
+      final double distanceToSegment = _distancePointToLineSegment(point: hazardPoint, lineStart: start, lineEnd: end);
 
       // Si la distancia es menor que el radio del hazard, intersecta
-      if (distanceToSegment <= zone.radiusMeters) {
-        return true;
-      }
+      if (distanceToSegment <= zone.radiusMeters) return true;
     }
     return false;
   }
@@ -200,32 +155,21 @@ class RouteHazardVisualizerService {
     // Distancias Haversine a los extremos
     const Distance distanceCalculator = Distance();
 
-    final double distToStart = distanceCalculator.as(
-      LengthUnit.Meter,
-      point,
-      lineStart,
-    );
+    final double distToStart = distanceCalculator.as(LengthUnit.Meter, point, lineStart);
 
-    final double distToEnd = distanceCalculator.as(
-      LengthUnit.Meter,
-      point,
-      lineEnd,
-    );
+    final double distToEnd = distanceCalculator.as(LengthUnit.Meter, point, lineEnd);
 
     // Proyección del punto en la línea
     // Si la proyección cae fuera del segmento, usa la distancia a los endpoints
     final double dx = lineEnd.longitude - lineStart.longitude;
     final double dy = lineEnd.latitude - lineStart.latitude;
 
-    if (dx == 0 && dy == 0) {
-      return distToStart;
-    }
+    if (dx == 0 && dy == 0) return distToStart;
 
     // Parámetro t representa la posición del punto proyectado en la línea
     // t=0 es el inicio, t=1 es el final, 0<t<1 significa dentro del segmento
     final double t =
-        ((point.longitude - lineStart.longitude) * dx +
-            (point.latitude - lineStart.latitude) * dy) /
+        ((point.longitude - lineStart.longitude) * dx + (point.latitude - lineStart.latitude) * dy) /
         (dx * dx + dy * dy);
 
     if (t < 0) {
@@ -251,9 +195,5 @@ class _RouteAvoidanceZone {
   final double longitude;
   final double radiusMeters;
 
-  const _RouteAvoidanceZone({
-    required this.latitude,
-    required this.longitude,
-    required this.radiusMeters,
-  });
+  const _RouteAvoidanceZone({required this.latitude, required this.longitude, required this.radiusMeters});
 }

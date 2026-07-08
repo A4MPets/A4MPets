@@ -13,14 +13,8 @@ extension _MapPageRoutesState on _MapPageState {
     _pushPanel(_buildAddRouteRoute(isDarkMode));
   }
 
-  void _openEditRoutePanel(
-    bool isDarkMode,
-    RouteRecord route, {
-    PanelAnchor anchor = PanelAnchor.topLeft,
-  }) {
-    final List<LatLng> points = route.points
-        .map((RoutePoint p) => p.toLatLng())
-        .toList();
+  void _openEditRoutePanel(bool isDarkMode, RouteRecord route, {PanelAnchor anchor = PanelAnchor.topLeft}) {
+    final List<LatLng> points = route.points.map((RoutePoint p) => p.toLatLng()).toList();
     _updatePageState(() {
       _draftRoutePoints = points;
       _draftRoutePolyline = List<LatLng>.from(points);
@@ -35,9 +29,7 @@ extension _MapPageRoutesState on _MapPageState {
   }
 
   void _showRouteOnMap(RouteRecord route) {
-    final List<LatLng> points = route.points
-        .map((RoutePoint p) => p.toLatLng())
-        .toList();
+    final List<LatLng> points = route.points.map((RoutePoint p) => p.toLatLng()).toList();
     _updatePageState(() {
       _draftRoutePoints = points;
       _draftRoutePolyline = List<LatLng>.from(points);
@@ -48,69 +40,22 @@ extension _MapPageRoutesState on _MapPageState {
     _refreshDraftRoutePolyline(points);
   }
 
-  Future<void> _confirmAndDeleteRoute(
-    BuildContext context,
-    RouteRecord route,
-  ) async {
+  Future<void> _confirmAndDeleteRoute(BuildContext context, RouteRecord route) async {
     final bool isDarkMode = ref.read(themeModeProvider);
 
-    final bool? confirmed = await showDialog<bool>(
+    final bool confirmed = await showAppConfirmationDialog(
       context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          backgroundColor: AppPalette.dialogBackground(isDarkMode),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: AppPalette.border(isDarkMode)),
-          ),
-          title: Text(
-            'Eliminar ruta',
-            style: TextStyle(
-              color: AppPalette.dialogTitle(isDarkMode),
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          content: Text(
-            '¿Estás seguro de borrar la ruta "${route.name}"?',
-            style: TextStyle(color: AppPalette.dialogBody(isDarkMode)),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(
-                'Cancelar',
-                style: TextStyle(
-                  color: AppPalette.dialogCancel(isDarkMode),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text(
-                'Borrar',
-                style: TextStyle(
-                  color: AppPalette.dangerRed,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+      isDarkMode: isDarkMode,
+      title: 'Eliminar ruta',
+      message: '¿Estás seguro de borrar la ruta "${route.name}"?',
+      confirmLabel: 'Borrar',
     );
 
-    if (confirmed != true) {
-      return;
-    }
+    if (!confirmed) return;
 
-    await ref
-        .read(routesControllerProvider.notifier)
-        .deleteRoute(routeId: route.id);
+    await ref.read(routesControllerProvider.notifier).deleteRoute(routeId: route.id);
 
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     if (_selectedRouteId == route.id) {
       _updatePageState(() {
@@ -131,7 +76,7 @@ extension _MapPageRoutesState on _MapPageState {
       expandHorizontal: false,
       expandVertical: true,
       scrollContent: false,
-      isManageRoutesPanel: true,
+      kind: PanelKind.manageRoutes,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
         return ManageRoutesPanelContent(
@@ -139,19 +84,14 @@ extension _MapPageRoutesState on _MapPageState {
           onAddRoutePressed: () => _openAddRoutePanel(isDarkMode),
           selectedRouteId: _selectedRouteId,
           onRoutePressed: _showRouteOnMap,
-          onEditRoutePressed: (RouteRecord route) =>
-              _openEditRoutePanel(isDarkMode, route),
-          onDeleteRoutePressed: (RouteRecord route) =>
-              _confirmAndDeleteRoute(context, route),
+          onEditRoutePressed: (RouteRecord route) => _openEditRoutePanel(isDarkMode, route),
+          onDeleteRoutePressed: (RouteRecord route) => _confirmAndDeleteRoute(context, route),
         );
       },
     );
   }
 
-  _PanelRoute _buildAddRouteRoute(
-    bool isDarkMode, {
-    PanelAnchor anchor = PanelAnchor.topLeft,
-  }) {
+  _PanelRoute _buildAddRouteRoute(bool isDarkMode, {PanelAnchor anchor = PanelAnchor.topLeft}) {
     final bool isEditing = _editingRouteId != null;
 
     return _PanelRoute(
@@ -165,7 +105,7 @@ extension _MapPageRoutesState on _MapPageState {
       expandHorizontal: false,
       expandVertical: false,
       scrollContent: false,
-      isAddRoutePanel: true,
+      kind: PanelKind.addRoute,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
         return AddRoutePanelContent(
@@ -200,9 +140,7 @@ extension _MapPageRoutesState on _MapPageState {
           onSaveRoute: _persistDraftRoute,
           onSavedComplete: (int savedRouteId) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) {
-                return;
-              }
+              if (!mounted) return;
               _closeAddRoutePanelAfterSave(savedRouteId);
             });
           },
@@ -229,18 +167,14 @@ extension _MapPageRoutesState on _MapPageState {
   }
 
   void _onRoutePointDragStart(int index) {
-    if (_activeRouteTool != _RouteMapTool.editPoint) {
-      return;
-    }
+    if (_activeRouteTool != _RouteMapTool.editPoint) return;
     _updatePageState(() {
       _selectedPointIndexForEdit = index;
     });
   }
 
   void _onRoutePointDragUpdate(int index, LatLng point) {
-    if (_activeRouteTool != _RouteMapTool.editPoint ||
-        index < 0 ||
-        index >= _draftRoutePoints.length) {
+    if (_activeRouteTool != _RouteMapTool.editPoint || index < 0 || index >= _draftRoutePoints.length) {
       return;
     }
 
@@ -255,9 +189,7 @@ extension _MapPageRoutesState on _MapPageState {
   }
 
   void _onRoutePointDragEnd(int index, LatLng point) {
-    if (_activeRouteTool != _RouteMapTool.editPoint ||
-        index < 0 ||
-        index >= _draftRoutePoints.length) {
+    if (_activeRouteTool != _RouteMapTool.editPoint || index < 0 || index >= _draftRoutePoints.length) {
       return;
     }
 
@@ -274,59 +206,17 @@ extension _MapPageRoutesState on _MapPageState {
   Future<bool> _confirmDiscardDraftRoute() async {
     final bool isDarkMode = ref.read(themeModeProvider);
 
-    final bool? result = await showDialog<bool>(
+    return showAppConfirmationDialog(
       context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          backgroundColor: AppPalette.dialogBackground(isDarkMode),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: AppPalette.border(isDarkMode)),
-          ),
-          title: Text(
-            'Descartar ruta',
-            style: TextStyle(
-              color: AppPalette.dialogTitle(isDarkMode),
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          content: Text(
-            'Tienes puntos sin guardar. Si cierras este panel, se perderán.',
-            style: TextStyle(color: AppPalette.dialogBody(isDarkMode)),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(
-                'Cancelar',
-                style: TextStyle(
-                  color: AppPalette.dialogCancel(isDarkMode),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text(
-                'Descartar',
-                style: TextStyle(
-                  color: AppPalette.dangerRed,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+      isDarkMode: isDarkMode,
+      title: 'Descartar ruta',
+      message: 'Tienes puntos sin guardar. Si cierras este panel, se perderán.',
+      confirmLabel: 'Descartar',
     );
-
-    return result ?? false;
   }
 
   void _reorderDraftPoints(int oldIndex, int newIndex) {
-    if (newIndex > oldIndex) {
-      newIndex -= 1;
-    }
+    if (newIndex > oldIndex) newIndex -= 1;
 
     List<LatLng> updated = <LatLng>[];
     _updatePageState(() {
@@ -334,9 +224,7 @@ extension _MapPageRoutesState on _MapPageState {
       final LatLng moved = updated.removeAt(oldIndex);
       updated.insert(newIndex, moved);
       _draftRoutePoints = updated;
-      if (_selectedPointIndexForEdit == oldIndex) {
-        _selectedPointIndexForEdit = newIndex;
-      }
+      if (_selectedPointIndexForEdit == oldIndex) _selectedPointIndexForEdit = newIndex;
     });
     _refreshDraftRoutePolyline(updated);
   }
@@ -348,9 +236,9 @@ extension _MapPageRoutesState on _MapPageState {
       updated.removeAt(index);
       _draftRoutePoints = updated;
       if (_selectedPointIndexForEdit != null) {
-        if (_selectedPointIndexForEdit == index) {
+        if (_selectedPointIndexForEdit == index)
           _selectedPointIndexForEdit = null;
-        } else if (_selectedPointIndexForEdit! > index) {
+        else if (_selectedPointIndexForEdit! > index) {
           _selectedPointIndexForEdit = _selectedPointIndexForEdit! - 1;
         }
       }
@@ -383,9 +271,7 @@ extension _MapPageRoutesState on _MapPageState {
       return;
     }
 
-    if (_hasOpenPanels &&
-        _panelStack.last.isReportHazardPanel &&
-        _isSelectingHazardLocationOnMap) {
+    if (_hasOpenPanels && _panelStack.last.isReportHazardPanel && _isSelectingHazardLocationOnMap) {
       _updatePageState(() {
         _manualHazardLocation = point;
         _isSelectingHazardLocationOnMap = false;
@@ -395,9 +281,7 @@ extension _MapPageRoutesState on _MapPageState {
       return;
     }
 
-    if (!_hasOpenPanels || !_panelStack.last.isAddRoutePanel) {
-      return;
-    }
+    if (!_hasOpenPanels || !_panelStack.last.isAddRoutePanel) return;
 
     if (_activeRouteTool == _RouteMapTool.addPoint) {
       late final List<LatLng> updated;
@@ -428,27 +312,16 @@ extension _MapPageRoutesState on _MapPageState {
   Future<int> _persistDraftRoute(String name) async {
     final String resolvedName = name.trim().isEmpty ? 'Ruta' : name.trim();
     final List<RoutePoint> points = _draftRoutePoints
-        .map(
-          (LatLng ll) =>
-              RoutePoint(latitude: ll.latitude, longitude: ll.longitude),
-        )
+        .map((LatLng ll) => RoutePoint(latitude: ll.latitude, longitude: ll.longitude))
         .toList(growable: false);
 
-    if (points.isEmpty) {
-      throw StateError('No hay puntos para guardar la ruta.');
-    }
+    if (points.isEmpty) throw StateError('No hay puntos para guardar la ruta.');
 
     if (_editingRouteId != null) {
       await ref
           .read(routesControllerProvider.notifier)
-          .updateRoute(
-            routeId: _editingRouteId!,
-            name: resolvedName,
-            points: points,
-          );
-      if (!mounted) {
-        return _editingRouteId!;
-      }
+          .updateRoute(routeId: _editingRouteId!, name: resolvedName, points: points);
+      if (!mounted) return _editingRouteId!;
       _updatePageState(() {
         _editingRouteName = resolvedName;
         _selectedRouteId = _editingRouteId;
@@ -456,9 +329,7 @@ extension _MapPageRoutesState on _MapPageState {
       return _editingRouteId!;
     }
 
-    return ref
-        .read(routesControllerProvider.notifier)
-        .addRoute(name: resolvedName, points: points);
+    return ref.read(routesControllerProvider.notifier).addRoute(name: resolvedName, points: points);
   }
 
   Future<void> _refreshDraftRoutePolyline(
@@ -491,35 +362,25 @@ extension _MapPageRoutesState on _MapPageState {
 
     try {
       final bool shouldApplyHazardAvoidance = _isTripNavigationContext;
-      final PlannedRouteResult routeResult = await _routingService
-          .buildRoadRoute(
-            waypoints: waypoints,
-            hazardRiskFilters: shouldApplyHazardAvoidance
-                ? _selectedTripHazardRiskFilters.toList(growable: false)
-                : const <String>[],
-            travelMode: _selectedTripTransport == _TripTransportMethod.vehicle
-                ? 'vehicle'
-                : 'walking',
-            tripConfig: shouldApplyHazardAvoidance
-                ? <String, Object?>{
-                    'selected_pet_ids': _selectedTripPetIds.toList(
-                      growable: false,
-                    ),
-                    'selected_route_id': _selectedTripRoute?.id,
-                    'transport_method': _selectedTripTransport.name,
-                    'hazard_risk_filters': _selectedTripHazardRiskFilters
-                        .toList(growable: false),
-                  }
-                : null,
-          );
-      if (!mounted || requestVersion != _routePolylineRequestVersion) {
-        return;
-      }
+      final PlannedRouteResult routeResult = await _routingService.buildRoadRoute(
+        waypoints: waypoints,
+        hazardRiskFilters: shouldApplyHazardAvoidance
+            ? _selectedTripHazardRiskFilters.toList(growable: false)
+            : const <String>[],
+        travelMode: _selectedTripTransport == _TripTransportMethod.vehicle ? 'vehicle' : 'walking',
+        tripConfig: shouldApplyHazardAvoidance
+            ? <String, Object?>{
+                'selected_pet_ids': _selectedTripPetIds.toList(growable: false),
+                'selected_route_id': _selectedTripRoute?.id,
+                'transport_method': _selectedTripTransport.name,
+                'hazard_risk_filters': _selectedTripHazardRiskFilters.toList(growable: false),
+              }
+            : null,
+      );
+      if (!mounted || requestVersion != _routePolylineRequestVersion) return;
       _updatePageState(() {
         _draftRoutePolyline = routeResult.polyline;
-        if (_isTripNavigationContext) {
-          _activeNavigationInstructions = routeResult.navigationInstructions;
-        }
+        if (_isTripNavigationContext) _activeNavigationInstructions = routeResult.navigationInstructions;
         _analyzeRouteForHazards();
       });
       if (_isTripNavigationContext) {
@@ -527,9 +388,7 @@ extension _MapPageRoutesState on _MapPageState {
         //ref.read(audioFeedbackServiceProvider).stopSpeech();
       }
     } catch (_) {
-      if (!mounted || requestVersion != _routePolylineRequestVersion) {
-        return;
-      }
+      if (!mounted || requestVersion != _routePolylineRequestVersion) return;
       _updatePageState(() {
         if (_isTripNavigationContext) {
           _activeNavigationInstructions = const <RouteNavigationInstruction>[];
@@ -547,19 +406,14 @@ extension _MapPageRoutesState on _MapPageState {
       LatLng? currentLocation = _latestUserLocation;
       if (currentLocation == null) {
         LocationPermission permission = await Geolocator.checkPermission();
-        if (permission == LocationPermission.denied) {
-          permission = await Geolocator.requestPermission();
-        }
-        if (permission == LocationPermission.denied ||
-            permission == LocationPermission.deniedForever) {
+        if (permission == LocationPermission.denied) permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
           return;
         }
         final Position pos = await Geolocator.getCurrentPosition();
         currentLocation = LatLng(pos.latitude, pos.longitude);
       }
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       final LatLng resolvedLocation = currentLocation;
       late final List<LatLng> updated;
       _updatePageState(() {

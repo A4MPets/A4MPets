@@ -30,6 +30,7 @@ void main() {
             'backend_user_id': 100,
             'email': 'qa@a4mpets.test',
             'access_token': 'token_abc123',
+            'token_expires_at': now,
             'last_synced_at': now,
           });
 
@@ -39,6 +40,7 @@ void main() {
       expect(profile.backendUserId, equals(100));
       expect(profile.email, equals('qa@a4mpets.test'));
       expect(profile.accessToken, equals('token_abc123'));
+      expect(profile.tokenExpiresAt, isNotNull);
       expect(profile.lastSyncedAt, isNotNull);
     });
 
@@ -69,6 +71,7 @@ void main() {
         username: 'qa_tester',
         isAuthenticated: true,
         accessToken: 'token_xyz',
+        tokenExpiresAt: DateTime.fromMillisecondsSinceEpoch(123456789),
       );
 
       final Map<String, Object?> map = profile.toMap();
@@ -76,6 +79,7 @@ void main() {
       expect(map['is_authenticated'], equals(1));
       expect(map['username'], equals('qa_tester'));
       expect(map['access_token'], equals('token_xyz'));
+      expect(map['token_expires_at'], equals(123456789));
     });
 
     test('toJson y fromJson mantienen consistencia de datos (roundtrip)', () {
@@ -86,6 +90,7 @@ void main() {
         backendUserId: 200,
         email: 'rt@test.com',
         accessToken: 'rt_token',
+        tokenExpiresAt: DateTime.fromMillisecondsSinceEpoch(987654321),
       );
 
       final String json = original.toJson();
@@ -97,6 +102,7 @@ void main() {
       expect(restored.backendUserId, equals(original.backendUserId));
       expect(restored.email, equals(original.email));
       expect(restored.accessToken, equals(original.accessToken));
+      expect(restored.tokenExpiresAt, equals(original.tokenExpiresAt));
     });
   });
 

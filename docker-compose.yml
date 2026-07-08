@@ -41,6 +41,7 @@ services:
       DB_CONNECTION: sqlite
       DB_DATABASE: /data/database.sqlite
       SESSION_DRIVER: database
+      API_TOKEN_LIFETIME_MINUTES: ${API_TOKEN_LIFETIME_MINUTES:-43200}
       CACHE_STORE: database
       QUEUE_CONNECTION: database
       GRAPHHOPPER_BASE_URL: http://graphhopper:8989

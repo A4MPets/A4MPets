@@ -1,22 +1,70 @@
 part of 'map_page.dart';
 
+enum PanelKind {
+  addRoute,
+  reportSelector,
+  reportHazard,
+  lostPetReport,
+  foundPetReport,
+  lostPetReportsList,
+  foundPetReportsList,
+  genericReport,
+  hazardDetails,
+  lostPetDetails,
+  foundPetDetails,
+  genericReportDetails,
+  hazardSettings,
+  hazardComments,
+  managePets,
+  lostPetPetSelection,
+  manageRoutes,
+  profile,
+  login,
+  register,
+  tripStart,
+  tripActive,
+  tripPetSelection,
+  tripRouteSelection,
+}
+
+const Set<PanelKind> _reportEditorPanelKinds = <PanelKind>{
+  PanelKind.reportHazard,
+  PanelKind.lostPetReport,
+  PanelKind.foundPetReport,
+  PanelKind.genericReport,
+};
+const Set<PanelKind> _reportFlowPanelKinds = <PanelKind>{
+  PanelKind.reportSelector,
+  PanelKind.lostPetPetSelection,
+  PanelKind.lostPetReportsList,
+  PanelKind.foundPetReportsList,
+  ..._reportEditorPanelKinds,
+};
+const Set<PanelKind> _reportDetailsPanelKinds = <PanelKind>{
+  PanelKind.hazardDetails,
+  PanelKind.lostPetDetails,
+  PanelKind.foundPetDetails,
+  PanelKind.genericReportDetails,
+};
+const Set<PanelKind> _tripFlowPanelKinds = <PanelKind>{
+  PanelKind.tripActive,
+  PanelKind.tripStart,
+  PanelKind.tripPetSelection,
+  PanelKind.tripRouteSelection,
+};
+const Set<PanelKind> _tripSetupPanelKinds = <PanelKind>{
+  PanelKind.tripStart,
+  PanelKind.tripPetSelection,
+  PanelKind.tripRouteSelection,
+};
+
 class _PanelRoute {
   final PanelKind kind;
   final int transitionKey;
   final String? title;
   final PanelAnchor anchor;
-  final double? width;
-  final double? height;
-  final double? maxHeight;
-  final double? maxHeightFactor;
-  final double? mobileMaxHeightFactor;
-  final double? desktopMaxHeightFactor;
-  final bool adaptHeightToContent;
-  final bool expandHorizontal;
-  final bool expandVertical;
-  final bool scrollContent;
-  final bool canMinimize;
-  final bool isMinimized;
+  final double? width, height, maxHeight, maxHeightFactor, mobileMaxHeightFactor, desktopMaxHeightFactor;
+  final bool adaptHeightToContent, expandHorizontal, expandVertical, scrollContent, canMinimize, isMinimized;
   final double minimizedHeight;
   final BorderRadius borderRadius;
   final double? contentTopPadding;
@@ -24,7 +72,7 @@ class _PanelRoute {
   final Widget Function(BuildContext context) contentBuilder;
 
   _PanelRoute({
-    PanelKind? kind,
+    this.kind = PanelKind.profile,
     required this.transitionKey,
     required this.contentBuilder,
     this.title,
@@ -39,78 +87,24 @@ class _PanelRoute {
     this.expandHorizontal = false,
     this.expandVertical = false,
     this.scrollContent = true,
-    bool isAddRoutePanel = false,
-    bool isReportSelectorPanel = false,
-    bool isReportHazardPanel = false,
-    bool isLostPetReportPanel = false,
-    bool isFoundPetReportPanel = false,
-    bool isLostPetReportsListPanel = false,
-    bool isFoundPetReportsListPanel = false,
-    bool isGenericReportPanel = false,
-    bool isHazardDetailsPanel = false,
-    bool isLostPetDetailsPanel = false,
-    bool isFoundPetDetailsPanel = false,
-    bool isGenericReportDetailsPanel = false,
-    bool isHazardSettingsPanel = false,
-    bool isHazardCommentsPanel = false,
-    bool isManagePetsPanel = false,
-    bool isLostPetPetSelectionPanel = false,
-    bool isManageRoutesPanel = false,
-    bool isProfilePanel = false,
-    bool isLoginPanel = false,
-    bool isRegisterPanel = false,
-    bool isTripStartPanel = false,
-    bool isTripPanel = false,
-    bool isTripPetSelectionPanel = false,
-    bool isTripRouteSelectionPanel = false,
     this.canMinimize = false,
     this.isMinimized = false,
     this.minimizedHeight = 74,
     this.borderRadius = const BorderRadius.all(Radius.circular(20)),
     this.contentTopPadding,
     this.onToggleMinimize,
-  }) : kind =
-           kind ??
-           _resolvePanelKind(
-             isAddRoutePanel: isAddRoutePanel,
-             isReportSelectorPanel: isReportSelectorPanel,
-             isReportHazardPanel: isReportHazardPanel,
-             isLostPetReportPanel: isLostPetReportPanel,
-             isFoundPetReportPanel: isFoundPetReportPanel,
-             isLostPetReportsListPanel: isLostPetReportsListPanel,
-             isFoundPetReportsListPanel: isFoundPetReportsListPanel,
-             isGenericReportPanel: isGenericReportPanel,
-             isHazardDetailsPanel: isHazardDetailsPanel,
-             isLostPetDetailsPanel: isLostPetDetailsPanel,
-             isFoundPetDetailsPanel: isFoundPetDetailsPanel,
-             isGenericReportDetailsPanel: isGenericReportDetailsPanel,
-             isHazardSettingsPanel: isHazardSettingsPanel,
-             isHazardCommentsPanel: isHazardCommentsPanel,
-             isManagePetsPanel: isManagePetsPanel,
-             isLostPetPetSelectionPanel: isLostPetPetSelectionPanel,
-             isManageRoutesPanel: isManageRoutesPanel,
-             isProfilePanel: isProfilePanel,
-             isLoginPanel: isLoginPanel,
-             isRegisterPanel: isRegisterPanel,
-             isTripStartPanel: isTripStartPanel,
-             isTripPanel: isTripPanel,
-             isTripPetSelectionPanel: isTripPetSelectionPanel,
-             isTripRouteSelectionPanel: isTripRouteSelectionPanel,
-           );
+  });
 
   bool get isAddRoutePanel => kind == PanelKind.addRoute;
   bool get isReportSelectorPanel => kind == PanelKind.reportSelector;
   bool get isReportHazardPanel => kind == PanelKind.reportHazard;
   bool get isLostPetReportPanel => kind == PanelKind.lostPetReport;
   bool get isFoundPetReportPanel => kind == PanelKind.foundPetReport;
-  bool get isLostPetReportsListPanel => kind == PanelKind.lostPetReportsList;
-  bool get isFoundPetReportsListPanel => kind == PanelKind.foundPetReportsList;
   bool get isGenericReportPanel => kind == PanelKind.genericReport;
   bool get isHazardDetailsPanel => kind == PanelKind.hazardDetails;
   bool get isLostPetDetailsPanel => kind == PanelKind.lostPetDetails;
   bool get isFoundPetDetailsPanel => kind == PanelKind.foundPetDetails;
-  bool get isGenericReportDetailsPanel =>
-      kind == PanelKind.genericReportDetails;
+  bool get isGenericReportDetailsPanel => kind == PanelKind.genericReportDetails;
   bool get isHazardSettingsPanel => kind == PanelKind.hazardSettings;
   bool get isHazardCommentsPanel => kind == PanelKind.hazardComments;
   bool get isManagePetsPanel => kind == PanelKind.managePets;
@@ -123,59 +117,16 @@ class _PanelRoute {
   bool get isTripPanel => kind == PanelKind.tripActive;
   bool get isTripPetSelectionPanel => kind == PanelKind.tripPetSelection;
   bool get isTripRouteSelectionPanel => kind == PanelKind.tripRouteSelection;
-
-  static PanelKind _resolvePanelKind({
-    required bool isAddRoutePanel,
-    required bool isReportSelectorPanel,
-    required bool isReportHazardPanel,
-    required bool isLostPetReportPanel,
-    required bool isFoundPetReportPanel,
-    required bool isLostPetReportsListPanel,
-    required bool isFoundPetReportsListPanel,
-    required bool isGenericReportPanel,
-    required bool isHazardDetailsPanel,
-    required bool isLostPetDetailsPanel,
-    required bool isFoundPetDetailsPanel,
-    required bool isGenericReportDetailsPanel,
-    required bool isHazardSettingsPanel,
-    required bool isHazardCommentsPanel,
-    required bool isManagePetsPanel,
-    required bool isLostPetPetSelectionPanel,
-    required bool isManageRoutesPanel,
-    required bool isProfilePanel,
-    required bool isLoginPanel,
-    required bool isRegisterPanel,
-    required bool isTripStartPanel,
-    required bool isTripPanel,
-    required bool isTripPetSelectionPanel,
-    required bool isTripRouteSelectionPanel,
-  }) {
-    if (isAddRoutePanel) return PanelKind.addRoute;
-    if (isReportSelectorPanel) return PanelKind.reportSelector;
-    if (isReportHazardPanel) return PanelKind.reportHazard;
-    if (isLostPetReportPanel) return PanelKind.lostPetReport;
-    if (isFoundPetReportPanel) return PanelKind.foundPetReport;
-    if (isLostPetReportsListPanel) return PanelKind.lostPetReportsList;
-    if (isFoundPetReportsListPanel) return PanelKind.foundPetReportsList;
-    if (isGenericReportPanel) return PanelKind.genericReport;
-    if (isHazardDetailsPanel) return PanelKind.hazardDetails;
-    if (isLostPetDetailsPanel) return PanelKind.lostPetDetails;
-    if (isFoundPetDetailsPanel) return PanelKind.foundPetDetails;
-    if (isGenericReportDetailsPanel) return PanelKind.genericReportDetails;
-    if (isHazardSettingsPanel) return PanelKind.hazardSettings;
-    if (isHazardCommentsPanel) return PanelKind.hazardComments;
-    if (isManagePetsPanel) return PanelKind.managePets;
-    if (isLostPetPetSelectionPanel) return PanelKind.lostPetPetSelection;
-    if (isManageRoutesPanel) return PanelKind.manageRoutes;
-    if (isProfilePanel) return PanelKind.profile;
-    if (isLoginPanel) return PanelKind.login;
-    if (isRegisterPanel) return PanelKind.register;
-    if (isTripStartPanel) return PanelKind.tripStart;
-    if (isTripPanel) return PanelKind.tripActive;
-    if (isTripPetSelectionPanel) return PanelKind.tripPetSelection;
-    if (isTripRouteSelectionPanel) return PanelKind.tripRouteSelection;
-    return PanelKind.profile;
-  }
+  bool get isReportEditorPanel => _reportEditorPanelKinds.contains(kind);
+  bool get isReportFlowPanel => _reportFlowPanelKinds.contains(kind);
+  bool get isReportDetailsPanel => _reportDetailsPanelKinds.contains(kind);
+  bool get isTripFlowPanel => _tripFlowPanelKinds.contains(kind);
+  bool get isTripSetupPanel => _tripSetupPanelKinds.contains(kind);
+  bool get isTripSelectionPanel => isTripPetSelectionPanel || isTripRouteSelectionPanel;
+  bool get isAuthPanel => isLoginPanel || isRegisterPanel || isProfilePanel;
+  bool get isPetDataPanel => isManagePetsPanel || isLostPetPetSelectionPanel || isTripPetSelectionPanel;
+  bool get isRouteDataPanel => isManageRoutesPanel || isTripRouteSelectionPanel;
+  bool get isReportDataPanel => isReportDetailsPanel || isHazardCommentsPanel || isHazardSettingsPanel;
 }
 
 class _ProximityAlertTarget {
@@ -197,11 +148,7 @@ class _ProximityAlertCard extends StatelessWidget {
   final VoidCallback onAcknowledge;
   final VoidCallback onOpenComments;
 
-  const _ProximityAlertCard({
-    required this.isDarkMode,
-    required this.onAcknowledge,
-    required this.onOpenComments,
-  });
+  const _ProximityAlertCard({required this.isDarkMode, required this.onAcknowledge, required this.onOpenComments});
 
   @override
   Widget build(BuildContext context) {
@@ -222,11 +169,7 @@ class _ProximityAlertCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(22),
                 border: Border.all(color: AppPalette.border(isDarkMode)),
                 boxShadow: const <BoxShadow>[
-                  BoxShadow(
-                    color: Color(0x33000000),
-                    blurRadius: 24,
-                    offset: Offset(0, 14),
-                  ),
+                  BoxShadow(color: Color(0x33000000), blurRadius: 24, offset: Offset(0, 14)),
                 ],
               ),
               child: Column(
@@ -236,58 +179,23 @@ class _ProximityAlertCard extends StatelessWidget {
                   Text(
                     '¡Cuidado!',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: TextStyle(color: textColor, fontSize: 22, fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 10),
                   Text(
                     'Estás dentro del radio de afectación de un peligro.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 18),
-                  SizedBox(
-                    height: 46,
-                    child: ElevatedButton(
-                      onPressed: onAcknowledge,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppPalette.primaryBlue,
-                        foregroundColor: AppPalette.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'De acuerdo',
-                        style: TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                  ),
+                  PanelActionButton(label: 'De acuerdo', onPressed: onAcknowledge, height: 46),
                   const SizedBox(height: 8),
-                  SizedBox(
+                  PanelActionButton(
+                    label: 'Desmentir o Confirmar',
+                    onPressed: onOpenComments,
                     height: 46,
-                    child: OutlinedButton(
-                      onPressed: onOpenComments,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppPalette.primaryBlue,
-                        side: const BorderSide(color: AppPalette.primaryBlue),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Desmentir o Confirmar',
-                        style: TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                    ),
+                    foregroundColor: AppPalette.primaryBlue,
+                    borderColor: AppPalette.primaryBlue,
                   ),
                 ],
               ),
@@ -304,14 +212,11 @@ class _TripStartPanelContent extends StatelessWidget {
   final _TripTransportMethod selectedTransport;
   final Set<String> selectedHazardRiskFilters;
   final int selectedPetsCount;
-  final String? selectedRouteName;
-  final String? errorText;
-  final VoidCallback onSelectPets;
-  final VoidCallback onSelectRoute;
+  final String? selectedRouteName, errorText;
+  final VoidCallback onSelectPets, onSelectRoute;
   final VoidCallback? onEditSelectedRoute;
   final ValueChanged<_TripTransportMethod> onTransportChanged;
-  final void Function(String riskLevelCode, bool value)
-  onToggleHazardRiskFilter;
+  final void Function(String riskLevelCode, bool value) onToggleHazardRiskFilter;
   final double contentTopPadding;
   final VoidCallback onStartTrip;
 
@@ -335,9 +240,7 @@ class _TripStartPanelContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color grayButton = AppPalette.cardBackground(isDarkMode);
     final Color textColor = AppPalette.textPrimary(isDarkMode);
-    final Color titleColor = isDarkMode
-        ? AppPalette.textMutedDark
-        : AppPalette.iconGray;
+    final Color titleColor = isDarkMode ? AppPalette.textMutedDark : AppPalette.iconGray;
 
     return Column(
       mainAxisSize: MainAxisSize.max,
@@ -352,9 +255,7 @@ class _TripStartPanelContent extends StatelessWidget {
                 _TripFieldTitle(label: 'Mascotas', color: titleColor),
                 const SizedBox(height: 6),
                 _TripGrayActionButton(
-                  label: selectedPetsCount == 0
-                      ? 'Seleccionar'
-                      : 'Mascotas seleccionadas: $selectedPetsCount',
+                  label: selectedPetsCount == 0 ? 'Seleccionar' : 'Mascotas seleccionadas: $selectedPetsCount',
                   semanticLabel: selectedPetsCount == 0
                       ? 'Seleccionar mascotas'
                       : 'Mascotas seleccionadas: $selectedPetsCount',
@@ -363,10 +264,7 @@ class _TripStartPanelContent extends StatelessWidget {
                   onPressed: onSelectPets,
                 ),
                 const SizedBox(height: 10),
-                _TripFieldTitle(
-                  label: 'Método de transporte',
-                  color: titleColor,
-                ),
+                _TripFieldTitle(label: 'Método de transporte', color: titleColor),
                 const SizedBox(height: 6),
                 Row(
                   children: [
@@ -374,10 +272,8 @@ class _TripStartPanelContent extends StatelessWidget {
                       child: _TripTransportButton(
                         label: 'A pie',
                         isDarkMode: isDarkMode,
-                        isSelected:
-                            selectedTransport == _TripTransportMethod.walking,
-                        onPressed: () =>
-                            onTransportChanged(_TripTransportMethod.walking),
+                        isSelected: selectedTransport == _TripTransportMethod.walking,
+                        onPressed: () => onTransportChanged(_TripTransportMethod.walking),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -385,10 +281,8 @@ class _TripStartPanelContent extends StatelessWidget {
                       child: _TripTransportButton(
                         label: 'En vehículo',
                         isDarkMode: isDarkMode,
-                        isSelected:
-                            selectedTransport == _TripTransportMethod.vehicle,
-                        onPressed: () =>
-                            onTransportChanged(_TripTransportMethod.vehicle),
+                        isSelected: selectedTransport == _TripTransportMethod.vehicle,
+                        onPressed: () => onTransportChanged(_TripTransportMethod.vehicle),
                       ),
                     ),
                   ],
@@ -397,47 +291,33 @@ class _TripStartPanelContent extends StatelessWidget {
                 _TripFieldTitle(label: 'Evitar peligros', color: titleColor),
                 const SizedBox(height: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: grayButton,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(color: grayButton, borderRadius: BorderRadius.circular(12)),
                   child: Column(
                     children: [
                       _TripRiskFilterCheckbox(
                         label: 'Bajo',
                         value: selectedHazardRiskFilters.contains('low'),
                         textColor: textColor,
-                        onChanged: (bool value) =>
-                            onToggleHazardRiskFilter('low', value),
+                        onChanged: (bool value) => onToggleHazardRiskFilter('low', value),
                       ),
                       _TripRiskFilterCheckbox(
                         label: 'Medio',
                         value: selectedHazardRiskFilters.contains('medium'),
                         textColor: textColor,
-                        onChanged: (bool value) =>
-                            onToggleHazardRiskFilter('medium', value),
+                        onChanged: (bool value) => onToggleHazardRiskFilter('medium', value),
                       ),
                       _TripRiskFilterCheckbox(
                         label: 'Alto',
                         value: selectedHazardRiskFilters.contains('high'),
                         textColor: textColor,
-                        onChanged: (bool value) =>
-                            onToggleHazardRiskFilter('high', value),
+                        onChanged: (bool value) => onToggleHazardRiskFilter('high', value),
                       ),
                       _TripRiskFilterCheckbox(
                         label: 'Otro',
-                        value: selectedHazardRiskFilters.contains(
-                          HazardRiskFiltering.other,
-                        ),
+                        value: selectedHazardRiskFilters.contains(HazardRiskFiltering.other),
                         textColor: textColor,
-                        onChanged: (bool value) => onToggleHazardRiskFilter(
-                          HazardRiskFiltering.other,
-                          value,
-                        ),
+                        onChanged: (bool value) => onToggleHazardRiskFilter(HazardRiskFiltering.other, value),
                       ),
                     ],
                   ),
@@ -446,18 +326,13 @@ class _TripStartPanelContent extends StatelessWidget {
                 _TripFieldTitle(label: 'Ruta', color: titleColor),
                 const SizedBox(height: 6),
                 _TripGrayActionButton(
-                  label: selectedRouteName == null
-                      ? 'Seleccionar'
-                      : 'Ruta: $selectedRouteName',
-                  semanticLabel: selectedRouteName == null
-                      ? 'Seleccionar ruta'
-                      : 'Ruta: $selectedRouteName',
+                  label: selectedRouteName == null ? 'Seleccionar' : 'Ruta: $selectedRouteName',
+                  semanticLabel: selectedRouteName == null ? 'Seleccionar ruta' : 'Ruta: $selectedRouteName',
                   backgroundColor: grayButton,
                   textColor: textColor,
                   onPressed: onSelectRoute,
                 ),
-                if (selectedRouteName != null &&
-                    onEditSelectedRoute != null) ...[
+                if (selectedRouteName != null && onEditSelectedRoute != null) ...[
                   const SizedBox(height: 8),
                   SizedBox(
                     height: 42,
@@ -465,21 +340,13 @@ class _TripStartPanelContent extends StatelessWidget {
                       onPressed: onEditSelectedRoute,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppPalette.primaryBlue,
-                        side: const BorderSide(
-                          color: AppPalette.primaryBlue,
-                          width: 1,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        side: const BorderSide(color: AppPalette.primaryBlue, width: 1),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       icon: const Icon(Icons.edit_rounded, size: 16),
                       label: const Text(
                         'Editar ruta seleccionada',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                       ),
                     ),
                   ),
@@ -489,11 +356,7 @@ class _TripStartPanelContent extends StatelessWidget {
                   Text(
                     errorText!,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppPalette.dangerRed,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(color: AppPalette.dangerRed, fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                 ],
               ],
@@ -505,24 +368,7 @@ class _TripStartPanelContent extends StatelessWidget {
           label: 'Confirmar inicio de viaje',
           button: true,
           onTap: onStartTrip,
-          child: SizedBox(
-            height: 48,
-            child: ElevatedButton(
-              onPressed: onStartTrip,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppPalette.primaryBlue,
-                foregroundColor: AppPalette.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'Iniciar Viaje',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-              ),
-            ),
-          ),
+          child: PanelActionButton(label: 'Iniciar Viaje', onPressed: onStartTrip, height: 48, fontSize: 15),
         ),
       ],
     );
@@ -533,9 +379,8 @@ class _TripPetSelectionPanelContent extends StatelessWidget {
   final bool isDarkMode;
   final AsyncValue<List<PetRecord>> petsValue;
   final Set<int> selectedPetIds;
-  final VoidCallback onAddPetPressed;
+  final VoidCallback onAddPetPressed, onDone;
   final ValueChanged<int> onTogglePet;
-  final VoidCallback onDone;
 
   const _TripPetSelectionPanelContent({
     required this.isDarkMode,
@@ -557,21 +402,13 @@ class _TripPetSelectionPanelContent extends StatelessWidget {
         Expanded(
           child: petsValue.when(
             data: (List<PetRecord> pets) {
-              final List<PetRecord> availablePets = pets
-                  .where((PetRecord pet) => !pet.isLost)
-                  .toList(growable: false);
+              final List<PetRecord> availablePets = pets.where((PetRecord pet) => !pet.isLost).toList(growable: false);
 
               if (availablePets.isEmpty) {
                 return Center(
                   child: Text(
-                    pets.isEmpty
-                        ? 'No hay mascotas registradas'
-                        : 'No hay mascotas disponibles para iniciar viaje',
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    pets.isEmpty ? 'No hay mascotas registradas' : 'No hay mascotas disponibles para iniciar viaje',
+                    style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w600),
                   ),
                 );
               }
@@ -599,9 +436,7 @@ class _TripPetSelectionPanelContent extends StatelessWidget {
                         border: Border.all(
                           color: selected
                               ? AppPalette.primaryBlue
-                              : (pet.isLost
-                                    ? AppPalette.reportYellow
-                                    : Colors.transparent),
+                              : (pet.isLost ? AppPalette.reportYellow : Colors.transparent),
                           width: selected || pet.isLost ? 2 : 0,
                         ),
                       ),
@@ -612,48 +447,7 @@ class _TripPetSelectionPanelContent extends StatelessWidget {
                             child: SizedBox(
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
-                                child:
-                                    pet.photoPath == null ||
-                                        pet.photoPath!.trim().isEmpty
-                                    ? Container(
-                                        color: AppPalette.placeholderGray,
-                                        alignment: Alignment.center,
-                                        child: const Icon(
-                                          Icons.pets,
-                                          color: AppPalette.iconGray,
-                                          size: 28,
-                                        ),
-                                      )
-                                    : buildLocalImageWidget(
-                                        source: pet.photoPath,
-                                        fit: BoxFit.cover,
-                                        fallback: Container(
-                                          color: AppPalette.placeholderGray,
-                                          alignment: Alignment.center,
-                                          child: const Icon(
-                                            Icons.pets,
-                                            color: AppPalette.iconGray,
-                                            size: 28,
-                                          ),
-                                        ),
-                                        errorBuilder:
-                                            (
-                                              BuildContext context,
-                                              Object error,
-                                              StackTrace? stackTrace,
-                                            ) {
-                                              return Container(
-                                                color:
-                                                    AppPalette.placeholderGray,
-                                                alignment: Alignment.center,
-                                                child: const Icon(
-                                                  Icons.pets,
-                                                  color: AppPalette.iconGray,
-                                                  size: 28,
-                                                ),
-                                              );
-                                            },
-                                      ),
+                                child: _tripPetPhoto(pet.photoPath),
                               ),
                             ),
                           ),
@@ -663,11 +457,7 @@ class _TripPetSelectionPanelContent extends StatelessWidget {
                             textAlign: TextAlign.center,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: textColor,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w700),
                           ),
                         ],
                       ),
@@ -682,11 +472,7 @@ class _TripPetSelectionPanelContent extends StatelessWidget {
                 error.toString().contains('Debes iniciar sesion')
                     ? 'Inicia sesion para seleccionar tus mascotas'
                     : 'No se pudieron cargar las mascotas',
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w600),
               ),
             ),
           ),
@@ -703,25 +489,30 @@ class _TripPetSelectionPanelContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        SizedBox(
-          height: 46,
-          child: ElevatedButton(
-            onPressed: onDone,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppPalette.primaryBlue,
-              foregroundColor: AppPalette.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text(
-              'Listo',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ),
+        PanelActionButton(label: 'Listo', onPressed: onDone, height: 46),
       ],
+    );
+  }
+}
+
+Widget _tripPetPhoto(String? source) {
+  if (source == null || source.trim().isEmpty) return const _TripPetFallback();
+  return buildLocalImageWidget(
+    source: source,
+    fit: BoxFit.cover,
+    fallback: const _TripPetFallback(),
+    errorBuilder: (_, _, _) => const _TripPetFallback(),
+  );
+}
+
+class _TripPetFallback extends StatelessWidget {
+  const _TripPetFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: AppPalette.placeholderGray,
+      child: Center(child: Icon(Icons.pets, color: AppPalette.iconGray, size: 28)),
     );
   }
 }
@@ -741,9 +532,7 @@ class _TripActivePanelContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color titleColor = isDarkMode
-        ? AppPalette.textMutedDark
-        : AppPalette.iconGray;
+    final Color titleColor = isDarkMode ? AppPalette.textMutedDark : AppPalette.iconGray;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -757,8 +546,7 @@ class _TripActivePanelContent extends StatelessWidget {
                 label: 'A pie',
                 isDarkMode: isDarkMode,
                 isSelected: selectedTransport == _TripTransportMethod.walking,
-                onPressed: () =>
-                    onTransportChanged(_TripTransportMethod.walking),
+                onPressed: () => onTransportChanged(_TripTransportMethod.walking),
               ),
             ),
             const SizedBox(width: 8),
@@ -767,31 +555,13 @@ class _TripActivePanelContent extends StatelessWidget {
                 label: 'En vehículo',
                 isDarkMode: isDarkMode,
                 isSelected: selectedTransport == _TripTransportMethod.vehicle,
-                onPressed: () =>
-                    onTransportChanged(_TripTransportMethod.vehicle),
+                onPressed: () => onTransportChanged(_TripTransportMethod.vehicle),
               ),
             ),
           ],
         ),
         const Spacer(),
-        SizedBox(
-          height: 48,
-          child: ElevatedButton(
-            onPressed: onFinishTrip,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppPalette.primaryBlue,
-              foregroundColor: AppPalette.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text(
-              'Terminar',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ),
+        PanelActionButton(label: 'Terminar', onPressed: onFinishTrip, height: 48, fontSize: 15),
       ],
     );
   }
@@ -801,10 +571,7 @@ class _TripArrivalPanelContent extends StatelessWidget {
   final bool isDarkMode;
   final VoidCallback onAcknowledge;
 
-  const _TripArrivalPanelContent({
-    required this.isDarkMode,
-    required this.onAcknowledge,
-  });
+  const _TripArrivalPanelContent({required this.isDarkMode, required this.onAcknowledge});
 
   @override
   Widget build(BuildContext context) {
@@ -817,31 +584,10 @@ class _TripArrivalPanelContent extends StatelessWidget {
         Text(
           '¡Ha llegado a su destino!',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            color: textColor,
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 16),
-        SizedBox(
-          height: 46,
-          child: ElevatedButton(
-            onPressed: onAcknowledge,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppPalette.primaryBlue,
-              foregroundColor: AppPalette.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text(
-              'De acuerdo',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ),
+        PanelActionButton(label: 'De acuerdo', onPressed: onAcknowledge, height: 46),
       ],
     );
   }
@@ -865,8 +611,7 @@ class _TripFieldTitle extends StatelessWidget {
 class _TripGrayActionButton extends StatelessWidget {
   final String label;
   final String? semanticLabel;
-  final Color backgroundColor;
-  final Color textColor;
+  final Color backgroundColor, textColor;
   final VoidCallback onPressed;
 
   const _TripGrayActionButton({
@@ -889,18 +634,12 @@ class _TripGrayActionButton extends StatelessWidget {
           style: OutlinedButton.styleFrom(
             backgroundColor: backgroundColor,
             side: BorderSide.none,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           child: ExcludeSemantics(
             child: Text(
               label,
-              style: TextStyle(
-                color: textColor,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w600),
             ),
           ),
         ),
@@ -911,8 +650,7 @@ class _TripGrayActionButton extends StatelessWidget {
 
 class _TripTransportButton extends StatelessWidget {
   final String label;
-  final bool isDarkMode;
-  final bool isSelected;
+  final bool isDarkMode, isSelected;
   final VoidCallback onPressed;
 
   const _TripTransportButton({
@@ -929,21 +667,11 @@ class _TripTransportButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: isSelected
-              ? AppPalette.primaryBlue
-              : AppPalette.cardBackground(isDarkMode),
-          foregroundColor: isSelected
-              ? AppPalette.white
-              : AppPalette.primaryBlue,
+          backgroundColor: isSelected ? AppPalette.primaryBlue : AppPalette.cardBackground(isDarkMode),
+          foregroundColor: isSelected ? AppPalette.white : AppPalette.primaryBlue,
           elevation: 0,
-          side: BorderSide(
-            color: isSelected
-                ? AppPalette.primaryBlue
-                : AppPalette.primaryBlue.withValues(alpha: 0.45),
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          side: BorderSide(color: isSelected ? AppPalette.primaryBlue : AppPalette.primaryBlue.withValues(alpha: 0.45)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         child: Text(
           label,
@@ -979,16 +707,10 @@ class _TripRiskFilterCheckbox extends StatelessWidget {
         dense: true,
         controlAffinity: ListTileControlAffinity.leading,
         activeColor: AppPalette.primaryBlue,
-        checkboxShape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(6),
-        ),
+        checkboxShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         title: Text(
           label,
-          style: TextStyle(
-            color: textColor,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
     );

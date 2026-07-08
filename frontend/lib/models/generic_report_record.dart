@@ -1,24 +1,16 @@
-import 'dart:convert';
-
+import 'model_parsing.dart';
 import 'report_comment_record.dart';
 
 class GenericReportRecord {
   final int id;
-  final String localUuid;
-  final String? remoteId;
-  final String syncStatus;
-  final DateTime lastModifiedAt;
-  final double latitude;
-  final double longitude;
-  final String description;
-  final DateTime reportedDate;
-  final String riskLevelCode;
+  final String localUuid, syncStatus;
+  final String? remoteId, photoUrl;
+  final DateTime lastModifiedAt, reportedDate, createdAt, updatedAt;
+  final double latitude, longitude;
+  final String description, riskLevelCode;
   final int impactRadiusMeters;
-  final String? photoUrl;
   final String reportedByUsername;
   final List<ReportCommentRecord> comments;
-  final DateTime createdAt;
-  final DateTime updatedAt;
   final bool needsSync;
 
   const GenericReportRecord({
@@ -42,40 +34,28 @@ class GenericReportRecord {
   });
 
   factory GenericReportRecord.fromMap(Map<String, Object?> map) {
-    final String commentsJson = map['comments_json'] as String? ?? '[]';
-    final List<dynamic> rawComments = jsonDecode(commentsJson) as List<dynamic>;
     final int nowMs = DateTime.now().millisecondsSinceEpoch;
-    final int createdAtMs = (map['created_at'] as num?)?.toInt() ?? nowMs;
-    final int updatedAtMs = (map['updated_at'] as num?)?.toInt() ?? createdAtMs;
-    final int lastModifiedMs =
-        (map['last_modified_at'] as num?)?.toInt() ?? updatedAtMs;
-    final int reportedDateMs =
-        (map['reported_date'] as num?)?.toInt() ?? createdAtMs;
+    final int createdAtMs = readInt(map['created_at'], nowMs);
+    final int updatedAtMs = readInt(map['updated_at'], createdAtMs);
 
     return GenericReportRecord(
-      id: (map['id'] as num?)?.toInt() ?? 0,
-      localUuid:
-          map['local_uuid'] as String? ?? 'generic-${map['id'] ?? createdAtMs}',
+      id: readInt(map['id']),
+      localUuid: map['local_uuid'] as String? ?? 'generic-${map['id'] ?? createdAtMs}',
       remoteId: map['remote_id']?.toString(),
       syncStatus: map['sync_status'] as String? ?? 'created',
-      lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(lastModifiedMs),
-      latitude: (map['latitude'] as num).toDouble(),
-      longitude: (map['longitude'] as num).toDouble(),
+      lastModifiedAt: readDateTimeOr(map['last_modified_at'], updatedAtMs),
+      latitude: readDouble(map['latitude']),
+      longitude: readDouble(map['longitude']),
       description: map['description'] as String? ?? '',
-      reportedDate: DateTime.fromMillisecondsSinceEpoch(reportedDateMs),
+      reportedDate: readDateTimeOr(map['reported_date'], createdAtMs),
       riskLevelCode: map['risk_level_code'] as String? ?? 'undefined',
-      impactRadiusMeters: (map['impact_radius_meters'] as num?)?.round() ?? 0,
+      impactRadiusMeters: readDouble(map['impact_radius_meters']).round(),
       photoUrl: map['photo_url'] as String?,
       reportedByUsername: map['reported_by_username'] as String? ?? 'Anonimo',
-      comments: rawComments
-          .map(
-            (dynamic item) =>
-                ReportCommentRecord.fromMap(item as Map<String, dynamic>),
-          )
-          .toList(growable: false),
+      comments: readReportComments(map['comments_json']),
       createdAt: DateTime.fromMillisecondsSinceEpoch(createdAtMs),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(updatedAtMs),
-      needsSync: (map['needs_sync'] as int? ?? 0) == 1,
+      needsSync: readBool(map['needs_sync']),
     );
   }
 
@@ -94,9 +74,7 @@ class GenericReportRecord {
       'impact_radius_meters': impactRadiusMeters,
       'photo_url': photoUrl,
       'reported_by_username': reportedByUsername,
-      'comments_json': jsonEncode(
-        comments.map((ReportCommentRecord c) => c.toMap()).toList(),
-      ),
+      'comments_json': writeReportComments(comments),
       'created_at': createdAt.millisecondsSinceEpoch,
       'updated_at': updatedAt.millisecondsSinceEpoch,
       'needs_sync': needsSync ? 1 : 0,

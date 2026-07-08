@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_name">A4MPets</string>
     <string name="nav_audio_channel_name">Audio de navegacion</string>
     <string name="nav_audio_channel_description">
         Mantiene activas las indicaciones y alertas en segundo plano.

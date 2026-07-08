@@ -7,6 +7,7 @@ import '../theme/app_palette.dart';
 import 'reporting_form_widgets.dart';
 import 'shared/local_image_widget.dart';
 import 'shared/panel_scroll_view.dart';
+import 'shared/report_detail_widgets.dart';
 
 class LostPetReportsListPanelContent extends StatefulWidget {
   final bool isDarkMode;
@@ -25,12 +26,10 @@ class LostPetReportsListPanelContent extends StatefulWidget {
   });
 
   @override
-  State<LostPetReportsListPanelContent> createState() =>
-      _LostPetReportsListPanelContentState();
+  State<LostPetReportsListPanelContent> createState() => _LostPetReportsListPanelContentState();
 }
 
-class _LostPetReportsListPanelContentState
-    extends State<LostPetReportsListPanelContent> {
+class _LostPetReportsListPanelContentState extends State<LostPetReportsListPanelContent> {
   final TextEditingController _queryController = TextEditingController();
   DateTime? _fromDate;
 
@@ -58,9 +57,7 @@ class _LostPetReportsListPanelContentState
     final Map<String, PetRecord> petsByUuid = <String, PetRecord>{
       for (final PetRecord pet in widget.pets) pet.localUuid: pet,
     };
-    final Map<int, PetRecord> petsById = <int, PetRecord>{
-      for (final PetRecord pet in widget.pets) pet.id: pet,
-    };
+    final Map<int, PetRecord> petsById = <int, PetRecord>{for (final PetRecord pet in widget.pets) pet.id: pet};
     final List<String> tokens = _queryController.text
         .toLowerCase()
         .split(RegExp(r'\s+'))
@@ -68,8 +65,7 @@ class _LostPetReportsListPanelContentState
         .toList(growable: false);
     final List<LostPetReportRecord> visible = widget.reports
         .where((report) {
-          if (_fromDate != null &&
-              report.disappearanceDate.isBefore(_fromDate!)) {
+          if (_fromDate != null && report.disappearanceDate.isBefore(_fromDate!)) {
             return false;
           }
           final String haystack = report.details.toLowerCase();
@@ -89,9 +85,7 @@ class _LostPetReportsListPanelContentState
         const SizedBox(height: 8),
         ReportingDateField(
           isDarkMode: widget.isDarkMode,
-          valueText: _fromDate == null
-              ? 'Filtrar por fecha'
-              : 'Desde: ${_formatDate(_fromDate!)}',
+          valueText: _fromDate == null ? 'Filtrar por fecha' : 'Desde: ${formatReportDate(_fromDate!)}',
           onTap: _pickDate,
         ),
         const SizedBox(height: 8),
@@ -103,11 +97,7 @@ class _LostPetReportsListPanelContentState
                     child: Text(
                       'No hay mascotas perdidas',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w600),
                     ),
                   )
                 : Column(
@@ -115,8 +105,7 @@ class _LostPetReportsListPanelContentState
                         .map((LostPetReportRecord report) {
                           final PetRecord? pet = report.petId == null
                               ? petsByUuid[report.petLocalUuid]
-                              : petsById[report.petId!] ??
-                                    petsByUuid[report.petLocalUuid];
+                              : petsById[report.petId!] ?? petsByUuid[report.petLocalUuid];
                           return _LostReportCard(
                             isDarkMode: widget.isDarkMode,
                             report: report,
@@ -131,12 +120,6 @@ class _LostPetReportsListPanelContentState
         ),
       ],
     );
-  }
-
-  static String _formatDate(DateTime date) {
-    final String day = date.day.toString().padLeft(2, '0');
-    final String month = date.month.toString().padLeft(2, '0');
-    return '$day/$month/${date.year}';
   }
 }
 
@@ -159,8 +142,13 @@ class _LostReportCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color textColor = AppPalette.textPrimary(isDarkMode);
     final Color borderColor = AppPalette.border(isDarkMode);
-    final String? photo =
-        pet?.photoPath ?? report.petPhotoUrl ?? report.photoUrl;
+    final String? photo = pet?.photoPath ?? report.petPhotoUrl ?? report.photoUrl;
+    Text primaryText(String text, {double size = 13, FontWeight weight = FontWeight.w500}) {
+      return Text(
+        text,
+        style: TextStyle(color: textColor, fontSize: size, fontWeight: weight),
+      );
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -178,50 +166,27 @@ class _LostReportCard extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: photo == null || photo.isEmpty
-                  ? const _ImageFallback()
+                  ? const ReportImageFallback(icon: Icons.pets)
                   : buildLocalImageWidget(
                       source: photo,
                       fit: BoxFit.cover,
-                      fallback: const _ImageFallback(),
-                      errorBuilder: (_, _, _) => const _ImageFallback(),
+                      fallback: const ReportImageFallback(icon: Icons.pets),
+                      errorBuilder: (_, _, _) => const ReportImageFallback(icon: Icons.pets),
                     ),
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            pet?.displayName ?? 'Mascota perdida',
-            style: TextStyle(
-              color: textColor,
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
+          primaryText(pet?.displayName ?? 'Mascota perdida', size: 15, weight: FontWeight.w800),
           const SizedBox(height: 6),
           Text(
-            _LostPetReportsListPanelContentState._formatDate(
-              report.disappearanceDate,
-            ),
-            style: const TextStyle(
-              color: AppPalette.textMutedDark,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
+            formatReportDate(report.disappearanceDate),
+            style: const TextStyle(color: AppPalette.textMutedDark, fontSize: 12, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 6),
-          Text(
-            report.details,
-            style: TextStyle(color: textColor, fontSize: 13),
-          ),
+          primaryText(report.details),
           if (report.phone != null && report.phone!.trim().isNotEmpty) ...[
             const SizedBox(height: 6),
-            Text(
-              'Telefono: ${report.phone}',
-              style: TextStyle(
-                color: textColor,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            primaryText('Telefono: ${report.phone}'),
           ],
           const SizedBox(height: 10),
           Row(
@@ -230,9 +195,7 @@ class _LostReportCard extends StatelessWidget {
                 child: ReportingSecondaryButton(
                   isDarkMode: isDarkMode,
                   label: 'Ubicación',
-                  onPressed: () => onGoToLocation(
-                    LatLng(report.lastSeenLatitude, report.lastSeenLongitude),
-                  ),
+                  onPressed: () => onGoToLocation(LatLng(report.lastSeenLatitude, report.lastSeenLongitude)),
                 ),
               ),
               if (onSelectReport != null) ...[
@@ -250,19 +213,6 @@ class _LostReportCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _ImageFallback extends StatelessWidget {
-  const _ImageFallback();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppPalette.placeholderGray,
-      alignment: Alignment.center,
-      child: const Icon(Icons.pets, color: AppPalette.iconGray, size: 42),
     );
   }
 }

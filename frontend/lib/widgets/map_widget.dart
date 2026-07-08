@@ -16,8 +16,8 @@ import '../models/colored_route_segment.dart';
 import '../theme/app_palette.dart';
 import 'map_widget_config.dart';
 
-/// Interactive map shell that renders user location, routes, hazards, and
-/// report overlays while delegating workflow decisions to parent callbacks.
+void _noop() {}
+
 class MapWidget extends StatefulWidget {
   final bool isDarkMode;
   final LatLng center;
@@ -40,89 +40,11 @@ class MapWidget extends StatefulWidget {
     this.location = const MapLocationConfig(),
   });
 
-  VoidCallback? get onSettingsTap => controls.onSettingsTap;
-  VoidCallback? get onReportDangerTap => controls.onReportDangerTap;
-  VoidCallback? get onModifyLocationTap => controls.onModifyLocationTap;
-  VoidCallback? get onStartTrip => controls.onStartTrip;
-  VoidCallback? get onProfileTap => controls.onProfileTap;
-  bool get hideDefaultControls => controls.hideDefaultControls;
-  bool get keepReportDangerVisible => controls.keepReportDangerVisible;
-  bool get keepModifyLocationVisible => controls.keepModifyLocationVisible;
-  Widget? get panelOverlay => controls.panelOverlay;
-
-  List<LatLng> get routePoints => routeOverlay.routePoints;
-  List<LatLng> get routePolylinePoints => routeOverlay.routePolylinePoints;
-  List<ColoredRouteSegment> get coloredRouteSegments =>
-      routeOverlay.coloredRouteSegments;
-  int? get selectedRoutePointIndex => routeOverlay.selectedRoutePointIndex;
-  void Function(int index)? get onRoutePointPointerDown =>
-      routeOverlay.onRoutePointPointerDown;
-  void Function(int index)? get onRoutePointTap => routeOverlay.onRoutePointTap;
-  bool get canDragRoutePoints => routeOverlay.canDragRoutePoints;
-  void Function(int index)? get onRoutePointDragStart =>
-      routeOverlay.onRoutePointDragStart;
-  void Function(int index, LatLng point)? get onRoutePointDragUpdate =>
-      routeOverlay.onRoutePointDragUpdate;
-  void Function(int index, LatLng point)? get onRoutePointDragEnd =>
-      routeOverlay.onRoutePointDragEnd;
-  bool get isSelectingRoutePoint => routeOverlay.isSelectingRoutePoint;
-  bool get routeSelectionHintAtTop => routeOverlay.routeSelectionHintAtTop;
-
-  void Function(LatLng)? get onMapTap => reportOverlay.onMapTap;
-  List<HazardReportRecord> get hazardReports => reportOverlay.hazardReports;
-  List<HazardReportRecord> get visibleHazardCircles =>
-      reportOverlay.visibleHazardCircles;
-  List<LostPetReportRecord> get lostPetReports => reportOverlay.lostPetReports;
-  List<FoundPetReportRecord> get foundPetReports =>
-      reportOverlay.foundPetReports;
-  List<GenericReportRecord> get genericReports => reportOverlay.genericReports;
-  HazardReportRecord? get highlightedHazard => reportOverlay.highlightedHazard;
-  LatLng? get hazardDraftLocation => reportOverlay.hazardDraftLocation;
-  int? get hazardDraftImpactRadiusMeters =>
-      reportOverlay.hazardDraftImpactRadiusMeters;
-  String? get hazardDraftRiskLevelCode =>
-      reportOverlay.hazardDraftRiskLevelCode;
-  bool get isSelectingHazardLocation => reportOverlay.isSelectingHazardLocation;
-  LatLng? get lostPetDraftLocation => reportOverlay.lostPetDraftLocation;
-  LatLng? get foundPetDraftLocation => reportOverlay.foundPetDraftLocation;
-  LatLng? get genericReportDraftLocation =>
-      reportOverlay.genericReportDraftLocation;
-  int? get genericReportDraftImpactRadiusMeters =>
-      reportOverlay.genericReportDraftImpactRadiusMeters;
-  String? get genericReportDraftRiskLevelCode =>
-      reportOverlay.genericReportDraftRiskLevelCode;
-  bool get isSelectingReportLocation => reportOverlay.isSelectingReportLocation;
-  bool get reportSelectionHintAtTop => reportOverlay.reportSelectionHintAtTop;
-  String get reportSelectionHintText => reportOverlay.reportSelectionHintText;
-  Color get reportSelectionHintColor => reportOverlay.reportSelectionHintColor;
-  void Function(HazardReportRecord report)? get onHazardTap =>
-      reportOverlay.onHazardTap;
-  void Function(LostPetReportRecord report)? get onLostPetTap =>
-      reportOverlay.onLostPetTap;
-  void Function(FoundPetReportRecord report)? get onFoundPetTap =>
-      reportOverlay.onFoundPetTap;
-  void Function(GenericReportRecord report)? get onGenericReportTap =>
-      reportOverlay.onGenericReportTap;
-
-  LatLng? get cameraFocusTarget => camera.cameraFocusTarget;
-  double? get cameraFocusZoom => camera.cameraFocusZoom;
-  int get cameraFocusRevision => camera.cameraFocusRevision;
-
-  void Function(LatLng location)? get onUserLocationChanged =>
-      location.onUserLocationChanged;
-  void Function(bool isLoading, String? errorText)?
-  get onUserLocationStatusChanged => location.onUserLocationStatusChanged;
-  int get locationRefreshRevision => location.locationRefreshRevision;
-  LatLng? get developerLocationMarker => location.developerLocationMarker;
-  bool get isDeveloperModifyingLocation =>
-      location.isDeveloperModifyingLocation;
-
   @override
   State<MapWidget> createState() => _MapWidgetState();
 }
 
-class _MapWidgetState extends State<MapWidget>
-    with TickerProviderStateMixin, WidgetsBindingObserver {
+class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin, WidgetsBindingObserver {
   late MapController mapController;
   AnimationController? _cameraAnimationController;
   bool _isMapReady = false;
@@ -130,7 +52,6 @@ class _MapWidgetState extends State<MapWidget>
   int? _draggingRoutePointIndex;
   LatLng? _draggingPoint;
 
-  // Location tracking
   LatLng? _userLocation;
   double _userHeading = 0.0;
   bool _hasLocationPermission = false;
@@ -143,11 +64,9 @@ class _MapWidgetState extends State<MapWidget>
   String? _userLocationErrorText;
   DateTime? _lastLocationPermissionPromptAt;
 
-  // Color cache for hazard rendering (avoid recalculation every frame)
   final Map<String, Color> _borderColorCache = {};
   final Map<String, Color> _fillColorCache = {};
 
-  // Color palette
   static const Color primary = AppPalette.primaryBlue;
   static const Color secondary = Color(0xFF0F176E);
   static const Color white = AppPalette.white;
@@ -156,22 +75,14 @@ class _MapWidgetState extends State<MapWidget>
   static const double _userFocusZoom = 17.5;
   static const Duration _permissionPromptCooldown = Duration(seconds: 3);
   static const Duration _locationStreamRetryDelay = Duration(seconds: 2);
-  static final LatLngBounds _caliBounds = LatLngBounds(
-    const LatLng(3.289, -76.639),
-    const LatLng(3.518, -76.445),
-  );
+  static final LatLngBounds _caliBounds = LatLngBounds(const LatLng(3.289, -76.639), const LatLng(3.518, -76.445));
 
-  LatLng? get _effectiveUserLocation {
-    return _isCustomPositionMode ? _customUserLocation : _userLocation;
-  }
+  LatLng? get _effectiveUserLocation => _isCustomPositionMode ? _customUserLocation : _userLocation;
 
   bool get _supportsCompass {
-    if (kIsWeb) {
-      return false;
-    }
+    if (kIsWeb) return false;
 
-    return defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS;
+    return defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS;
   }
 
   @override
@@ -186,9 +97,7 @@ class _MapWidgetState extends State<MapWidget>
   }
 
   Future<void> _requestLocationPermission() async {
-    if (_isResolvingLocation) {
-      return;
-    }
+    if (_isResolvingLocation) return;
 
     _emitUserLocationStatus(isLoading: true, errorText: null);
 
@@ -196,13 +105,8 @@ class _MapWidgetState extends State<MapWidget>
       _isResolvingLocation = true;
       final bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        if (mounted) {
-          setState(() => _hasLocationPermission = false);
-        }
-        _emitUserLocationStatus(
-          isLoading: false,
-          errorText: 'Activa la ubicación del dispositivo para continuar.',
-        );
+        if (mounted) setState(() => _hasLocationPermission = false);
+        _emitUserLocationStatus(isLoading: false, errorText: 'Activa la ubicación del dispositivo para continuar.');
         return;
       }
 
@@ -210,15 +114,9 @@ class _MapWidgetState extends State<MapWidget>
       if (permission == LocationPermission.denied) {
         final DateTime now = DateTime.now();
         final DateTime? lastPrompt = _lastLocationPermissionPromptAt;
-        if (lastPrompt != null &&
-            now.difference(lastPrompt) < _permissionPromptCooldown) {
-          if (mounted) {
-            setState(() => _hasLocationPermission = false);
-          }
-          _emitUserLocationStatus(
-            isLoading: false,
-            errorText: 'Debes habilitar los permisos de ubicacion.',
-          );
+        if (lastPrompt != null && now.difference(lastPrompt) < _permissionPromptCooldown) {
+          if (mounted) setState(() => _hasLocationPermission = false);
+          _emitUserLocationStatus(isLoading: false, errorText: 'Debes habilitar los permisos de ubicacion.');
           return;
         }
 
@@ -227,35 +125,22 @@ class _MapWidgetState extends State<MapWidget>
       }
 
       if (permission == LocationPermission.denied) {
-        if (mounted) {
-          setState(() => _hasLocationPermission = false);
-        }
-        _emitUserLocationStatus(
-          isLoading: false,
-          errorText: 'Debes habilitar los permisos de ubicación.',
-        );
+        if (mounted) setState(() => _hasLocationPermission = false);
+        _emitUserLocationStatus(isLoading: false, errorText: 'Debes habilitar los permisos de ubicación.');
       } else if (permission == LocationPermission.deniedForever) {
-        if (mounted) {
-          setState(() => _hasLocationPermission = false);
-        }
+        if (mounted) setState(() => _hasLocationPermission = false);
         _emitUserLocationStatus(
           isLoading: false,
-          errorText:
-              'Los permisos de ubicación están bloqueados. Debes habilitarlos manualmente.',
+          errorText: 'Los permisos de ubicación están bloqueados. Debes habilitarlos manualmente.',
         );
       } else {
-        if (mounted) {
-          setState(() => _hasLocationPermission = true);
-        }
+        if (mounted) setState(() => _hasLocationPermission = true);
         await _getCurrentLocationAndHeading();
         _startLocationTracking();
       }
     } catch (e) {
       debugPrint('Error requesting location permission: $e');
-      _emitUserLocationStatus(
-        isLoading: false,
-        errorText: 'No se pudo solicitar la ubicación actual.',
-      );
+      _emitUserLocationStatus(isLoading: false, errorText: 'No se pudo solicitar la ubicación actual.');
     } finally {
       _isResolvingLocation = false;
     }
@@ -264,9 +149,7 @@ class _MapWidgetState extends State<MapWidget>
   Future<void> _getCurrentLocationAndHeading() async {
     try {
       final Position position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
 
       if (mounted) {
@@ -276,16 +159,11 @@ class _MapWidgetState extends State<MapWidget>
         });
         _emitUserLocationStatus(isLoading: false, errorText: null);
         final LatLng? locationToEmit = _effectiveUserLocation;
-        if (locationToEmit != null) {
-          widget.onUserLocationChanged?.call(locationToEmit);
-        }
+        if (locationToEmit != null) widget.location.onUserLocationChanged?.call(locationToEmit);
       }
     } catch (e) {
       debugPrint('Error getting current location: $e');
-      _emitUserLocationStatus(
-        isLoading: false,
-        errorText: 'No se pudo obtener tu ubicación actual.',
-      );
+      _emitUserLocationStatus(isLoading: false, errorText: 'No se pudo obtener tu ubicación actual.');
     }
   }
 
@@ -298,81 +176,54 @@ class _MapWidgetState extends State<MapWidget>
     );
 
     _positionStreamSub?.cancel();
-    _positionStreamSub =
-        Geolocator.getPositionStream(locationSettings: locationSettings).listen(
-          (Position position) {
-            if (mounted) {
-              final LatLng nextLocation = LatLng(
-                position.latitude,
-                position.longitude,
-              );
-              setState(() {
-                _userLocation = nextLocation;
-                _userHeading = position.heading.isNaN
-                    ? _userHeading
-                    : position.heading;
-              });
-              if (!_isCustomPositionMode) {
-                widget.onUserLocationChanged?.call(nextLocation);
-              }
-              _emitUserLocationStatus(isLoading: false, errorText: null);
-            }
-          },
-          onError: (Object error, StackTrace stackTrace) {
-            debugPrint('Location stream error: $error');
-            _emitUserLocationStatus(
-              isLoading: false,
-              errorText:
-                  'Se perdió la actualización de ubicación. Reintentando.',
-            );
+    _positionStreamSub = Geolocator.getPositionStream(locationSettings: locationSettings).listen(
+      (Position position) {
+        if (mounted) {
+          final LatLng nextLocation = LatLng(position.latitude, position.longitude);
+          setState(() {
+            _userLocation = nextLocation;
+            _userHeading = position.heading.isNaN ? _userHeading : position.heading;
+          });
+          if (!_isCustomPositionMode) widget.location.onUserLocationChanged?.call(nextLocation);
+          _emitUserLocationStatus(isLoading: false, errorText: null);
+        }
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('Location stream error: $error');
+        _emitUserLocationStatus(isLoading: false, errorText: 'Se perdió la actualización de ubicación. Reintentando.');
 
-            if (!mounted) {
-              return;
-            }
+        if (!mounted) return;
 
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) {
-                return;
-              }
-              _scheduleLocationTrackingRestart();
-            });
-          },
-          onDone: () {
-            if (!mounted) {
-              return;
-            }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _scheduleLocationTrackingRestart();
+        });
+      },
+      onDone: () {
+        if (!mounted) return;
 
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) {
-                return;
-              }
-              _scheduleLocationTrackingRestart();
-            });
-          },
-        );
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _scheduleLocationTrackingRestart();
+        });
+      },
+    );
   }
 
   void _scheduleLocationTrackingRestart() {
-    if (!mounted || !_hasLocationPermission) {
-      return;
-    }
+    if (!mounted || !_hasLocationPermission) return;
 
     _locationRestartTimer?.cancel();
     _locationRestartTimer = Timer(_locationStreamRetryDelay, () async {
-      if (!mounted || !_hasLocationPermission || _isResolvingLocation) {
-        return;
-      }
+      if (!mounted || !_hasLocationPermission || _isResolvingLocation) return;
 
       final LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.always ||
-          permission == LocationPermission.whileInUse) {
+      if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
         _startLocationTracking();
         return;
       }
 
-      if (mounted) {
-        setState(() => _hasLocationPermission = false);
-      }
+      if (mounted) setState(() => _hasLocationPermission = false);
       _emitUserLocationStatus(
         isLoading: false,
         errorText: permission == LocationPermission.deniedForever
@@ -383,17 +234,13 @@ class _MapWidgetState extends State<MapWidget>
   }
 
   void _startCompassTracking() {
-    if (!_supportsCompass) {
-      return;
-    }
+    if (!_supportsCompass) return;
 
     _compassStreamSub?.cancel();
     _compassStreamSub = FlutterCompass.events?.listen(
       (CompassEvent event) {
         final double? heading = event.heading;
-        if (heading == null || heading.isNaN || !mounted) {
-          return;
-        }
+        if (heading == null || heading.isNaN || !mounted) return;
 
         setState(() {
           _userHeading = heading;
@@ -407,18 +254,14 @@ class _MapWidgetState extends State<MapWidget>
 
   Future<void> _toggleCustomPositionMode() async {
     if (_isCustomPositionMode) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {
         _isCustomPositionMode = false;
       });
 
       final LatLng? locationToEmit = _effectiveUserLocation;
-      if (locationToEmit != null) {
-        widget.onUserLocationChanged?.call(locationToEmit);
-      }
-      widget.onModifyLocationTap?.call();
+      if (locationToEmit != null) widget.location.onUserLocationChanged?.call(locationToEmit);
+      widget.controls.onModifyLocationTap?.call();
       return;
     }
 
@@ -426,17 +269,13 @@ class _MapWidgetState extends State<MapWidget>
     if (seedLocation == null) {
       try {
         final Position position = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-          ),
+          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
         );
         seedLocation = LatLng(position.latitude, position.longitude);
         if (mounted) {
           setState(() {
             _userLocation = seedLocation;
-            _userHeading = position.heading.isNaN
-                ? _userHeading
-                : position.heading;
+            _userHeading = position.heading.isNaN ? _userHeading : position.heading;
           });
         }
       } catch (e) {
@@ -444,9 +283,7 @@ class _MapWidgetState extends State<MapWidget>
       }
     }
 
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     setState(() {
       _isCustomPositionMode = true;
@@ -454,10 +291,8 @@ class _MapWidgetState extends State<MapWidget>
     });
 
     final LatLng? locationToEmit = _effectiveUserLocation;
-    if (locationToEmit != null) {
-      widget.onUserLocationChanged?.call(locationToEmit);
-    }
-    widget.onModifyLocationTap?.call();
+    if (locationToEmit != null) widget.location.onUserLocationChanged?.call(locationToEmit);
+    widget.controls.onModifyLocationTap?.call();
   }
 
   Future<void> _prewarmTileCache() async {
@@ -479,14 +314,10 @@ class _MapWidgetState extends State<MapWidget>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) {
-      return;
-    }
+    if (state != AppLifecycleState.resumed) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       _startCompassTracking();
       _requestLocationPermission();
     });
@@ -496,21 +327,18 @@ class _MapWidgetState extends State<MapWidget>
   void didUpdateWidget(covariant MapWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (widget.locationRefreshRevision != oldWidget.locationRefreshRevision) {
+    if (widget.location.locationRefreshRevision != oldWidget.location.locationRefreshRevision) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
         _requestLocationPermission();
       });
     }
 
     if (_isMapReady &&
-        widget.cameraFocusTarget != null &&
-        widget.cameraFocusRevision != oldWidget.cameraFocusRevision) {
-      final LatLng focusTarget = widget.cameraFocusTarget!;
-      final double nextZoom =
-          widget.cameraFocusZoom ?? mapController.camera.zoom;
+        widget.camera.cameraFocusTarget != null &&
+        widget.camera.cameraFocusRevision != oldWidget.camera.cameraFocusRevision) {
+      final LatLng focusTarget = widget.camera.cameraFocusTarget!;
+      final double nextZoom = widget.camera.cameraFocusZoom ?? mapController.camera.zoom;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _animateCameraFocus(focusTarget, nextZoom);
       });
@@ -518,9 +346,7 @@ class _MapWidgetState extends State<MapWidget>
   }
 
   void _animateCameraFocus(LatLng center, double zoom) {
-    if (!_isMapReady || !mounted) {
-      return;
-    }
+    if (!_isMapReady || !mounted) return;
 
     final LatLng startCenter = mapController.camera.center;
     final double startZoom = mapController.camera.zoom;
@@ -536,38 +362,26 @@ class _MapWidgetState extends State<MapWidget>
 
     _disposeCameraAnimation();
 
-    final Tween<double> latTween = Tween<double>(
-      begin: startCenter.latitude,
-      end: center.latitude,
-    );
-    final Tween<double> lngTween = Tween<double>(
-      begin: startCenter.longitude,
-      end: center.longitude,
-    );
+    final Tween<double> latTween = Tween<double>(begin: startCenter.latitude, end: center.latitude);
+    final Tween<double> lngTween = Tween<double>(begin: startCenter.longitude, end: center.longitude);
     final Tween<double> zoomTween = Tween<double>(begin: startZoom, end: zoom);
     final AnimationController controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 340),
     );
-    final Animation<double> animation = CurvedAnimation(
-      parent: controller,
-      curve: Curves.easeOutCubic,
-    );
+    final Animation<double> animation = CurvedAnimation(parent: controller, curve: Curves.easeOutCubic);
     bool hasTriggeredMove = false;
 
     _cameraAnimationController = controller;
 
     controller.addListener(() {
-      if (!mounted || _cameraAnimationController != controller) {
-        return;
-      }
+      if (!mounted || _cameraAnimationController != controller) return;
 
       final String moveId;
-      if (animation.value == 1.0) {
+      if (animation.value == 1.0)
         moveId = 'hazard-focus-finished';
-      } else if (!hasTriggeredMove) {
-        moveId =
-            'hazard-focus-start#${center.latitude},${center.longitude},$zoom';
+      else if (!hasTriggeredMove) {
+        moveId = 'hazard-focus-start#${center.latitude},${center.longitude},$zoom';
       } else {
         moveId = 'hazard-focus-progress';
       }
@@ -580,12 +394,9 @@ class _MapWidgetState extends State<MapWidget>
     });
 
     controller.addStatusListener((AnimationStatus status) {
-      if (_cameraAnimationController != controller) {
-        return;
-      }
+      if (_cameraAnimationController != controller) return;
 
-      if (status == AnimationStatus.completed ||
-          status == AnimationStatus.dismissed) {
+      if (status == AnimationStatus.completed || status == AnimationStatus.dismissed) {
         _disposeCameraAnimation(controller);
       }
     });
@@ -598,24 +409,17 @@ class _MapWidgetState extends State<MapWidget>
   }
 
   void _disposeCameraAnimation([AnimationController? controller]) {
-    final AnimationController? activeController =
-        controller ?? _cameraAnimationController;
-    if (activeController == null) {
-      return;
-    }
+    final AnimationController? activeController = controller ?? _cameraAnimationController;
+    if (activeController == null) return;
 
-    if (_cameraAnimationController == activeController) {
-      _cameraAnimationController = null;
-    }
+    if (_cameraAnimationController == activeController) _cameraAnimationController = null;
 
     activeController.stop();
     activeController.dispose();
   }
 
   void _safeMove(LatLng center, double zoom) {
-    if (!_isMapReady || !mounted) {
-      return;
-    }
+    if (!_isMapReady || !mounted) return;
 
     try {
       mapController.move(center, zoom);
@@ -624,28 +428,22 @@ class _MapWidgetState extends State<MapWidget>
     }
   }
 
-  void _emitUserLocationStatus({
-    required bool isLoading,
-    required String? errorText,
-  }) {
-    if (_userLocationErrorText == errorText &&
-        _isResolvingLocation == isLoading) {
+  void _emitUserLocationStatus({required bool isLoading, required String? errorText}) {
+    if (_userLocationErrorText == errorText && _isResolvingLocation == isLoading) {
       return;
     }
 
     _isResolvingLocation = isLoading;
     _userLocationErrorText = errorText;
-    widget.onUserLocationStatusChanged?.call(isLoading, errorText);
+    widget.location.onUserLocationStatusChanged?.call(isLoading, errorText);
   }
 
-  // Zoom In
   void _zoomIn() {
     if (!_isMapReady) return;
     final double nextZoom = (mapController.camera.zoom + 1).clamp(11.0, 22.0);
     _safeMove(mapController.camera.center, nextZoom);
   }
 
-  // Zoom Out
   void _zoomOut() {
     if (!_isMapReady) return;
     final double nextZoom = (mapController.camera.zoom - 1).clamp(11.0, 22.0);
@@ -654,54 +452,24 @@ class _MapWidgetState extends State<MapWidget>
 
   void _centerOnUserLocation() {
     final LatLng? location = _effectiveUserLocation;
-    if (!_isMapReady || location == null) {
-      return;
-    }
+    if (!_isMapReady || location == null) return;
 
     _cancelCameraAnimation();
-    final double targetZoom = math
-        .max(mapController.camera.zoom, _userFocusZoom)
-        .clamp(11.0, 22.0);
+    final double targetZoom = math.max(mapController.camera.zoom, _userFocusZoom).clamp(11.0, 22.0);
     _animateCameraFocus(location, targetZoom);
   }
 
   void _resetMapRotation() {
-    if (!_isMapReady) {
-      return;
-    }
+    if (!_isMapReady) return;
 
     final double currentRotation = mapController.camera.rotation;
-    if (currentRotation.abs() < 0.01) {
-      return;
-    }
+    if (currentRotation.abs() < 0.01) return;
 
     try {
-      mapController.moveAndRotate(
-        mapController.camera.center,
-        mapController.camera.zoom,
-        0,
-        id: 'reset-map-rotation',
-      );
+      mapController.moveAndRotate(mapController.camera.center, mapController.camera.zoom, 0, id: 'reset-map-rotation');
     } catch (error) {
       debugPrint('Map rotation reset skipped due to runtime state: $error');
     }
-  }
-
-  void _onReportarPeligro() {
-    widget.onReportDangerTap?.call();
-  }
-
-  void _onIniciarViaje() {
-    widget.onStartTrip?.call();
-  }
-
-  void _onProfileTap() {
-    widget.onProfileTap?.call();
-  }
-
-  // Open settings panel
-  void _openSettings() {
-    widget.onSettingsTap?.call();
   }
 
   Color _hazardBorderColorForRiskLevel(String? riskLevelCode) {
@@ -734,31 +502,11 @@ class _MapWidgetState extends State<MapWidget>
     });
   }
 
-  Color _hazardBorderColor(HazardReportRecord report) {
-    return _hazardBorderColorForRiskLevel(report.riskLevelCode);
-  }
-
-  Color _hazardFillColor(HazardReportRecord report) {
-    return _hazardFillColorForRiskLevel(report.riskLevelCode);
-  }
-
-  Color _genericReportBorderColor(GenericReportRecord report) {
-    return AppPalette.borderLight;
-  }
-
-  Color _genericReportFillColor(GenericReportRecord report) {
-    return AppPalette.borderLight.withValues(alpha: 0.45);
-  }
-
-  LatLng _applyPixelDeltaToLatLng({
-    required LatLng source,
-    required Offset delta,
-  }) {
+  LatLng _applyPixelDeltaToLatLng({required LatLng source, required Offset delta}) {
     final double zoom = mapController.camera.zoom;
     final double latitudeRadians = source.latitude * (math.pi / 180.0);
     final double cosLat = math.cos(latitudeRadians).abs().clamp(0.0001, 1.0);
-    final double metersPerPixel =
-        156543.03392 * math.cos(latitudeRadians) / math.pow(2, zoom);
+    final double metersPerPixel = 156543.03392 * math.cos(latitudeRadians) / math.pow(2, zoom);
 
     final double deltaMetersEast = delta.dx * metersPerPixel;
     final double deltaMetersNorth = -delta.dy * metersPerPixel;
@@ -790,38 +538,26 @@ class _MapWidgetState extends State<MapWidget>
         ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
         : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
 
-    final Color mapBackgroundColor = widget.isDarkMode
-        ? const Color(0xFF1A1818)
-        : const Color(0xFFEEEEEE);
+    final Color mapBackgroundColor = widget.isDarkMode ? const Color(0xFF1A1818) : const Color(0xFFEEEEEE);
 
     final bool isWeb = MediaQuery.of(context).size.width > 900;
-    final bool controlsVisible = !widget.hideDefaultControls;
+    final bool controlsVisible = !widget.controls.hideDefaultControls;
     final double topSystemInset = MediaQuery.of(context).padding.top;
-    final bool reportDangerVisible =
-        controlsVisible || widget.keepReportDangerVisible;
-    final bool modifyLocationVisible =
-        controlsVisible || widget.keepModifyLocationVisible;
-    final bool isMobileTripOverlayActive =
-        !controlsVisible && widget.keepReportDangerVisible;
-    final double mobileBottomActionsOffset = isMobileTripOverlayActive
-        ? 244
-        : 16;
+    final bool reportDangerVisible = controlsVisible || widget.controls.keepReportDangerVisible;
+    final bool modifyLocationVisible = controlsVisible || widget.controls.keepModifyLocationVisible;
+    final bool isMobileTripOverlayActive = !controlsVisible && widget.controls.keepReportDangerVisible;
+    final double mobileBottomActionsOffset = isMobileTripOverlayActive ? 244 : 16;
 
     return Stack(
       children: [
-        // MAP
         FlutterMap(
           mapController: mapController,
           options: MapOptions(
             initialCenter: widget.center,
             initialZoom: widget.zoom,
-            cameraConstraint: CameraConstraint.containCenter(
-              bounds: _caliBounds,
-            ),
+            cameraConstraint: CameraConstraint.containCenter(bounds: _caliBounds),
             onMapReady: () {
-              if (_isMapReady || !mounted) {
-                return;
-              }
+              if (_isMapReady || !mounted) return;
               _isMapReady = true;
               _prewarmTileCache();
             },
@@ -830,31 +566,27 @@ class _MapWidgetState extends State<MapWidget>
             backgroundColor: mapBackgroundColor,
             keepAlive: true,
             interactionOptions: InteractionOptions(
-              flags: _isDraggingRoutePoint
-                  ? InteractiveFlag.none
-                  : InteractiveFlag.all,
+              flags: _isDraggingRoutePoint ? InteractiveFlag.none : InteractiveFlag.all,
             ),
             onMapEvent: (MapEvent event) {
-              if (_shouldCancelCameraAnimationForEvent(event)) {
-                _cancelCameraAnimation();
-              }
+              if (_shouldCancelCameraAnimationForEvent(event)) _cancelCameraAnimation();
             },
             onTap: (TapPosition tapPosition, LatLng point) {
               if (_isCustomPositionMode) {
                 setState(() {
                   _customUserLocation = point;
                 });
-                widget.onUserLocationChanged?.call(point);
+                widget.location.onUserLocationChanged?.call(point);
                 return;
               }
-              widget.onMapTap?.call(point);
+              widget.reportOverlay.onMapTap?.call(point);
             },
           ),
           children: [
             TileLayer(
               urlTemplate: tileUrl,
               subdomains: const ['a', 'b', 'c', 'd'],
-              userAgentPackageName: 'com.example.app',
+              userAgentPackageName: 'com.a4mpets.app',
               maxNativeZoom: 19,
               minZoom: 11,
               maxZoom: 22,
@@ -862,364 +594,126 @@ class _MapWidgetState extends State<MapWidget>
               keepBuffer: 6,
               panBuffer: 3,
               tileDisplay: const TileDisplay.instantaneous(opacity: 1.0),
-              tileUpdateTransformer: TileUpdateTransformers.throttle(
-                const Duration(milliseconds: 90),
-              ),
+              tileUpdateTransformer: TileUpdateTransformers.throttle(const Duration(milliseconds: 90)),
             ),
-            // User location marker
-            if (_effectiveUserLocation != null &&
-                (_hasLocationPermission || _isCustomPositionMode))
-              RepaintBoundary(
-                child: MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: _effectiveUserLocation!,
-                      width: 40,
-                      height: 40,
-                      child: _CurrentLocationMarker(heading: _userHeading),
-                    ),
-                  ],
-                ),
+            if (_effectiveUserLocation != null && (_hasLocationPermission || _isCustomPositionMode))
+              _buildSingleMarkerLayer(
+                point: _effectiveUserLocation!,
+                width: 40,
+                height: 40,
+                child: _CurrentLocationMarker(heading: _userHeading),
               ),
-            // Developer location marker
-            if (widget.isDeveloperModifyingLocation &&
-                widget.developerLocationMarker != null)
-              RepaintBoundary(
-                child: MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: widget.developerLocationMarker!,
-                      width: 50,
-                      height: 50,
-                      child: const _DeveloperLocationMarker(),
-                    ),
-                  ],
-                ),
+            if (widget.location.isDeveloperModifyingLocation && widget.location.developerLocationMarker != null)
+              _buildSingleMarkerLayer(
+                point: widget.location.developerLocationMarker!,
+                width: 50,
+                height: 50,
+                child: const _DeveloperLocationMarker(),
               ),
-            if (widget.highlightedHazard != null)
-              RepaintBoundary(
-                child: CircleLayer(
-                  circles: [
-                    CircleMarker(
-                      point: LatLng(
-                        widget.highlightedHazard!.incidentLatitude,
-                        widget.highlightedHazard!.incidentLongitude,
-                      ),
-                      color: _hazardFillColor(widget.highlightedHazard!),
-                      borderColor: _hazardBorderColor(
-                        widget.highlightedHazard!,
-                      ),
-                      borderStrokeWidth: 1.5,
-                      useRadiusInMeter: true,
-                      radius: widget.highlightedHazard!.impactRadiusMeters
-                          .toDouble(),
-                    ),
-                  ],
-                ),
+            if (widget.reportOverlay.highlightedHazard != null)
+              _buildHazardCircleLayer([widget.reportOverlay.highlightedHazard!], borderStrokeWidth: 1.5),
+            if (widget.reportOverlay.highlightedHazard == null && widget.reportOverlay.visibleHazardCircles.isNotEmpty)
+              _buildHazardCircleLayer(widget.reportOverlay.visibleHazardCircles),
+            if (widget.reportOverlay.hazardDraftLocation != null &&
+                widget.reportOverlay.hazardDraftImpactRadiusMeters != null)
+              _buildDraftCircleLayer(
+                point: widget.reportOverlay.hazardDraftLocation!,
+                color: _hazardFillColorForRiskLevel(widget.reportOverlay.hazardDraftRiskLevelCode),
+                borderColor: _hazardBorderColorForRiskLevel(widget.reportOverlay.hazardDraftRiskLevelCode),
+                radius: widget.reportOverlay.hazardDraftImpactRadiusMeters!.toDouble(),
               ),
-            if (widget.highlightedHazard == null &&
-                widget.visibleHazardCircles.isNotEmpty)
-              RepaintBoundary(
-                child: CircleLayer(
-                  circles: widget.visibleHazardCircles
-                      .map((HazardReportRecord report) {
-                        return CircleMarker(
-                          point: LatLng(
-                            report.incidentLatitude,
-                            report.incidentLongitude,
-                          ),
-                          color: _hazardFillColor(report),
-                          borderColor: _hazardBorderColor(report),
-                          borderStrokeWidth: 1.2,
-                          useRadiusInMeter: true,
-                          radius: report.impactRadiusMeters.toDouble(),
-                        );
-                      })
-                      .toList(growable: false),
-                ),
+            if (widget.reportOverlay.visibleHazardCircles.isNotEmpty)
+              _buildHazardMarkerLayer(widget.reportOverlay.visibleHazardCircles),
+            if (widget.reportOverlay.hazardDraftLocation != null)
+              _buildDraftMarkerLayer(
+                widget.reportOverlay.hazardDraftLocation!,
+                color: _hazardBorderColorForRiskLevel(widget.reportOverlay.hazardDraftRiskLevelCode),
+                label: '!',
               ),
-            if (widget.hazardDraftLocation != null &&
-                widget.hazardDraftImpactRadiusMeters != null)
-              RepaintBoundary(
-                child: CircleLayer(
-                  circles: [
-                    CircleMarker(
-                      point: widget.hazardDraftLocation!,
-                      color: _hazardFillColorForRiskLevel(
-                        widget.hazardDraftRiskLevelCode,
-                      ),
-                      borderColor: _hazardBorderColorForRiskLevel(
-                        widget.hazardDraftRiskLevelCode,
-                      ),
-                      borderStrokeWidth: 1.5,
-                      useRadiusInMeter: true,
-                      radius: widget.hazardDraftImpactRadiusMeters!.toDouble(),
-                    ),
-                  ],
-                ),
+            if (widget.reportOverlay.lostPetReports.isNotEmpty)
+              _buildReportMarkerLayer<LostPetReportRecord>(
+                reports: widget.reportOverlay.lostPetReports,
+                pointFor: (report) => LatLng(report.lastSeenLatitude, report.lastSeenLongitude),
+                messageFor: (report) => 'Abrir mascota perdida ${report.details}',
+                onTap: (report) => widget.reportOverlay.onLostPetTap?.call(report),
+                color: AppPalette.reportYellow,
+                label: '?',
               ),
-            if (widget.visibleHazardCircles.isNotEmpty)
-              RepaintBoundary(
-                child: MarkerLayer(
-                  markers: widget.visibleHazardCircles
-                      .map((HazardReportRecord report) {
-                        return Marker(
-                          point: LatLng(
-                            report.incidentLatitude,
-                            report.incidentLongitude,
-                          ),
-                          width: 24,
-                          height: 24,
-                          child: Tooltip(
-                            message:
-                                'Abrir peligro ${report.narrativeDescription}',
-                            child: Semantics(
-                              label:
-                                  'Abrir peligro ${report.narrativeDescription}',
-                              button: true,
-                              child: GestureDetector(
-                                onTap: () => widget.onHazardTap?.call(report),
-                                child: _HazardMarkerWidget(
-                                  color: _hazardBorderColor(report),
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      })
-                      .toList(growable: false),
-                ),
+            if (widget.reportOverlay.foundPetReports.isNotEmpty)
+              _buildReportMarkerLayer<FoundPetReportRecord>(
+                reports: widget.reportOverlay.foundPetReports,
+                pointFor: (report) => LatLng(report.latitude, report.longitude),
+                messageFor: (report) => 'Abrir mascota encontrada ${report.details}',
+                onTap: (report) => widget.reportOverlay.onFoundPetTap?.call(report),
+                color: AppPalette.reportGreen,
+                label: '!',
               ),
-            if (widget.hazardDraftLocation != null)
-              RepaintBoundary(
-                child: MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: widget.hazardDraftLocation!,
-                      width: 24,
-                      height: 24,
-                      child: _HazardMarkerWidget(
-                        color: _hazardBorderColorForRiskLevel(
-                          widget.hazardDraftRiskLevelCode,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+            if (widget.reportOverlay.genericReports.any((GenericReportRecord report) => report.impactRadiusMeters > 0))
+              _buildGenericReportCircleLayer(widget.reportOverlay.genericReports),
+            if (widget.reportOverlay.genericReports.isNotEmpty)
+              _buildReportMarkerLayer<GenericReportRecord>(
+                reports: widget.reportOverlay.genericReports,
+                pointFor: (report) => LatLng(report.latitude, report.longitude),
+                messageFor: (report) => 'Abrir reporte generico ${report.description}',
+                onTap: (report) => widget.reportOverlay.onGenericReportTap?.call(report),
+                color: AppPalette.charcoal,
+                label: 'i',
               ),
-            if (widget.lostPetReports.isNotEmpty)
-              RepaintBoundary(
-                child: MarkerLayer(
-                  markers: widget.lostPetReports
-                      .map((LostPetReportRecord report) {
-                        return Marker(
-                          point: LatLng(
-                            report.lastSeenLatitude,
-                            report.lastSeenLongitude,
-                          ),
-                          width: 24,
-                          height: 24,
-                          child: Tooltip(
-                            message: 'Abrir mascota perdida ${report.details}',
-                            child: Semantics(
-                              label: 'Abrir mascota perdida ${report.details}',
-                              button: true,
-                              child: GestureDetector(
-                                onTap: () => widget.onLostPetTap?.call(report),
-                                child: const _HazardMarkerWidget(
-                                  color: AppPalette.reportYellow,
-                                  label: '?',
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      })
-                      .toList(growable: false),
-                ),
+            if (widget.reportOverlay.lostPetDraftLocation != null)
+              _buildDraftMarkerLayer(
+                widget.reportOverlay.lostPetDraftLocation!,
+                color: AppPalette.reportYellow,
+                label: '?',
               ),
-            if (widget.foundPetReports.isNotEmpty)
-              RepaintBoundary(
-                child: MarkerLayer(
-                  markers: widget.foundPetReports
-                      .map((FoundPetReportRecord report) {
-                        return Marker(
-                          point: LatLng(report.latitude, report.longitude),
-                          width: 24,
-                          height: 24,
-                          child: Tooltip(
-                            message:
-                                'Abrir mascota encontrada ${report.details}',
-                            child: Semantics(
-                              label:
-                                  'Abrir mascota encontrada ${report.details}',
-                              button: true,
-                              child: GestureDetector(
-                                onTap: () => widget.onFoundPetTap?.call(report),
-                                child: const _HazardMarkerWidget(
-                                  color: AppPalette.reportGreen,
-                                  label: '!',
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      })
-                      .toList(growable: false),
-                ),
+            if (widget.reportOverlay.foundPetDraftLocation != null)
+              _buildDraftMarkerLayer(
+                widget.reportOverlay.foundPetDraftLocation!,
+                color: AppPalette.reportGreen,
+                label: '!',
               ),
-            if (widget.genericReports.any(
-              (GenericReportRecord report) => report.impactRadiusMeters > 0,
-            ))
-              RepaintBoundary(
-                child: CircleLayer(
-                  circles: widget.genericReports
-                      .where(
-                        (GenericReportRecord report) =>
-                            report.impactRadiusMeters > 0,
-                      )
-                      .map((GenericReportRecord report) {
-                        return CircleMarker(
-                          point: LatLng(report.latitude, report.longitude),
-                          color: _genericReportFillColor(report),
-                          borderColor: _genericReportBorderColor(report),
-                          borderStrokeWidth: 1.2,
-                          useRadiusInMeter: true,
-                          radius: report.impactRadiusMeters.toDouble(),
-                        );
-                      })
-                      .toList(growable: false),
-                ),
+            if (widget.reportOverlay.genericReportDraftLocation != null &&
+                widget.reportOverlay.genericReportDraftImpactRadiusMeters != null &&
+                widget.reportOverlay.genericReportDraftImpactRadiusMeters! > 0)
+              _buildDraftCircleLayer(
+                point: widget.reportOverlay.genericReportDraftLocation!,
+                color: AppPalette.borderLight.withValues(alpha: 0.45),
+                borderColor: AppPalette.borderLight,
+                radius: widget.reportOverlay.genericReportDraftImpactRadiusMeters!.toDouble(),
               ),
-            if (widget.genericReports.isNotEmpty)
-              RepaintBoundary(
-                child: MarkerLayer(
-                  markers: widget.genericReports
-                      .map((GenericReportRecord report) {
-                        return Marker(
-                          point: LatLng(report.latitude, report.longitude),
-                          width: 24,
-                          height: 24,
-                          child: Tooltip(
-                            message:
-                                'Abrir reporte generico ${report.description}',
-                            child: Semantics(
-                              label:
-                                  'Abrir reporte generico ${report.description}',
-                              button: true,
-                              child: GestureDetector(
-                                onTap: () =>
-                                    widget.onGenericReportTap?.call(report),
-                                child: const _HazardMarkerWidget(
-                                  color: AppPalette.charcoal,
-                                  label: 'i',
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      })
-                      .toList(growable: false),
-                ),
+            if (widget.reportOverlay.genericReportDraftLocation != null)
+              _buildDraftMarkerLayer(
+                widget.reportOverlay.genericReportDraftLocation!,
+                color: AppPalette.charcoal,
+                label: 'i',
               ),
-            if (widget.lostPetDraftLocation != null)
-              RepaintBoundary(
-                child: MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: widget.lostPetDraftLocation!,
-                      width: 24,
-                      height: 24,
-                      child: const _HazardMarkerWidget(
-                        color: AppPalette.reportYellow,
-                        label: '?',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            if (widget.foundPetDraftLocation != null)
-              RepaintBoundary(
-                child: MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: widget.foundPetDraftLocation!,
-                      width: 24,
-                      height: 24,
-                      child: const _HazardMarkerWidget(
-                        color: AppPalette.reportGreen,
-                        label: '!',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            if (widget.genericReportDraftLocation != null &&
-                widget.genericReportDraftImpactRadiusMeters != null &&
-                widget.genericReportDraftImpactRadiusMeters! > 0)
-              RepaintBoundary(
-                child: CircleLayer(
-                  circles: [
-                    CircleMarker(
-                      point: widget.genericReportDraftLocation!,
-                      color: AppPalette.borderLight.withValues(alpha: 0.45),
-                      borderColor: AppPalette.borderLight,
-                      borderStrokeWidth: 1.5,
-                      useRadiusInMeter: true,
-                      radius: widget.genericReportDraftImpactRadiusMeters!
-                          .toDouble(),
-                    ),
-                  ],
-                ),
-              ),
-            if (widget.genericReportDraftLocation != null)
-              RepaintBoundary(
-                child: MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: widget.genericReportDraftLocation!,
-                      width: 24,
-                      height: 24,
-                      child: const _HazardMarkerWidget(
-                        color: AppPalette.charcoal,
-                        label: 'i',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            if (widget.routePolylinePoints.length >= 2)
-              RepaintBoundary(
-                child: PolylineLayer(polylines: _buildRoutePolylines()),
-              ),
-            if (widget.routePoints.isNotEmpty)
+            if (widget.routeOverlay.routePolylinePoints.length >= 2)
+              RepaintBoundary(child: PolylineLayer(polylines: _buildRoutePolylines())),
+            if (widget.routeOverlay.routePoints.isNotEmpty)
               RepaintBoundary(
                 child: MarkerLayer(
                   markers: List<Marker>.generate(
-                    widget.routePoints.length,
+                    widget.routeOverlay.routePoints.length,
                     (int index) => Marker(
-                      point: widget.routePoints[index],
+                      point: widget.routeOverlay.routePoints[index],
                       width: 28,
                       height: 28,
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
-                        onTapDown: (_) =>
-                            widget.onRoutePointPointerDown?.call(index),
-                        onTap: () => widget.onRoutePointTap?.call(index),
-                        onPanStart: widget.canDragRoutePoints
+                        onTapDown: (_) => widget.routeOverlay.onRoutePointPointerDown?.call(index),
+                        onTap: () => widget.routeOverlay.onRoutePointTap?.call(index),
+                        onPanStart: widget.routeOverlay.canDragRoutePoints
                             ? (_) {
                                 setState(() {
                                   _isDraggingRoutePoint = true;
                                   _draggingRoutePointIndex = index;
-                                  _draggingPoint = widget.routePoints[index];
+                                  _draggingPoint = widget.routeOverlay.routePoints[index];
                                 });
-                                widget.onRoutePointDragStart?.call(index);
+                                widget.routeOverlay.onRoutePointDragStart?.call(index);
                               }
                             : null,
-                        onPanUpdate: widget.canDragRoutePoints
+                        onPanUpdate: widget.routeOverlay.canDragRoutePoints
                             ? (DragUpdateDetails details) {
-                                if (_draggingRoutePointIndex != index ||
-                                    _draggingPoint == null) {
+                                if (_draggingRoutePointIndex != index || _draggingPoint == null) {
                                   return;
                                 }
 
@@ -1228,13 +722,10 @@ class _MapWidgetState extends State<MapWidget>
                                   delta: details.delta,
                                 );
                                 _draggingPoint = next;
-                                widget.onRoutePointDragUpdate?.call(
-                                  index,
-                                  next,
-                                );
+                                widget.routeOverlay.onRoutePointDragUpdate?.call(index, next);
                               }
                             : null,
-                        onPanEnd: widget.canDragRoutePoints
+                        onPanEnd: widget.routeOverlay.canDragRoutePoints
                             ? (_) {
                                 final LatLng? finalPoint = _draggingPoint;
                                 setState(() {
@@ -1243,16 +734,13 @@ class _MapWidgetState extends State<MapWidget>
                                   _draggingPoint = null;
                                 });
                                 if (finalPoint != null) {
-                                  widget.onRoutePointDragEnd?.call(
-                                    index,
-                                    finalPoint,
-                                  );
+                                  widget.routeOverlay.onRoutePointDragEnd?.call(index, finalPoint);
                                 }
                               }
                             : null,
                         child: _NumberedMapMarker(
                           number: index + 1,
-                          isSelected: widget.selectedRoutePointIndex == index,
+                          isSelected: widget.routeOverlay.selectedRoutePointIndex == index,
                         ),
                       ),
                     ),
@@ -1262,9 +750,7 @@ class _MapWidgetState extends State<MapWidget>
           ],
         ),
 
-        // MOBILE LAYOUT
         if (!isWeb) ...[
-          // Bottom area - Mobile: expanded action buttons
           Positioned(
             left: 16,
             right: 16,
@@ -1277,55 +763,21 @@ class _MapWidgetState extends State<MapWidget>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (reportDangerVisible)
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton(
-                          onPressed: _onReportarPeligro,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: secondary,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: const Text(
-                            'Reportar',
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
+                      _buildPrimaryMapButton(
+                        label: 'Reportar',
+                        backgroundColor: secondary,
+                        foregroundColor: white,
+                        onPressed: widget.controls.onReportDangerTap ?? _noop,
+                        fontWeight: FontWeight.w600,
                       ),
                     if (controlsVisible) ...[
                       const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton(
-                          onPressed: _onIniciarViaje,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: primary,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: const Text(
-                            'Iniciar Viaje',
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
+                      _buildPrimaryMapButton(
+                        label: 'Iniciar Viaje',
+                        backgroundColor: primary,
+                        foregroundColor: white,
+                        onPressed: widget.controls.onStartTrip ?? _noop,
+                        fontWeight: FontWeight.w600,
                       ),
                     ],
                   ],
@@ -1334,7 +786,6 @@ class _MapWidgetState extends State<MapWidget>
             ),
           ),
 
-          // Right: zoom buttons anchored above bottom action buttons
           Positioned(
             right: 16,
             bottom: 160,
@@ -1342,22 +793,7 @@ class _MapWidgetState extends State<MapWidget>
               child: _buildAnimatedControl(
                 visible: controlsVisible,
                 hiddenOffset: const Offset(0.06, 0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildZoomButton(
-                      icon: Icons.add,
-                      onPressed: _zoomIn,
-                      isTop: true,
-                    ),
-                    const SizedBox(height: 8),
-                    _buildZoomButton(
-                      icon: Icons.remove,
-                      onPressed: _zoomOut,
-                      isTop: false,
-                    ),
-                  ],
-                ),
+                child: _buildZoomControls(),
               ),
             ),
           ),
@@ -1369,140 +805,31 @@ class _MapWidgetState extends State<MapWidget>
               child: _buildAnimatedControl(
                 visible: controlsVisible,
                 hiddenOffset: const Offset(-0.06, 0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildMapActionButton(
-                      icon: Icons.my_location,
-                      onPressed: _centerOnUserLocation,
-                      semanticLabel: 'Centrar en mi ubicacion',
-                    ),
-                    const SizedBox(height: 8),
-                    _buildMapActionButton(
-                      icon: Icons.explore_outlined,
-                      onPressed: _resetMapRotation,
-                      semanticLabel: 'Restablecer rotacion del mapa',
-                    ),
-                  ],
-                ),
+                child: _buildMapUtilityControls(),
               ),
             ),
           ),
 
-          // User profile button - Mobile (top left corner)
-          Positioned(
-            top: 16 + topSystemInset,
-            left: 16,
-            child: _buildAnimatedControl(
-              visible: controlsVisible,
-              hiddenOffset: const Offset(-0.06, 0),
-              child: Semantics(
-                label: 'Abrir perfil',
-                button: true,
-                child: Tooltip(
-                  message: 'Abrir perfil',
-                  child: GestureDetector(
-                    onTap: _onProfileTap,
-                    child: SizedBox(
-                      width: 48,
-                      height: 48,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: translucentWhite,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.person,
-                          color: contentGray,
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // Settings button - Mobile (top right corner)
-          Positioned(
-            top: 16 + topSystemInset,
-            right: 16,
-            child: _buildAnimatedControl(
-              visible: controlsVisible,
-              hiddenOffset: const Offset(0.06, 0),
-              child: Semantics(
-                label: 'Abrir configuracion',
-                button: true,
-                child: Tooltip(
-                  message: 'Abrir configuracion',
-                  child: GestureDetector(
-                    onTap: _openSettings,
-                    child: SizedBox(
-                      width: 48,
-                      height: 48,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: translucentWhite,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.settings,
-                          color: contentGray,
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
+          ..._buildTopCornerControls(topSystemInset: topSystemInset, controlsVisible: controlsVisible, isWeb: false),
         ],
 
-        // WEB LAYOUT
         if (isWeb) ...[
-          // "Report Danger" button - Web (bottom left corner)
           Positioned(
             left: 16,
             bottom: 16,
             child: _buildAnimatedControl(
               visible: reportDangerVisible,
               hiddenOffset: const Offset(-0.06, 0.06),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 220,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _onReportarPeligro,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: secondary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text(
-                        'Reportar',
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+              child: _buildPrimaryMapButton(
+                label: 'Reportar',
+                backgroundColor: secondary,
+                foregroundColor: white,
+                onPressed: widget.controls.onReportDangerTap ?? _noop,
+                width: 220,
               ),
             ),
           ),
 
-          // Start Trip + Zoom controls - Web (bottom right corner)
           Positioned(
             bottom: 16,
             right: 16,
@@ -1513,45 +840,14 @@ class _MapWidgetState extends State<MapWidget>
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  // Zoom buttons (above Start Trip), right-aligned
-                  _buildZoomButton(
-                    icon: Icons.add,
-                    onPressed: _zoomIn,
-                    isTop: true,
-                    semanticLabel: 'Acercar mapa',
-                  ),
-                  const SizedBox(height: 8),
-                  _buildZoomButton(
-                    icon: Icons.remove,
-                    onPressed: _zoomOut,
-                    isTop: false,
-                    semanticLabel: 'Alejar mapa',
-                  ),
+                  _buildZoomControls(zoomInLabel: 'Acercar mapa', zoomOutLabel: 'Alejar mapa'),
                   const SizedBox(height: 12),
-                  // Start Trip - larger, below zoom buttons
-                  SizedBox(
+                  _buildPrimaryMapButton(
+                    label: 'Iniciar Viaje',
+                    backgroundColor: primary,
+                    foregroundColor: white,
+                    onPressed: widget.controls.onStartTrip ?? _noop,
                     width: 220,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _onIniciarViaje,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text(
-                        'Iniciar Viaje',
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
                   ),
                 ],
               ),
@@ -1564,138 +860,36 @@ class _MapWidgetState extends State<MapWidget>
             child: _buildAnimatedControl(
               visible: controlsVisible,
               hiddenOffset: const Offset(-0.06, 0.06),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildMapActionButton(
-                    icon: Icons.my_location,
-                    onPressed: _centerOnUserLocation,
-                    semanticLabel: 'Centrar en mi ubicacion',
-                  ),
-                  const SizedBox(height: 8),
-                  _buildMapActionButton(
-                    icon: Icons.explore_outlined,
-                    onPressed: _resetMapRotation,
-                    semanticLabel: 'Restablecer rotacion del mapa',
-                  ),
-                ],
-              ),
+              child: _buildMapUtilityControls(),
             ),
           ),
 
-          // User profile button - Web (top left corner)
-          Positioned(
-            top: 16 + topSystemInset,
-            left: 16,
-            child: _buildAnimatedControl(
-              visible: controlsVisible,
-              hiddenOffset: const Offset(-0.06, 0),
-              child: Semantics(
-                label: 'Abrir perfil',
-                button: true,
-                child: Tooltip(
-                  message: 'Abrir perfil',
-                  child: GestureDetector(
-                    onTap: _onProfileTap,
-                    child: SizedBox(
-                      width: 48,
-                      height: 48,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: white,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.person,
-                          color: contentGray,
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // Settings button - Web (top right corner)
-          Positioned(
-            top: 16 + topSystemInset,
-            right: 16,
-            child: _buildAnimatedControl(
-              visible: controlsVisible,
-              hiddenOffset: const Offset(0.06, 0),
-              child: Semantics(
-                label: 'Abrir configuracion',
-                button: true,
-                child: Tooltip(
-                  message: 'Abrir configuracion',
-                  child: GestureDetector(
-                    onTap: _openSettings,
-                    child: SizedBox(
-                      width: 48,
-                      height: 48,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: translucentWhite,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.settings,
-                          color: contentGray,
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
+          ..._buildTopCornerControls(topSystemInset: topSystemInset, controlsVisible: controlsVisible, isWeb: true),
         ],
 
-        // Modify location button - Dev tool, visible on both mobile and web
         Positioned(
           top: 72 + topSystemInset,
           right: 16,
           child: _buildAnimatedControl(
             visible: modifyLocationVisible,
             hiddenOffset: const Offset(0.06, 0),
-            child: Semantics(
+            child: _buildMapCornerButton(
               label: 'Cambiar ubicacion manual',
-              button: true,
-              child: Tooltip(
-                message: 'Cambiar ubicacion manual',
-                child: GestureDetector(
-                  onTap: _toggleCustomPositionMode,
-                  child: SizedBox(
-                    width: 48,
-                    height: 48,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: _isCustomPositionMode
-                            ? AppPalette.primaryBlue.withValues(alpha: 0.92)
-                            : translucentWhite,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        Icons.location_on,
-                        color: _isCustomPositionMode ? white : contentGray,
-                        size: 24,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+              icon: Icons.location_on,
+              backgroundColor: _isCustomPositionMode
+                  ? AppPalette.primaryBlue.withValues(alpha: 0.92)
+                  : translucentWhite,
+              iconColor: _isCustomPositionMode ? white : contentGray,
+              onTap: _toggleCustomPositionMode,
             ),
           ),
         ),
         _buildSelectionHintPositioned(
           isWeb: isWeb,
           topSystemInset: topSystemInset,
-          anchorTop: widget.routeSelectionHintAtTop,
+          anchorTop: widget.routeOverlay.routeSelectionHintAtTop,
           bottomOffset: isWeb ? 24 : 20,
-          visible: widget.isSelectingRoutePoint,
+          visible: widget.routeOverlay.isSelectingRoutePoint,
           child: _buildSelectionHint(
             color: AppPalette.primaryBlue,
             icon: Icons.touch_app,
@@ -1705,35 +899,25 @@ class _MapWidgetState extends State<MapWidget>
         _buildSelectionHintPositioned(
           isWeb: isWeb,
           topSystemInset: topSystemInset,
-          anchorTop: widget.reportSelectionHintAtTop,
+          anchorTop: widget.reportOverlay.reportSelectionHintAtTop,
           bottomOffset: isWeb ? 72 : 68,
-          visible:
-              widget.isSelectingHazardLocation ||
-              widget.isSelectingReportLocation,
+          visible: widget.reportOverlay.isSelectingHazardLocation || widget.reportOverlay.isSelectingReportLocation,
           child: _buildSelectionHint(
-            color: widget.isSelectingHazardLocation
-                ? _hazardBorderColorForRiskLevel(
-                    widget.hazardDraftRiskLevelCode,
-                  )
-                : widget.reportSelectionHintColor,
+            color: widget.reportOverlay.isSelectingHazardLocation
+                ? _hazardBorderColorForRiskLevel(widget.reportOverlay.hazardDraftRiskLevelCode)
+                : widget.reportOverlay.reportSelectionHintColor,
             icon: Icons.place_rounded,
-            text: widget.isSelectingHazardLocation
+            text: widget.reportOverlay.isSelectingHazardLocation
                 ? 'Toca el mapa para ubicar el peligro'
-                : widget.reportSelectionHintText,
+                : widget.reportOverlay.reportSelectionHintText,
           ),
         ),
-        if (widget.panelOverlay != null)
-          Positioned.fill(child: widget.panelOverlay!),
+        if (widget.controls.panelOverlay != null) Positioned.fill(child: widget.controls.panelOverlay!),
       ],
     );
   }
 
-  // Reusable widget for map action buttons
-  Widget _buildMapActionButton({
-    required IconData icon,
-    required VoidCallback onPressed,
-    String? semanticLabel,
-  }) {
+  Widget _buildMapActionButton({required IconData icon, required VoidCallback onPressed, String? semanticLabel}) {
     return SizedBox(
       width: 48,
       height: 48,
@@ -1750,16 +934,288 @@ class _MapWidgetState extends State<MapWidget>
     );
   }
 
-  Widget _buildZoomButton({
-    required IconData icon,
-    required VoidCallback onPressed,
-    required bool isTop,
-    String? semanticLabel,
+  Widget _buildZoomControls({String? zoomInLabel, String? zoomOutLabel}) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildMapActionButton(icon: Icons.add, onPressed: _zoomIn, semanticLabel: zoomInLabel),
+        const SizedBox(height: 8),
+        _buildMapActionButton(icon: Icons.remove, onPressed: _zoomOut, semanticLabel: zoomOutLabel),
+      ],
+    );
+  }
+
+  Widget _buildMapUtilityControls() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildMapActionButton(
+          icon: Icons.my_location,
+          onPressed: _centerOnUserLocation,
+          semanticLabel: 'Centrar en mi ubicacion',
+        ),
+        const SizedBox(height: 8),
+        _buildMapActionButton(
+          icon: Icons.explore_outlined,
+          onPressed: _resetMapRotation,
+          semanticLabel: 'Restablecer rotacion del mapa',
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildTopCornerControls({
+    required double topSystemInset,
+    required bool controlsVisible,
+    required bool isWeb,
   }) {
-    return _buildMapActionButton(
-      icon: icon,
-      onPressed: onPressed,
-      semanticLabel: semanticLabel,
+    return [
+      _buildTopCornerControl(
+        topSystemInset: topSystemInset,
+        controlsVisible: controlsVisible,
+        left: true,
+        label: 'Abrir perfil',
+        icon: Icons.person,
+        backgroundColor: isWeb ? white : translucentWhite,
+        onTap: widget.controls.onProfileTap ?? _noop,
+      ),
+      _buildTopCornerControl(
+        topSystemInset: topSystemInset,
+        controlsVisible: controlsVisible,
+        left: false,
+        label: 'Abrir configuracion',
+        icon: Icons.settings,
+        backgroundColor: translucentWhite,
+        onTap: widget.controls.onSettingsTap ?? _noop,
+      ),
+    ];
+  }
+
+  Widget _buildTopCornerControl({
+    required double topSystemInset,
+    required bool controlsVisible,
+    required bool left,
+    required String label,
+    required IconData icon,
+    required Color backgroundColor,
+    required VoidCallback onTap,
+  }) {
+    return Positioned(
+      top: 16 + topSystemInset,
+      left: left ? 16 : null,
+      right: left ? null : 16,
+      child: _buildAnimatedControl(
+        visible: controlsVisible,
+        hiddenOffset: Offset(left ? -0.06 : 0.06, 0),
+        child: _buildMapCornerButton(
+          label: label,
+          icon: icon,
+          backgroundColor: backgroundColor,
+          iconColor: contentGray,
+          onTap: onTap,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReportMarkerLayer<T>({
+    required Iterable<T> reports,
+    required LatLng Function(T report) pointFor,
+    required String Function(T report) messageFor,
+    required void Function(T report) onTap,
+    required Color color,
+    Color Function(T report)? colorFor,
+    required String label,
+  }) {
+    return RepaintBoundary(
+      child: MarkerLayer(
+        markers: reports
+            .map(
+              (T report) => _buildReportMarker(
+                point: pointFor(report),
+                message: messageFor(report),
+                onTap: () => onTap(report),
+                color: colorFor?.call(report) ?? color,
+                label: label,
+              ),
+            )
+            .toList(growable: false),
+      ),
+    );
+  }
+
+  Widget _buildHazardCircleLayer(Iterable<HazardReportRecord> reports, {double borderStrokeWidth = 1.2}) {
+    return _buildCircleLayer(
+      reports.map(
+        (HazardReportRecord report) => _buildCircleMarker(
+          point: LatLng(report.incidentLatitude, report.incidentLongitude),
+          color: _hazardFillColorForRiskLevel(report.riskLevelCode),
+          borderColor: _hazardBorderColorForRiskLevel(report.riskLevelCode),
+          borderStrokeWidth: borderStrokeWidth,
+          radius: report.impactRadiusMeters.toDouble(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGenericReportCircleLayer(Iterable<GenericReportRecord> reports) {
+    return _buildCircleLayer(
+      reports
+          .where((GenericReportRecord report) => report.impactRadiusMeters > 0)
+          .map(
+            (GenericReportRecord report) => _buildCircleMarker(
+              point: LatLng(report.latitude, report.longitude),
+              color: AppPalette.borderLight.withValues(alpha: 0.45),
+              borderColor: AppPalette.borderLight,
+              radius: report.impactRadiusMeters.toDouble(),
+            ),
+          ),
+    );
+  }
+
+  Widget _buildHazardMarkerLayer(Iterable<HazardReportRecord> reports) {
+    return _buildReportMarkerLayer<HazardReportRecord>(
+      reports: reports,
+      pointFor: (HazardReportRecord report) => LatLng(report.incidentLatitude, report.incidentLongitude),
+      messageFor: (HazardReportRecord report) => 'Abrir peligro ${report.narrativeDescription}',
+      onTap: (HazardReportRecord report) => widget.reportOverlay.onHazardTap?.call(report),
+      color: AppPalette.dangerRed,
+      colorFor: (HazardReportRecord report) => _hazardBorderColorForRiskLevel(report.riskLevelCode),
+      label: '!',
+    );
+  }
+
+  Widget _buildSingleMarkerLayer({
+    required LatLng point,
+    required double width,
+    required double height,
+    required Widget child,
+  }) {
+    return RepaintBoundary(
+      child: MarkerLayer(
+        markers: [Marker(point: point, width: width, height: height, child: child)],
+      ),
+    );
+  }
+
+  Widget _buildDraftMarkerLayer(LatLng point, {required Color color, required String label}) {
+    return _buildSingleMarkerLayer(
+      point: point,
+      width: 24,
+      height: 24,
+      child: _HazardMarkerWidget(color: color, label: label),
+    );
+  }
+
+  Widget _buildDraftCircleLayer({
+    required LatLng point,
+    required Color color,
+    required Color borderColor,
+    required double radius,
+  }) {
+    return _buildCircleLayer([
+      _buildCircleMarker(point: point, color: color, borderColor: borderColor, borderStrokeWidth: 1.5, radius: radius),
+    ]);
+  }
+
+  Widget _buildCircleLayer(Iterable<CircleMarker> circles) {
+    return RepaintBoundary(child: CircleLayer(circles: circles.toList(growable: false)));
+  }
+
+  CircleMarker _buildCircleMarker({
+    required LatLng point,
+    required Color color,
+    required Color borderColor,
+    required double radius,
+    double borderStrokeWidth = 1.2,
+  }) {
+    return CircleMarker(
+      point: point,
+      color: color,
+      borderColor: borderColor,
+      borderStrokeWidth: borderStrokeWidth,
+      useRadiusInMeter: true,
+      radius: radius,
+    );
+  }
+
+  Marker _buildReportMarker({
+    required LatLng point,
+    required String message,
+    required VoidCallback onTap,
+    required Color color,
+    required String label,
+  }) {
+    return Marker(
+      point: point,
+      width: 24,
+      height: 24,
+      child: Tooltip(
+        message: message,
+        child: Semantics(
+          label: message,
+          button: true,
+          child: GestureDetector(
+            onTap: onTap,
+            child: _HazardMarkerWidget(color: color, label: label),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPrimaryMapButton({
+    required String label,
+    required Color backgroundColor,
+    required Color foregroundColor,
+    required VoidCallback onPressed,
+    double width = double.infinity,
+    FontWeight fontWeight = FontWeight.w700,
+  }) {
+    return SizedBox(
+      width: width,
+      height: 56,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: backgroundColor,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: foregroundColor, fontSize: 16, fontWeight: fontWeight),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMapCornerButton({
+    required String label,
+    required IconData icon,
+    required Color backgroundColor,
+    required Color iconColor,
+    required VoidCallback onTap,
+  }) {
+    return Semantics(
+      label: label,
+      button: true,
+      child: Tooltip(
+        message: label,
+        child: GestureDetector(
+          onTap: onTap,
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: DecoratedBox(
+              decoration: BoxDecoration(color: backgroundColor, borderRadius: BorderRadius.circular(8)),
+              child: Icon(icon, color: iconColor, size: 24),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -1784,11 +1240,7 @@ class _MapWidgetState extends State<MapWidget>
     );
   }
 
-  Widget _buildSelectionHint({
-    required Color color,
-    required IconData icon,
-    required String text,
-  }) {
+  Widget _buildSelectionHint({required Color color, required IconData icon, required String text}) {
     return Center(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1796,11 +1248,7 @@ class _MapWidgetState extends State<MapWidget>
           color: color,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.25),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
+            BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 8, offset: const Offset(0, 2)),
           ],
         ),
         child: Row(
@@ -1810,11 +1258,7 @@ class _MapWidgetState extends State<MapWidget>
             const SizedBox(width: 6),
             Text(
               text,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -1852,30 +1296,16 @@ class _MapWidgetState extends State<MapWidget>
     );
   }
 
-  /// Construye las polylines para la ruta, considerando segmentos coloreados si existen
   List<Polyline> _buildRoutePolylines() {
-    if (widget.coloredRouteSegments.isNotEmpty) {
-      // Si hay segmentos coloreados, renderizar cada uno con su color
-      return widget.coloredRouteSegments
+    if (widget.routeOverlay.coloredRouteSegments.isNotEmpty) {
+      return widget.routeOverlay.coloredRouteSegments
           .where((ColoredRouteSegment segment) => segment.points.length >= 2)
           .map(
-            (ColoredRouteSegment segment) => Polyline(
-              points: segment.points,
-              color: segment.color,
-              strokeWidth: 2.0,
-            ),
+            (ColoredRouteSegment segment) => Polyline(points: segment.points, color: segment.color, strokeWidth: 2.0),
           )
           .toList();
-    } else {
-      // Si no hay segmentos coloreados, renderizar la ruta normal (azul)
-      return [
-        Polyline(
-          points: widget.routePolylinePoints,
-          color: AppPalette.primaryBlue,
-          strokeWidth: 2.0,
-        ),
-      ];
     }
+    return [Polyline(points: widget.routeOverlay.routePolylinePoints, color: AppPalette.primaryBlue, strokeWidth: 2.0)];
   }
 }
 
@@ -1896,22 +1326,13 @@ class _HazardMarkerWidget extends StatelessWidget {
           shape: BoxShape.circle,
           border: Border.all(color: Colors.white, width: 1.2),
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.18),
-              blurRadius: 4,
-              offset: const Offset(0, 1),
-            ),
+            BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 4, offset: const Offset(0, 1)),
           ],
         ),
         alignment: Alignment.center,
         child: Text(
           label,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 12,
-            fontWeight: FontWeight.w900,
-            height: 1,
-          ),
+          style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, height: 1),
         ),
       ),
     );
@@ -1935,12 +1356,7 @@ class _NumberedMapMarker extends StatelessWidget {
       child: Center(
         child: Text(
           '$number',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-            height: 1.0,
-          ),
+          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600, height: 1.0),
         ),
       ),
     );
@@ -1955,22 +1371,17 @@ class _CurrentLocationMarker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Transform.rotate(
-      angle: (heading * math.pi) / 180, // Convert degrees to radians
+      angle: (heading * math.pi) / 180,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Blue circle
           SizedBox(
             width: 36,
             height: 36,
             child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: AppPalette.primaryBlue.withValues(alpha: 0.30),
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: AppPalette.primaryBlue.withValues(alpha: 0.30), shape: BoxShape.circle),
             ),
           ),
-          // White center dot
           SizedBox(
             width: 14,
             height: 14,
@@ -1982,13 +1393,9 @@ class _CurrentLocationMarker extends StatelessWidget {
               ),
             ),
           ),
-          // Direction indicator (small tip)
           Positioned(
             top: 1,
-            child: CustomPaint(
-              size: const Size(10, 10),
-              painter: _ArrowPainter(),
-            ),
+            child: CustomPaint(size: const Size(10, 10), painter: _ArrowPainter()),
           ),
         ],
       ),
@@ -2004,21 +1411,16 @@ class _DeveloperLocationMarker extends StatelessWidget {
     return Stack(
       alignment: Alignment.center,
       children: [
-        // Outer pulsing circle
         ScaleTransition(
           scale: AlwaysStoppedAnimation(1.0),
           child: SizedBox(
             width: 50,
             height: 50,
             child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: const Color(0xFF5984BC).withValues(alpha: 0.3),
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: const Color(0xFF5984BC).withValues(alpha: 0.3), shape: BoxShape.circle),
             ),
           ),
         ),
-        // Inner circle
         SizedBox(
           width: 30,
           height: 30,
@@ -2030,15 +1432,11 @@ class _DeveloperLocationMarker extends StatelessWidget {
             ),
           ),
         ),
-        // Center dot
         SizedBox(
           width: 10,
           height: 10,
           child: DecoratedBox(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
+            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
           ),
         ),
       ],

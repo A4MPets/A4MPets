@@ -4,8 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class BackendApiClient {
-  BackendApiClient({http.Client? httpClient})
-    : _httpClient = httpClient ?? http.Client();
+  BackendApiClient({http.Client? httpClient}) : _httpClient = httpClient ?? http.Client();
 
   static const String configuredApiBaseUrl = String.fromEnvironment(
     'A4M_API_BASE_URL',
@@ -42,9 +41,7 @@ class BackendApiClient {
       'Accept': 'application/json',
     };
 
-    if (bearerToken != null && bearerToken.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $bearerToken';
-    }
+    if (bearerToken != null && bearerToken.isNotEmpty) headers['Authorization'] = 'Bearer $bearerToken';
 
     return headers;
   }
@@ -88,10 +85,7 @@ class BackendApiClient {
     for (final String baseUrl in baseUrls) {
       try {
         final http.Response response = await _httpClient
-            .get(
-              Uri.parse('$baseUrl$path'),
-              headers: jsonHeaders(bearerToken: bearerToken),
-            )
+            .get(Uri.parse('$baseUrl$path'), headers: jsonHeaders(bearerToken: bearerToken))
             .timeout(timeout);
 
         if (response.statusCode < 500) {
@@ -139,6 +133,7 @@ class BackendApiClient {
 
   Future<http.Response?> deleteWithFallback(
     String path, {
+    Object? body,
     String? bearerToken,
     Duration timeout = const Duration(seconds: 5),
   }) async {
@@ -149,6 +144,7 @@ class BackendApiClient {
             .delete(
               Uri.parse('$baseUrl$path'),
               headers: jsonHeaders(bearerToken: bearerToken),
+              body: body == null ? null : jsonEncode(body),
             )
             .timeout(timeout);
 

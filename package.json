@@ -5,6 +5,7 @@
     "frontend:android": "node scripts/run-frontend.js --android",
     "frontend:url": "node scripts/run-frontend.js --url",
     "frontend:runtime": "node scripts/run-frontend.js --url-file .runtime/cloudflare-url.txt",
+    "frontend:cloudflare": "node scripts/run-frontend.js --frontend-cloudflare --url-file .runtime/cloudflare-url.txt",
     "frontend:android:url": "node scripts/run-frontend.js --android --url",
     "frontend:android:runtime": "node scripts/run-frontend.js --android --url-file .runtime/cloudflare-url.txt",
     "backend": "node scripts/run-backend.js",
@@ -14,13 +15,19 @@
     "dev": "concurrently \"npm run backend\" \"npm run frontend\" \"npm run graphhopper\"",
     "dev:android": "concurrently \"npm run backend\" \"npm run frontend:android\" \"npm run graphhopper\"",
     "dev:cloudflare": "concurrently \"npm run backend:cloudflare\" \"npm run frontend:runtime\" \"npm run graphhopper\"",
+    "dev:cloudflare:frontend": "concurrently \"npm run backend:cloudflare\" \"npm run frontend:cloudflare\" \"npm run graphhopper\"",
     "dev:cloudflare:android": "concurrently \"npm run backend:cloudflare\" \"npm run frontend:android:runtime\" \"npm run graphhopper\"",
     "dev:docker": "docker compose up -d --build",
+    "coverage:pdf": "node scripts/generate-coverage-pdfs.js",
+    "playwright:pdf": "node scripts/generate-playwright-report-pdf.js",
+    "deployment:costs": "node scripts/generate-deployment-cost-report.js",
+    "business:model": "node scripts/generate-business-model-report.js",
     "test:e2e:f5": "playwright test --config=playwright.f5.config.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
     "concurrently": "^9.0.1",
+    "pdf-lib": "^1.17.1",
     "playwright": "^1.59.1",
     "puppeteer": "^24.42.0"
   }

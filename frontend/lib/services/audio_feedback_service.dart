@@ -5,9 +5,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'dart:async';
 
 class AudioFeedbackService {
-  static const MethodChannel _audioBackgroundChannel = MethodChannel(
-    'com.a4mpets/audio_background_service',
-  );
+  static const MethodChannel _audioBackgroundChannel = MethodChannel('com.a4mpets/audio_background_service');
 
   AudioFeedbackService()
     : _tts = FlutterTts(),
@@ -33,9 +31,8 @@ class AudioFeedbackService {
 
   Future<void> enableBackgroundAudio({String? notificationText}) async {
     if (_backgroundAudioRequested) {
-      if (notificationText != null && notificationText.trim().isNotEmpty) {
+      if (notificationText != null && notificationText.trim().isNotEmpty)
         await _updateBackgroundAudioNotification(notificationText.trim());
-      }
       return;
     }
     _backgroundAudioRequested = true;
@@ -52,26 +49,17 @@ class AudioFeedbackService {
   }
 
   Future<void> playDangerAlertWithSpeech(String message) async {
-    await _playAsset(
-      player: _dangerPlayer,
-      assetPath: 'audio/danger_alert.wav',
-    );
+    await _playAsset(player: _dangerPlayer, assetPath: 'audio/danger_alert.wav');
     await _enqueueSpeech(message, clearQueue: true, stopCurrent: true);
   }
 
   Future<void> playArrivalCue(String message) async {
-    await _playAsset(
-      player: _arrivalPlayer,
-      assetPath: 'audio/arrival_chime.wav',
-    );
+    await _playAsset(player: _arrivalPlayer, assetPath: 'audio/arrival_chime.wav');
     await _enqueueSpeech(message, clearQueue: true, stopCurrent: true);
   }
 
   Future<void> playWaypointCue() async {
-    await _playAsset(
-      player: _waypointPlayer,
-      assetPath: 'audio/arrival_chime.wav',
-    );
+    await _playAsset(player: _waypointPlayer, assetPath: 'audio/arrival_chime.wav');
   }
 
   Future<void> stopSpeech() async {
@@ -83,9 +71,7 @@ class AudioFeedbackService {
       // Ignore platform-level TTS stop failures.
     } finally {
       _isSpeaking = false;
-      if (_speechCompleter != null && !_speechCompleter!.isCompleted) {
-        _speechCompleter!.complete();
-      }
+      if (_speechCompleter != null && !_speechCompleter!.isCompleted) _speechCompleter!.complete();
     }
   }
 
@@ -102,9 +88,7 @@ class AudioFeedbackService {
   }
 
   Future<void> _ensureTtsInitialized() async {
-    if (_ttsInitialized) {
-      return;
-    }
+    if (_ttsInitialized) return;
 
     _ttsInitialized = true;
     try {
@@ -115,14 +99,10 @@ class AudioFeedbackService {
 
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
       try {
-        await _tts.setIosAudioCategory(
-          IosTextToSpeechAudioCategory.playback,
-          [
-            IosTextToSpeechAudioCategoryOptions.allowBluetooth,
-            IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
-          ],
-          IosTextToSpeechAudioMode.voicePrompt,
-        );
+        await _tts.setIosAudioCategory(IosTextToSpeechAudioCategory.playback, [
+          IosTextToSpeechAudioCategoryOptions.allowBluetooth,
+          IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
+        ], IosTextToSpeechAudioMode.voicePrompt);
       } catch (_) {
         // Keep defaults when iOS category configuration is unavailable.
       }
@@ -148,21 +128,15 @@ class AudioFeedbackService {
     }
 
     _tts.setCompletionHandler(() {
-      if (_speechCompleter != null && !_speechCompleter!.isCompleted) {
-        _speechCompleter!.complete();
-      }
+      if (_speechCompleter != null && !_speechCompleter!.isCompleted) _speechCompleter!.complete();
     });
 
     _tts.setErrorHandler((dynamic message) {
-      if (_speechCompleter != null && !_speechCompleter!.isCompleted) {
-        _speechCompleter!.complete();
-      }
+      if (_speechCompleter != null && !_speechCompleter!.isCompleted) _speechCompleter!.complete();
     });
 
     _tts.setCancelHandler(() {
-      if (_speechCompleter != null && !_speechCompleter!.isCompleted) {
-        _speechCompleter!.complete();
-      }
+      if (_speechCompleter != null && !_speechCompleter!.isCompleted) _speechCompleter!.complete();
     });
   }
 
@@ -193,107 +167,74 @@ class AudioFeedbackService {
   }
 
   Future<void> _startBackgroundAudioService({String? notificationText}) async {
-    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
-      return;
-    }
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
     try {
-      await _audioBackgroundChannel.invokeMethod<void>(
-        'startAudioBackgroundService',
-        <String, dynamic>{
-          'notificationText': notificationText?.trim(),
-        },
-      );
+      await _audioBackgroundChannel.invokeMethod<void>('startAudioBackgroundService', <String, dynamic>{
+        'notificationText': notificationText?.trim(),
+      });
     } catch (error) {
       debugPrint('AudioFeedbackService.startBackgroundService failed: $error');
     }
   }
 
   Future<void> _updateBackgroundAudioNotification(String text) async {
-    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
-      return;
-    }
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
     try {
-      await _audioBackgroundChannel.invokeMethod<void>(
-        'updateAudioBackgroundNotification',
-        <String, dynamic>{'notificationText': text},
-      );
+      await _audioBackgroundChannel.invokeMethod<void>('updateAudioBackgroundNotification', <String, dynamic>{
+        'notificationText': text,
+      });
     } catch (error) {
       debugPrint('AudioFeedbackService.updateNotification failed: $error');
     }
   }
 
   Future<void> _stopBackgroundAudioService() async {
-    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
-      return;
-    }
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
     try {
-      await _audioBackgroundChannel.invokeMethod<void>(
-        'stopAudioBackgroundService',
-      );
+      await _audioBackgroundChannel.invokeMethod<void>('stopAudioBackgroundService');
     } catch (error) {
       debugPrint('AudioFeedbackService.stopBackgroundService failed: $error');
     }
   }
 
-  Future<void> _enqueueSpeech(
-    String message, {
-    required bool clearQueue,
-    required bool stopCurrent,
-  }) async {
+  Future<void> _enqueueSpeech(String message, {required bool clearQueue, required bool stopCurrent}) async {
     final String normalizedMessage = message.trim();
-    if (normalizedMessage.isEmpty) {
-      return;
-    }
+    if (normalizedMessage.isEmpty) return;
 
-    if (clearQueue) {
-      _speechQueue.clear();
-    }
+    if (clearQueue) _speechQueue.clear();
 
-    if (stopCurrent) {
-      await stopSpeech();
-    }
+    if (stopCurrent) await stopSpeech();
 
     _speechQueue.add(normalizedMessage);
     unawaited(_processSpeechQueue());
   }
 
   Future<void> _processSpeechQueue() async {
-    if (_isSpeaking) {
-      return;
-    }
+    if (_isSpeaking) return;
     _isSpeaking = true;
 
     try {
       await _ensureTtsInitialized();
       while (_speechQueue.isNotEmpty) {
-        if (!_isSpeaking) {
-          break;
-        }
+        if (!_isSpeaking) break;
         final String nextMessage = _speechQueue.removeAt(0);
-        
+
         _speechCompleter = Completer<void>();
         await _tts.speak(nextMessage);
-        
-        if (_speechCompleter != null) {
-          await _speechCompleter!.future;
-        }
+
+        if (_speechCompleter != null) await _speechCompleter!.future;
         _speechCompleter = null;
       }
     } catch (error) {
       debugPrint('AudioFeedbackService.processQueue failed: $error');
     } finally {
       _isSpeaking = false;
-      if (_speechCompleter != null && !_speechCompleter!.isCompleted) {
-        _speechCompleter!.complete();
-      }
+      if (_speechCompleter != null && !_speechCompleter!.isCompleted) _speechCompleter!.complete();
       _speechCompleter = null;
     }
   }
 
-  Future<void> _playAsset({
-    required AudioPlayer player,
-    required String assetPath,
-  }) async {
+  Future<void> _playAsset({required AudioPlayer player, required String assetPath}) async {
     try {
       await player.stop();
       await player.play(AssetSource(assetPath));

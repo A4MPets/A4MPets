@@ -20,9 +20,9 @@ class RegisterTest extends TestCase
     public function test_register_returns_token_and_user_data_on_success(): void
     {
         $response = $this->postJson('/api/auth/register', [
-            'name'                  => 'qa_tester',
-            'email'                 => 'qa@a4mpets.test',
-            'password'              => 'secret1234',
+            'name' => 'qa_tester',
+            'email' => 'qa@a4mpets.test',
+            'password' => 'secret1234',
             'password_confirmation' => 'secret1234',
         ]);
 
@@ -34,6 +34,7 @@ class RegisterTest extends TestCase
                     'user' => ['id', 'name', 'email'],
                     'access_token',
                     'token_type',
+                    'expires_at',
                 ],
             ])
             ->assertJsonPath('success', true)
@@ -51,9 +52,9 @@ class RegisterTest extends TestCase
         User::factory()->create(['email' => 'duplicate@a4mpets.test']);
 
         $response = $this->postJson('/api/auth/register', [
-            'name'                  => 'otro_usuario',
-            'email'                 => 'duplicate@a4mpets.test',
-            'password'              => 'secret1234',
+            'name' => 'otro_usuario',
+            'email' => 'duplicate@a4mpets.test',
+            'password' => 'secret1234',
             'password_confirmation' => 'secret1234',
         ]);
 
@@ -67,9 +68,9 @@ class RegisterTest extends TestCase
     public function test_register_fails_when_password_too_short(): void
     {
         $response = $this->postJson('/api/auth/register', [
-            'name'                  => 'qa_short_pass',
-            'email'                 => 'short@a4mpets.test',
-            'password'              => '123',
+            'name' => 'qa_short_pass',
+            'email' => 'short@a4mpets.test',
+            'password' => '123',
             'password_confirmation' => '123',
         ]);
 
@@ -83,9 +84,9 @@ class RegisterTest extends TestCase
     public function test_register_fails_when_passwords_dont_match(): void
     {
         $response = $this->postJson('/api/auth/register', [
-            'name'                  => 'qa_mismatch',
-            'email'                 => 'mismatch@a4mpets.test',
-            'password'              => 'secret1234',
+            'name' => 'qa_mismatch',
+            'email' => 'mismatch@a4mpets.test',
+            'password' => 'secret1234',
             'password_confirmation' => 'diferente5678',
         ]);
 

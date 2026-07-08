@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPetPhotoUrl;
+use App\Models\Concerns\HasReportCommentsJson;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class FoundPetReport extends Model
 {
+    use HasPetPhotoUrl;
+    use HasReportCommentsJson;
+
     protected $fillable = [
         'user_id',
         'pet_id',
@@ -51,38 +55,5 @@ class FoundPetReport extends Model
     public function matchedLostPetReport(): BelongsTo
     {
         return $this->belongsTo(LostPetReport::class, 'matched_lost_pet_report_id');
-    }
-
-    public function comments(): MorphMany
-    {
-        return $this->morphMany(ReportComment::class, 'commentable')->orderBy('commented_at')->orderBy('id');
-    }
-
-    public function getPetPhotoUrlAttribute(): ?string
-    {
-        $pet = $this->relationLoaded('pet') ? $this->pet : $this->pet()->first();
-
-        return $this->photo_url ?? $pet?->photo_path;
-    }
-
-    public function getCommentsJsonAttribute(): string
-    {
-        $comments = $this->relationLoaded('comments')
-            ? $this->comments
-            : $this->comments()->get();
-
-        return $comments->values()->map(static function (ReportComment $comment): array {
-            $commentedAt = $comment->commented_at ?? $comment->created_at ?? now();
-            $timestampMs = ($commentedAt->getTimestamp() * 1000)
-                + (int) floor(((int) $commentedAt->format('u')) / 1000);
-
-            return [
-                'author_username' => $comment->author_name,
-                'author_avatar_url' => $comment->author_avatar_url,
-                'is_anonymous' => $comment->is_anonymous,
-                'comment_text' => $comment->comment_text,
-                'created_at' => $timestampMs,
-            ];
-        })->toJson();
     }
 }

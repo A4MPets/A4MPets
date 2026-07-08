@@ -1,20 +1,15 @@
+import 'model_parsing.dart';
+
 class PetRecord {
   final int id;
   final String localUuid;
-  final String? remoteId;
-  final String? name;
-  final String? photoPath;
+  final String? remoteId, name, photoPath;
   final int totalWalks;
   final DateTime registeredAt;
-  final DateTime? adoptionDate;
-  final DateTime? birthDate;
-  final String status;
-  final bool isOwnerless;
-  final String syncStatus;
-  final DateTime lastModifiedAt;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-  final bool needsSync;
+  final DateTime? adoptionDate, birthDate;
+  final String status, syncStatus;
+  final bool isOwnerless, needsSync;
+  final DateTime lastModifiedAt, createdAt, updatedAt;
 
   const PetRecord({
     required this.id,
@@ -37,35 +32,28 @@ class PetRecord {
 
   factory PetRecord.fromMap(Map<String, Object?> map) {
     final int nowMs = DateTime.now().millisecondsSinceEpoch;
-    final int createdAtMs = _timestampMs(map['created_at'], nowMs);
+    final int createdAtMs = readInt(map['created_at'], nowMs);
     DateTime? optionalDate(Object? value) {
-      final int? ms = _optionalTimestampMs(value);
-      return ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
+      return readDateTime(value);
     }
 
     return PetRecord(
-      id: _intValue(map['id'], 0),
+      id: readInt(map['id']),
       localUuid: map['local_uuid'] as String? ?? 'pt_${map['id']}_$createdAtMs',
       remoteId: map['remote_id']?.toString(),
       name: map['name'] as String?,
       photoPath: map['photo_path'] as String?,
-      totalWalks: _intValue(map['total_walks'], 0),
-      registeredAt: DateTime.fromMillisecondsSinceEpoch(
-        _timestampMs(map['registered_at'], createdAtMs),
-      ),
+      totalWalks: readInt(map['total_walks']),
+      registeredAt: readDateTimeOr(map['registered_at'], createdAtMs),
       adoptionDate: optionalDate(map['adoption_date']),
       birthDate: optionalDate(map['birth_date']),
       status: _normalizeStatus(map['status'] as String?),
-      isOwnerless: _boolValue(map['is_ownerless']),
+      isOwnerless: readBool(map['is_ownerless']),
       syncStatus: map['sync_status'] as String? ?? 'created',
-      lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(
-        _timestampMs(map['last_modified_at'], nowMs),
-      ),
+      lastModifiedAt: readDateTimeOr(map['last_modified_at'], nowMs),
       createdAt: DateTime.fromMillisecondsSinceEpoch(createdAtMs),
-      updatedAt: DateTime.fromMillisecondsSinceEpoch(
-        _timestampMs(map['updated_at'], nowMs),
-      ),
-      needsSync: _boolValue(map['needs_sync']),
+      updatedAt: readDateTimeOr(map['updated_at'], nowMs),
+      needsSync: readBool(map['needs_sync']),
     );
   }
 
@@ -124,9 +112,7 @@ class PetRecord {
       photoPath: photoPath ?? this.photoPath,
       totalWalks: totalWalks ?? this.totalWalks,
       registeredAt: registeredAt ?? this.registeredAt,
-      adoptionDate: clearAdoptionDate
-          ? null
-          : adoptionDate ?? this.adoptionDate,
+      adoptionDate: clearAdoptionDate ? null : adoptionDate ?? this.adoptionDate,
       birthDate: clearBirthDate ? null : birthDate ?? this.birthDate,
       status: status ?? this.status,
       isOwnerless: isOwnerless ?? this.isOwnerless,
@@ -140,34 +126,5 @@ class PetRecord {
 
   static String _normalizeStatus(String? value) {
     return value == 'perdida' || value == 'lost' ? 'perdida' : 'normal';
-  }
-
-  static int _intValue(Object? value, int fallback) {
-    if (value is num) return value.toInt();
-    if (value is String) return int.tryParse(value) ?? fallback;
-    return fallback;
-  }
-
-  static bool _boolValue(Object? value) {
-    if (value is bool) return value;
-    if (value is num) return value.toInt() == 1;
-    if (value is String) {
-      final String normalized = value.toLowerCase().trim();
-      return normalized == '1' || normalized == 'true';
-    }
-    return false;
-  }
-
-  static int _timestampMs(Object? value, int fallback) {
-    return _optionalTimestampMs(value) ?? fallback;
-  }
-
-  static int? _optionalTimestampMs(Object? value) {
-    if (value is num) return value.toInt();
-    if (value is String && value.trim().isNotEmpty) {
-      return DateTime.tryParse(value)?.millisecondsSinceEpoch ??
-          int.tryParse(value);
-    }
-    return null;
   }
 }

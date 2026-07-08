@@ -9,15 +9,11 @@ import '../models/lost_pet_report_record.dart';
 import '../theme/app_palette.dart';
 
 class MapControlsConfig {
-  final bool hideDefaultControls;
-  final bool keepReportDangerVisible;
+  final bool hideDefaultControls, keepReportDangerVisible;
   final bool keepModifyLocationVisible;
   final Widget? panelOverlay;
-  final VoidCallback? onSettingsTap;
-  final VoidCallback? onReportDangerTap;
-  final VoidCallback? onModifyLocationTap;
-  final VoidCallback? onStartTrip;
-  final VoidCallback? onProfileTap;
+  final VoidCallback? onSettingsTap, onReportDangerTap, onModifyLocationTap;
+  final VoidCallback? onStartTrip, onProfileTap;
 
   const MapControlsConfig({
     this.hideDefaultControls = false,
@@ -33,15 +29,12 @@ class MapControlsConfig {
 }
 
 class MapRouteOverlayConfig {
-  final List<LatLng> routePoints;
-  final List<LatLng> routePolylinePoints;
+  final List<LatLng> routePoints, routePolylinePoints;
   final List<ColoredRouteSegment> coloredRouteSegments;
   final int? selectedRoutePointIndex;
-  final bool canDragRoutePoints;
-  final bool isSelectingRoutePoint;
+  final bool canDragRoutePoints, isSelectingRoutePoint;
   final bool routeSelectionHintAtTop;
-  final void Function(int index)? onRoutePointPointerDown;
-  final void Function(int index)? onRoutePointTap;
+  final void Function(int index)? onRoutePointPointerDown, onRoutePointTap;
   final void Function(int index)? onRoutePointDragStart;
   final void Function(int index, LatLng point)? onRoutePointDragUpdate;
   final void Function(int index, LatLng point)? onRoutePointDragEnd;
@@ -63,8 +56,7 @@ class MapRouteOverlayConfig {
 }
 
 class MapReportOverlayConfig {
-  final List<HazardReportRecord> hazardReports;
-  final List<HazardReportRecord> visibleHazardCircles;
+  final List<HazardReportRecord> hazardReports, visibleHazardCircles;
   final List<LostPetReportRecord> lostPetReports;
   final List<FoundPetReportRecord> foundPetReports;
   final List<GenericReportRecord> genericReports;
@@ -73,13 +65,11 @@ class MapReportOverlayConfig {
   final int? hazardDraftImpactRadiusMeters;
   final String? hazardDraftRiskLevelCode;
   final bool isSelectingHazardLocation;
-  final LatLng? lostPetDraftLocation;
-  final LatLng? foundPetDraftLocation;
+  final LatLng? lostPetDraftLocation, foundPetDraftLocation;
   final LatLng? genericReportDraftLocation;
   final int? genericReportDraftImpactRadiusMeters;
   final String? genericReportDraftRiskLevelCode;
-  final bool isSelectingReportLocation;
-  final bool reportSelectionHintAtTop;
+  final bool isSelectingReportLocation, reportSelectionHintAtTop;
   final String reportSelectionHintText;
   final Color reportSelectionHintColor;
   final void Function(HazardReportRecord report)? onHazardTap;
@@ -121,11 +111,7 @@ class MapCameraConfig {
   final double? cameraFocusZoom;
   final int cameraFocusRevision;
 
-  const MapCameraConfig({
-    this.cameraFocusTarget,
-    this.cameraFocusZoom,
-    this.cameraFocusRevision = 0,
-  });
+  const MapCameraConfig({this.cameraFocusTarget, this.cameraFocusZoom, this.cameraFocusRevision = 0});
 }
 
 class MapLocationConfig {
@@ -133,8 +119,7 @@ class MapLocationConfig {
   final LatLng? developerLocationMarker;
   final bool isDeveloperModifyingLocation;
   final void Function(LatLng location)? onUserLocationChanged;
-  final void Function(bool isLoading, String? errorText)?
-  onUserLocationStatusChanged;
+  final void Function(bool isLoading, String? errorText)? onUserLocationStatusChanged;
 
   const MapLocationConfig({
     this.locationRefreshRevision = 0,

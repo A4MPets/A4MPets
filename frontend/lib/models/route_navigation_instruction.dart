@@ -11,18 +11,13 @@ class RouteNavigationInstruction {
     required this.pointEndIndex,
   });
 
-  final int sequence;
-  final int sign;
-  final String text;
-  final String streetName;
+  final int sequence, sign;
+  final String text, streetName;
   final int? exitNumber;
-  final double distanceMeters;
-  final double durationSeconds;
-  final int pointStartIndex;
-  final int pointEndIndex;
+  final double distanceMeters, durationSeconds;
+  final int pointStartIndex, pointEndIndex;
 
-  String get id =>
-      'instruction-$sequence-$pointStartIndex-$pointEndIndex-$sign';
+  String get id => 'instruction-$sequence-$pointStartIndex-$pointEndIndex-$sign';
 
   bool get isArrival => sign == 4;
 

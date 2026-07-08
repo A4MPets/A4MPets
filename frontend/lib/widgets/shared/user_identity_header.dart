@@ -21,13 +21,9 @@ class UserIdentityHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color textColor = isDarkMode
-        ? const Color(0xFFAAAAAA)
-        : const Color(0xFF404040);
+    final Color textColor = isDarkMode ? const Color(0xFFAAAAAA) : const Color(0xFF404040);
 
-    final Color avatarBorderColor = isDarkMode
-        ? const Color(0xFFFFFFFF)
-        : const Color(0xFF404040);
+    final Color avatarBorderColor = isDarkMode ? const Color(0xFFFFFFFF) : const Color(0xFF404040);
 
     return Column(
       children: [
@@ -42,11 +38,7 @@ class UserIdentityHeader extends StatelessWidget {
         Text(
           username,
           textAlign: TextAlign.center,
-          style: TextStyle(
-            color: textColor,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: textColor, fontSize: 20, fontWeight: FontWeight.w600),
         ),
       ],
     );
@@ -121,16 +113,9 @@ class _UserAvatar extends StatelessWidget {
                     child: isBusy
                         ? const Padding(
                             padding: EdgeInsets.all(9),
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Color(0xFF404040),
-                            ),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF404040)),
                           )
-                        : const Icon(
-                            Icons.edit,
-                            size: 18,
-                            color: Color(0xFF404040),
-                          ),
+                        : const Icon(Icons.edit, size: 18, color: Color(0xFF404040)),
                   ),
                 ),
               ),

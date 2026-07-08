@@ -1,25 +1,16 @@
-import 'dart:convert';
-
+import 'model_parsing.dart';
 import 'report_comment_record.dart';
 
 class LostPetReportRecord {
   final int id;
-  final String localUuid;
-  final String? remoteId;
-  final String syncStatus;
-  final DateTime lastModifiedAt;
+  final String localUuid, syncStatus;
+  final String? remoteId, photoUrl, petPhotoUrl, phone;
+  final DateTime lastModifiedAt, disappearanceDate, createdAt, updatedAt;
   final int? petId;
   final String petLocalUuid;
-  final double lastSeenLatitude;
-  final double lastSeenLongitude;
+  final double lastSeenLatitude, lastSeenLongitude;
   final String details;
-  final DateTime disappearanceDate;
-  final String? photoUrl;
-  final String? petPhotoUrl;
-  final String? phone;
   final List<ReportCommentRecord> comments;
-  final DateTime createdAt;
-  final DateTime updatedAt;
   final bool needsSync;
 
   const LostPetReportRecord({
@@ -44,43 +35,29 @@ class LostPetReportRecord {
   });
 
   factory LostPetReportRecord.fromMap(Map<String, Object?> map) {
-    final String commentsJson = map['comments_json'] as String? ?? '[]';
-    final List<dynamic> rawComments = jsonDecode(commentsJson) as List<dynamic>;
     final int nowMs = DateTime.now().millisecondsSinceEpoch;
-    final int createdAtMs = (map['created_at'] as num?)?.toInt() ?? nowMs;
-    final int updatedAtMs = (map['updated_at'] as num?)?.toInt() ?? createdAtMs;
-    final int lastModifiedMs =
-        (map['last_modified_at'] as num?)?.toInt() ?? updatedAtMs;
-    final int disappearanceDateMs =
-        (map['disappearance_date'] as num?)?.toInt() ?? createdAtMs;
+    final int createdAtMs = readInt(map['created_at'], nowMs);
+    final int updatedAtMs = readInt(map['updated_at'], createdAtMs);
 
     return LostPetReportRecord(
-      id: (map['id'] as num?)?.toInt() ?? 0,
-      localUuid:
-          map['local_uuid'] as String? ?? 'lost-${map['id'] ?? createdAtMs}',
+      id: readInt(map['id']),
+      localUuid: map['local_uuid'] as String? ?? 'lost-${map['id'] ?? createdAtMs}',
       remoteId: map['remote_id']?.toString(),
       syncStatus: map['sync_status'] as String? ?? 'created',
-      lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(lastModifiedMs),
-      petId: (map['pet_id'] as num?)?.toInt(),
+      lastModifiedAt: readDateTimeOr(map['last_modified_at'], updatedAtMs),
+      petId: readOptionalInt(map['pet_id']),
       petLocalUuid: map['pet_local_uuid'] as String? ?? '',
-      lastSeenLatitude: (map['last_seen_latitude'] as num).toDouble(),
-      lastSeenLongitude: (map['last_seen_longitude'] as num).toDouble(),
+      lastSeenLatitude: readDouble(map['last_seen_latitude']),
+      lastSeenLongitude: readDouble(map['last_seen_longitude']),
       details: map['details'] as String? ?? '',
-      disappearanceDate: DateTime.fromMillisecondsSinceEpoch(
-        disappearanceDateMs,
-      ),
+      disappearanceDate: readDateTimeOr(map['disappearance_date'], createdAtMs),
       photoUrl: map['photo_url'] as String?,
       petPhotoUrl: map['pet_photo_url'] as String?,
       phone: map['phone'] as String?,
-      comments: rawComments
-          .map(
-            (dynamic item) =>
-                ReportCommentRecord.fromMap(item as Map<String, dynamic>),
-          )
-          .toList(growable: false),
+      comments: readReportComments(map['comments_json']),
       createdAt: DateTime.fromMillisecondsSinceEpoch(createdAtMs),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(updatedAtMs),
-      needsSync: (map['needs_sync'] as int? ?? 0) == 1,
+      needsSync: readBool(map['needs_sync']),
     );
   }
 
@@ -100,9 +77,7 @@ class LostPetReportRecord {
       'photo_url': photoUrl,
       'pet_photo_url': petPhotoUrl,
       'phone': phone,
-      'comments_json': jsonEncode(
-        comments.map((ReportCommentRecord c) => c.toMap()).toList(),
-      ),
+      'comments_json': writeReportComments(comments),
       'created_at': createdAt.millisecondsSinceEpoch,
       'updated_at': updatedAt.millisecondsSinceEpoch,
       'needs_sync': needsSync ? 1 : 0,

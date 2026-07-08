@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Auth\DeleteAccountRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Models\User;
+use App\Services\Auth\AccountDeletionService;
 use App\Services\Auth\AuthTokenService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,7 +17,8 @@ use Illuminate\Validation\ValidationException;
 class AuthController extends Controller
 {
     public function __construct(
-        private readonly AuthTokenService $authTokenService
+        private readonly AuthTokenService $authTokenService,
+        private readonly AccountDeletionService $accountDeletionService
     ) {}
 
     public function register(RegisterRequest $request): JsonResponse
@@ -37,6 +40,7 @@ class AuthController extends Controller
                 'user' => $this->authTokenService->formatUser($user),
                 'access_token' => $token['plain_token'],
                 'token_type' => 'Bearer',
+                'expires_at' => $token['expires_at']->toISOString(),
             ],
         ], 201);
     }
@@ -66,6 +70,7 @@ class AuthController extends Controller
                 'user' => $this->authTokenService->formatUser($user),
                 'access_token' => $token['plain_token'],
                 'token_type' => 'Bearer',
+                'expires_at' => $token['expires_at']->toISOString(),
             ],
         ]);
     }
@@ -94,6 +99,25 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Sesion cerrada correctamente',
+        ]);
+    }
+
+    public function deleteAccount(DeleteAccountRequest $request): JsonResponse
+    {
+        $user = $request->user();
+        $validated = $request->validated();
+
+        if (! $user || ! Hash::check($validated['password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'password' => ['La contrasena no es valida.'],
+            ]);
+        }
+
+        $this->accountDeletionService->deleteAccount($user);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Cuenta eliminada correctamente',
         ]);
     }
 

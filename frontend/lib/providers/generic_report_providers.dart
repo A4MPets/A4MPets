@@ -6,22 +6,18 @@ import '../repositories/user_local_repository.dart';
 import 'async_list_controller.dart';
 import 'session_providers.dart';
 
-final genericReportsControllerProvider =
-    AsyncNotifierProvider<GenericReportsController, List<GenericReportRecord>>(
-      GenericReportsController.new,
-    );
+final genericReportsControllerProvider = AsyncNotifierProvider<GenericReportsController, List<GenericReportRecord>>(
+  GenericReportsController.new,
+);
 
-class GenericReportsController
-    extends AsyncListController<GenericReportRecord> {
+class GenericReportsController extends AsyncListController<GenericReportRecord> {
   UserLocalRepository get _repository => ref.read(userLocalRepositoryProvider);
 
   @override
   Duration get refreshInterval => const Duration(seconds: 60);
 
   @override
-  Future<List<GenericReportRecord>> loadItems() {
-    return _repository.getGenericReports();
-  }
+  Future<List<GenericReportRecord>> loadItems() => _repository.getGenericReports();
 
   Future<void> addGenericReport({
     required double latitude,
@@ -32,39 +28,24 @@ class GenericReportsController
     required int impactRadiusMeters,
     String? photoUrl,
   }) async {
-    await _repository.addGenericReport(
-      latitude: latitude,
-      longitude: longitude,
-      description: description,
-      reportedDate: reportedDate,
-      riskLevelCode: riskLevelCode,
-      impactRadiusMeters: impactRadiusMeters,
-      photoUrl: photoUrl,
+    await mutateAndReload(
+      () => _repository.addGenericReport(
+        latitude: latitude,
+        longitude: longitude,
+        description: description,
+        reportedDate: reportedDate,
+        riskLevelCode: riskLevelCode,
+        impactRadiusMeters: impactRadiusMeters,
+        photoUrl: photoUrl,
+      ),
     );
-    await reload();
   }
 
-  Future<void> syncWithBackend() => reload();
-
-  Future<void> addCommentToGenericReport({
-    required int reportId,
-    required ReportCommentRecord comment,
-  }) async {
-    await _repository.addCommentToGenericReport(
-      reportId: reportId,
-      comment: comment,
-    );
-    await reload();
+  Future<void> addCommentToGenericReport({required int reportId, required ReportCommentRecord comment}) async {
+    await mutateAndReload(() => _repository.addCommentToGenericReport(reportId: reportId, comment: comment));
   }
 
-  Future<void> deleteGenericReport({
-    required int reportId,
-    String? remoteId,
-  }) async {
-    await _repository.deleteGenericReport(
-      reportId: reportId,
-      remoteId: remoteId,
-    );
-    await reload();
+  Future<void> deleteGenericReport({required int reportId, String? remoteId}) async {
+    await mutateAndReload(() => _repository.deleteGenericReport(reportId: reportId, remoteId: remoteId));
   }
 }

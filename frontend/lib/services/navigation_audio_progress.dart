@@ -38,9 +38,7 @@ class NavigationAudioProgress {
     required Set<String> spokenImmediateKeys,
     required Distance distanceCalculator,
   }) {
-    if (polyline.length < 2) {
-      return null;
-    }
+    if (polyline.length < 2) return null;
 
     final List<double> cumulativeDistances = _cumulativeRouteDistances(
       polyline: polyline,
@@ -52,38 +50,22 @@ class NavigationAudioProgress {
       cumulativeDistances: cumulativeDistances,
       distanceCalculator: distanceCalculator,
     );
-    if (userRouteMatch.offRouteMeters > offRouteToleranceMeters) {
-      return null;
-    }
+    if (userRouteMatch.offRouteMeters > offRouteToleranceMeters) return null;
 
-    final RouteNavigationInstruction? primaryInstruction =
-        _nextPrimaryInstruction(
-          instructions: instructions,
-          cumulativeDistances: cumulativeDistances,
-          minRouteMeters:
-              userRouteMatch.alongRouteMeters - passedManeuverToleranceMeters,
-        );
-    if (primaryInstruction == null) {
-      return null;
-    }
-
-    final int maneuverIndex = primaryInstruction.pointStartIndex.clamp(
-      0,
-      polyline.length - 1,
+    final RouteNavigationInstruction? primaryInstruction = _nextPrimaryInstruction(
+      instructions: instructions,
+      cumulativeDistances: cumulativeDistances,
+      minRouteMeters: userRouteMatch.alongRouteMeters - passedManeuverToleranceMeters,
     );
+    if (primaryInstruction == null) return null;
+
+    final int maneuverIndex = primaryInstruction.pointStartIndex.clamp(0, polyline.length - 1);
     final LatLng maneuverPoint = polyline[maneuverIndex];
     final double maneuverRouteMeters = cumulativeDistances[maneuverIndex];
-    final double distanceMeters = math.max(
-      0,
-      maneuverRouteMeters - userRouteMatch.alongRouteMeters,
-    );
-    final String maneuverKey = _buildManeuverKey(
-      instruction: primaryInstruction,
-      maneuverPoint: maneuverPoint,
-    );
+    final double distanceMeters = math.max(0, maneuverRouteMeters - userRouteMatch.alongRouteMeters);
+    final String maneuverKey = _buildManeuverKey(instruction: primaryInstruction, maneuverPoint: maneuverPoint);
 
-    if (distanceMeters <= immediateThresholdMeters &&
-        !spokenImmediateKeys.contains(maneuverKey)) {
+    if (distanceMeters <= immediateThresholdMeters && !spokenImmediateKeys.contains(maneuverKey)) {
       return NavigationAudioCue(
         instruction: primaryInstruction,
         type: NavigationAudioCueType.immediate,
@@ -125,16 +107,9 @@ class NavigationAudioProgress {
     required double minRouteMeters,
   }) {
     for (final RouteNavigationInstruction instruction in instructions) {
-      if (!instruction.isAudibleTurn) {
-        continue;
-      }
-      final int index = instruction.pointStartIndex.clamp(
-        0,
-        cumulativeDistances.length - 1,
-      );
-      if (cumulativeDistances[index] < minRouteMeters) {
-        continue;
-      }
+      if (!instruction.isAudibleTurn) continue;
+      final int index = instruction.pointStartIndex.clamp(0, cumulativeDistances.length - 1);
+      if (cumulativeDistances[index] < minRouteMeters) continue;
       return instruction;
     }
     return null;
@@ -146,10 +121,7 @@ class NavigationAudioProgress {
   }) {
     final List<double> cumulative = <double>[0];
     for (int index = 1; index < polyline.length; index += 1) {
-      cumulative.add(
-        cumulative.last +
-            distanceCalculator.distance(polyline[index - 1], polyline[index]),
-      );
+      cumulative.add(cumulative.last + distanceCalculator.distance(polyline[index - 1], polyline[index]));
     }
     return cumulative;
   }
@@ -160,42 +132,27 @@ class NavigationAudioProgress {
     required List<double> cumulativeDistances,
     required Distance distanceCalculator,
   }) {
-    final _MetricPoint current = _MetricPoint.fromLatLng(
-      currentLocation,
-      origin: currentLocation,
-    );
+    final _MetricPoint current = _MetricPoint.fromLatLng(currentLocation, origin: currentLocation);
     double bestOffRouteMeters = double.infinity;
     double bestAlongRouteMeters = 0;
 
     for (int index = 0; index < polyline.length - 1; index += 1) {
       final LatLng start = polyline[index];
       final LatLng end = polyline[index + 1];
-      final _MetricPoint a = _MetricPoint.fromLatLng(
-        start,
-        origin: currentLocation,
-      );
-      final _MetricPoint b = _MetricPoint.fromLatLng(
-        end,
-        origin: currentLocation,
-      );
+      final _MetricPoint a = _MetricPoint.fromLatLng(start, origin: currentLocation);
+      final _MetricPoint b = _MetricPoint.fromLatLng(end, origin: currentLocation);
       final double dx = b.x - a.x;
       final double dy = b.y - a.y;
       final double segmentLengthSquared = (dx * dx) + (dy * dy);
-      if (segmentLengthSquared == 0) {
-        continue;
-      }
+      if (segmentLengthSquared == 0) continue;
 
-      final double rawT =
-          (((current.x - a.x) * dx) + ((current.y - a.y) * dy)) /
-          segmentLengthSquared;
+      final double rawT = (((current.x - a.x) * dx) + ((current.y - a.y) * dy)) / segmentLengthSquared;
       final double t = rawT.clamp(0.0, 1.0);
       final double projectedX = a.x + (dx * t);
       final double projectedY = a.y + (dy * t);
       final double offRouteDx = current.x - projectedX;
       final double offRouteDy = current.y - projectedY;
-      final double offRouteMeters = math.sqrt(
-        (offRouteDx * offRouteDx) + (offRouteDy * offRouteDy),
-      );
+      final double offRouteMeters = math.sqrt((offRouteDx * offRouteDx) + (offRouteDy * offRouteDy));
 
       if (offRouteMeters < bestOffRouteMeters) {
         final double segmentMeters = distanceCalculator.distance(start, end);
@@ -204,16 +161,10 @@ class NavigationAudioProgress {
       }
     }
 
-    return _RouteMatch(
-      alongRouteMeters: bestAlongRouteMeters,
-      offRouteMeters: bestOffRouteMeters,
-    );
+    return _RouteMatch(alongRouteMeters: bestAlongRouteMeters, offRouteMeters: bestOffRouteMeters);
   }
 
-  static String _buildManeuverKey({
-    required RouteNavigationInstruction instruction,
-    required LatLng maneuverPoint,
-  }) {
+  static String _buildManeuverKey({required RouteNavigationInstruction instruction, required LatLng maneuverPoint}) {
     final String lat = maneuverPoint.latitude.toStringAsFixed(4);
     final String lng = maneuverPoint.longitude.toStringAsFixed(4);
     return '${instruction.sign}-$lat-$lng';
@@ -221,10 +172,7 @@ class NavigationAudioProgress {
 }
 
 class _RouteMatch {
-  const _RouteMatch({
-    required this.alongRouteMeters,
-    required this.offRouteMeters,
-  });
+  const _RouteMatch({required this.alongRouteMeters, required this.offRouteMeters});
 
   final double alongRouteMeters;
   final double offRouteMeters;
@@ -238,8 +186,7 @@ class _MetricPoint {
 
   static _MetricPoint fromLatLng(LatLng point, {required LatLng origin}) {
     const double metersPerDegreeLatitude = 111320;
-    final double metersPerDegreeLongitude =
-        metersPerDegreeLatitude * math.cos(origin.latitude * math.pi / 180);
+    final double metersPerDegreeLongitude = metersPerDegreeLatitude * math.cos(origin.latitude * math.pi / 180);
 
     return _MetricPoint(
       x: (point.longitude - origin.longitude) * metersPerDegreeLongitude,

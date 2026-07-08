@@ -1,32 +1,38 @@
 # A4MPets
 
-Guia minima para ejecutar el proyecto en dos modos.
+A4MPets es un monorepo con frontend Flutter, backend Laravel 12 y GraphHopper como motor de rutas. La referencia principal de arquitectura vive en [docs/contexto_arquitectura_a4mpets.md](docs/contexto_arquitectura_a4mpets.md).
+
+## Qué hay en el repositorio
+
+- `frontend/`: interfaz Flutter, providers Riverpod, widgets y servicios de cliente.
+- `backend/`: API Laravel, reglas de dominio, persistencia SQLite e integración con GraphHopper.
+- `docker-compose.yml` y `docker-compose.server.yml`: orquestación de backend, frontend y GraphHopper.
+- `scripts/`: utilidades de arranque, empaquetado y generación de reportes.
+- `features/`: backlog documental de publicacion, vulnerabilidades y modelo de negocio.
 
 ## Requisitos
 
-- Docker Desktop
-- PHP + Composer
-- Flutter SDK
+- Docker Desktop.
+- PHP y Composer.
+- Flutter SDK.
 
-Mapa requerido para GraphHopper:
+El mapa requerido por GraphHopper debe existir en `backend/graphhopper/data/map.osm.pbf`.
 
-backend/graphhopper/data/map.osm.pbf
+## Inicio rápido
 
-## Modo 1: Todo en contenedores
-
-Desde la raiz del repo:
+### Todo en contenedores
 
 ```bash
 docker compose up -d --build
 ```
 
-URLs:
+URLs locales:
 
 - Frontend: http://127.0.0.1:8080
 - Backend: http://127.0.0.1:8000
 - GraphHopper: http://127.0.0.1:8989
 
-Logs:
+Logs útiles:
 
 ```bash
 docker compose logs -f graphhopper
@@ -34,25 +40,21 @@ docker compose logs -f backend
 docker compose logs -f frontend
 ```
 
-Detener todo:
+Detener el stack:
 
 ```bash
 docker compose down
 ```
 
-## Modo 2: GraphHopper en contenedor + Backend/Frontend local
+### GraphHopper en contenedor y backend/frontend local
 
-### 1) Levantar solo GraphHopper (Docker)
-
-Desde la raiz del repo:
+Levantar solo GraphHopper:
 
 ```bash
 docker compose up -d graphhopper
 ```
 
-### 2) Levantar Backend local
-
-En otra terminal:
+Levantar backend local:
 
 ```bash
 cd backend
@@ -63,13 +65,7 @@ php artisan config:clear
 php artisan serve
 ```
 
-Backend local:
-
-- http://127.0.0.1:8000
-
-### 3) Levantar Frontend local
-
-En otra terminal:
+Levantar frontend local:
 
 ```bash
 cd frontend
@@ -77,14 +73,22 @@ flutter pub get
 flutter run -d chrome
 ```
 
-### 4) Configuración de backend para GraphHopper local
-
-En backend/.env:
+Si GraphHopper corre en local, el backend usa estas variables en `backend/.env`:
 
 ```env
 GRAPHHOPPER_BASE_URL=http://127.0.0.1:8989
 GRAPHHOPPER_API_KEY=
+API_TOKEN_LIFETIME_MINUTES=43200
 ```
+
+Para builds Android publicables, la app usa `com.a4mpets.app` y el nombre visible `A4MPets`. La URL publica de privacidad/terminos se configura al compilar Flutter:
+
+```bash
+cd frontend
+flutter build appbundle --release --build-name 1.0.0 --build-number 1 --dart-define=A4M_PUBLIC_WEB_BASE_URL=https://a4mpets.com
+```
+
+La firma release lee `frontend/android/key.properties`; usa `frontend/android/key.properties.example` como plantilla y no subas el keystore al repositorio.
 
 Aplicar cambios:
 
@@ -93,16 +97,24 @@ cd backend
 php artisan config:clear
 ```
 
-## Comandos rapidos
-
-Reiniciar solo GraphHopper:
+## Comandos rápidos
 
 ```bash
 docker compose restart graphhopper
-```
-
-Ver estado:
-
-```bash
 docker compose ps
 ```
+
+## Automatización de navegador
+
+Playwright está disponible en el root del proyecto y se usa con la configuración `playwright.f5.config.js`.
+
+- Paquetes verificados: `playwright@1.59.1` y `@playwright/test@1.59.1`.
+- Script disponible: `npm run test:e2e:f5`.
+
+## Lectura recomendada
+
+Para entender el sistema sin entrar al área de pruebas, empieza por:
+
+1. [docs/contexto_arquitectura_a4mpets.md](docs/contexto_arquitectura_a4mpets.md)
+2. `backend/routes/api.php`
+3. `frontend/lib/main.dart`

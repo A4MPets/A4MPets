@@ -3,16 +3,12 @@ import 'dart:convert';
 import 'package:latlong2/latlong.dart';
 
 class RoutePoint {
-  final double latitude;
-  final double longitude;
+  final double latitude, longitude;
 
   const RoutePoint({required this.latitude, required this.longitude});
 
   factory RoutePoint.fromMap(Map<String, dynamic> map) {
-    return RoutePoint(
-      latitude: (map['lat'] as num).toDouble(),
-      longitude: (map['lng'] as num).toDouble(),
-    );
+    return RoutePoint(latitude: (map['lat'] as num).toDouble(), longitude: (map['lng'] as num).toDouble());
   }
 
   Map<String, dynamic> toMap() {
@@ -25,12 +21,9 @@ class RoutePoint {
 class RouteRecord {
   final int id;
   final String? remoteId;
-  final String name;
+  final String name, syncStatus;
   final List<RoutePoint> points;
-  final String syncStatus;
-  final DateTime lastModifiedAt;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime lastModifiedAt, createdAt, updatedAt;
   final bool needsSync;
 
   const RouteRecord({
@@ -54,19 +47,11 @@ class RouteRecord {
       id: map['id'] as int,
       remoteId: map['remote_id']?.toString(),
       name: map['name'] as String,
-      points: rawPoints
-          .map((dynamic e) => RoutePoint.fromMap(e as Map<String, dynamic>))
-          .toList(),
+      points: rawPoints.map((dynamic e) => RoutePoint.fromMap(e as Map<String, dynamic>)).toList(),
       syncStatus: map['sync_status'] as String? ?? 'created',
-      lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(
-        (map['last_modified_at'] as int?) ?? nowMs,
-      ),
-      createdAt: DateTime.fromMillisecondsSinceEpoch(
-        (map['created_at'] as int?) ?? nowMs,
-      ),
-      updatedAt: DateTime.fromMillisecondsSinceEpoch(
-        (map['updated_at'] as int?) ?? nowMs,
-      ),
+      lastModifiedAt: DateTime.fromMillisecondsSinceEpoch((map['last_modified_at'] as int?) ?? nowMs),
+      createdAt: DateTime.fromMillisecondsSinceEpoch((map['created_at'] as int?) ?? nowMs),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch((map['updated_at'] as int?) ?? nowMs),
       needsSync: (map['needs_sync'] as int? ?? 0) == 1,
     );
   }
@@ -76,9 +61,7 @@ class RouteRecord {
       'id': id,
       'remote_id': remoteId,
       'name': name,
-      'points_json': jsonEncode(
-        points.map((RoutePoint p) => p.toMap()).toList(),
-      ),
+      'points_json': jsonEncode(points.map((RoutePoint p) => p.toMap()).toList()),
       'sync_status': syncStatus,
       'last_modified_at': lastModifiedAt.millisecondsSinceEpoch,
       'created_at': createdAt.millisecondsSinceEpoch,

@@ -8,7 +8,9 @@ import '../models/pet_record.dart';
 import '../providers/local_data_providers.dart';
 import '../theme/app_palette.dart';
 import 'reporting_form_widgets.dart';
+import 'shared/confirmation_dialog.dart';
 import 'shared/local_image_widget.dart';
+import 'shared/panel_action_button.dart';
 import 'shared/user_identity_header.dart';
 
 class ManagePetsPanelContent extends ConsumerWidget {
@@ -31,22 +33,15 @@ class ManagePetsPanelContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<LocalUserProfile> userProfile = ref.watch(
-      localUserProfileProvider,
-    );
-    final AsyncValue<List<PetRecord>> petsValue = ref.watch(
-      myPetsControllerProvider,
-    );
+    final AsyncValue<LocalUserProfile> userProfile = ref.watch(localUserProfileProvider);
+    final AsyncValue<List<PetRecord>> petsValue = ref.watch(myPetsControllerProvider);
 
     final Color cardBorder = AppPalette.border(isDarkMode);
     final Color textColor = AppPalette.textPrimary(isDarkMode);
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        final double gridSquareSize = math.min(
-          constraints.maxWidth,
-          constraints.maxHeight * 0.52,
-        );
+        final double gridSquareSize = math.min(constraints.maxWidth, constraints.maxHeight * 0.52);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -61,10 +56,7 @@ class ManagePetsPanelContent extends ConsumerWidget {
               },
               loading: () => const SizedBox.shrink(),
               error: (Object error, StackTrace stackTrace) {
-                return UserIdentityHeader(
-                  isDarkMode: isDarkMode,
-                  username: 'Usuario',
-                );
+                return UserIdentityHeader(isDarkMode: isDarkMode, username: 'Usuario');
               },
             ),
             const SizedBox(height: 18),
@@ -90,23 +82,18 @@ class ManagePetsPanelContent extends ConsumerWidget {
                         child: Text(
                           'Aún no has agregado mascotas',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: textColor,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w600),
                         ),
                       );
                     }
 
                     return GridView.builder(
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                            childAspectRatio: 0.78,
-                          ),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 0.78,
+                      ),
                       itemCount: visiblePets.length,
                       itemBuilder: (BuildContext context, int index) {
                         final PetRecord pet = visiblePets[index];
@@ -125,11 +112,7 @@ class ManagePetsPanelContent extends ConsumerWidget {
                     return Center(
                       child: Text(
                         'No se pudieron cargar las mascotas',
-                        style: TextStyle(
-                          color: textColor,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w600),
                       ),
                     );
                   },
@@ -137,24 +120,7 @@ class ManagePetsPanelContent extends ConsumerWidget {
               ),
             ),
             const Spacer(),
-            SizedBox(
-              height: 48,
-              child: ElevatedButton(
-                onPressed: onAddPetPressed,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppPalette.primaryBlue,
-                  foregroundColor: AppPalette.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'Agregar mascota',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                ),
-              ),
-            ),
+            PanelActionButton(label: 'Agregar mascota', onPressed: onAddPetPressed, height: 48, fontSize: 15),
           ],
         );
       },
@@ -166,60 +132,35 @@ class AddPetPanelContent extends ConsumerStatefulWidget {
   final bool isDarkMode;
   final Future<void> Function(int petId) onSaved;
 
-  const AddPetPanelContent({
-    super.key,
-    required this.isDarkMode,
-    required this.onSaved,
-  });
+  const AddPetPanelContent({super.key, required this.isDarkMode, required this.onSaved});
 
   @override
   ConsumerState<AddPetPanelContent> createState() => _AddPetPanelContentState();
 }
 
-class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
+mixin _PetFormState<T extends ConsumerStatefulWidget> on ConsumerState<T> {
   late final TextEditingController _nameController;
+  String? _storedPhotoPath;
   DateTime? _adoptionDate;
   DateTime? _birthDate;
-  String? _storedPhotoPath;
-  String _defaultPetName = 'Mascota';
   bool _isSaving = false;
   bool _isPickingPhoto = false;
   String? _errorText;
 
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController();
-    _loadDefaultPetName();
+  void _initPetForm({
+    String initialName = '',
+    String? initialPhotoPath,
+    DateTime? initialAdoptionDate,
+    DateTime? initialBirthDate,
+  }) {
+    _nameController = TextEditingController(text: initialName);
+    _storedPhotoPath = initialPhotoPath;
+    _adoptionDate = initialAdoptionDate;
+    _birthDate = initialBirthDate;
   }
 
-  @override
-  void dispose() {
+  void _disposePetForm() {
     _nameController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadDefaultPetName() async {
-    try {
-      final int nextNumber = await ref
-          .read(myPetsControllerProvider.notifier)
-          .getNextDefaultPetNumber();
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _defaultPetName = 'Mascota $nextNumber';
-      });
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _defaultPetName = 'Mascota 1';
-      });
-    }
   }
 
   Future<void> _pickPhoto() async {
@@ -229,21 +170,15 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
     });
 
     try {
-      final String? storedPath = await ref
-          .read(localMediaStorageServiceProvider)
-          .pickAndStorePetPhoto();
+      final String? storedPath = await ref.read(localMediaStorageServiceProvider).pickAndStorePetPhoto();
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
         _storedPhotoPath = storedPath;
       });
     } catch (_) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {
         _errorText = 'No se pudo cargar la imagen. Intenta nuevamente.';
       });
@@ -256,38 +191,22 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
     }
   }
 
-  Future<void> _savePet() async {
+  Future<void> _runPetSave({
+    required Future<void> Function() action,
+    String message = 'No se pudo guardar la mascota. Intenta nuevamente.',
+  }) async {
     setState(() {
       _errorText = null;
       _isSaving = true;
     });
 
-    final String resolvedName = _nameController.text.trim().isEmpty
-        ? _defaultPetName
-        : _nameController.text.trim();
-
     try {
-      final int petId = await ref
-          .read(myPetsControllerProvider.notifier)
-          .addPet(
-            name: resolvedName,
-            photoPath: _storedPhotoPath,
-            adoptionDate: _adoptionDate,
-            birthDate: _birthDate,
-          );
-
-      if (!mounted) {
-        return;
-      }
-
-      await widget.onSaved(petId);
+      await action();
     } catch (_) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
-        _errorText = 'No se pudo guardar la mascota. Intenta nuevamente.';
+        _errorText = message;
       });
     } finally {
       if (mounted) {
@@ -298,152 +217,224 @@ class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> {
     }
   }
 
+  String _resolvedPetName(String fallback) {
+    final String name = _nameController.text.trim();
+    return name.isEmpty ? fallback : name;
+  }
+
   Future<void> _pickOptionalDate({
+    required bool isDarkMode,
     required DateTime? current,
     required ValueChanged<DateTime?> onPicked,
   }) async {
-    final DateTime now = DateTime.now();
-    final DateTime? picked = await showReportingDatePicker(
-      context: context,
-      isDarkMode: widget.isDarkMode,
-      initialDate: current ?? now,
-      firstDate: DateTime(now.year - 30),
-      lastDate: DateTime(now.year, now.month, now.day),
+    final DateTime? picked = await _showPetDatePicker(
+      context,
+      isDarkMode: isDarkMode,
+      initialDate: current ?? DateTime.now(),
     );
     if (!mounted) return;
     onPicked(picked);
   }
 
-  String _formatOptionalDate(DateTime? date, String fallback) {
-    if (date == null) return fallback;
-    final String day = date.day.toString().padLeft(2, '0');
-    final String month = date.month.toString().padLeft(2, '0');
-    return '$day/$month/${date.year}';
+  Widget _buildPetForm({
+    required bool isDarkMode,
+    required String fallbackName,
+    required FontWeight previewFontWeight,
+    required VoidCallback onSubmit,
+    required bool canSubmit,
+    required EdgeInsets padding,
+    required Widget actions,
+    MainAxisSize mainAxisSize = MainAxisSize.max,
+  }) {
+    return _PetFormBody(
+      isDarkMode: isDarkMode,
+      photoPath: _storedPhotoPath,
+      borderColor: AppPalette.border(isDarkMode),
+      isPickingPhoto: _isPickingPhoto,
+      onPickPhoto: _pickPhoto,
+      nameController: _nameController,
+      fallbackName: fallbackName,
+      previewTextColor: AppPalette.textPrimary(isDarkMode),
+      previewFontWeight: previewFontWeight,
+      onNameSubmitted: (_) {
+        if (canSubmit) onSubmit();
+      },
+      adoptionDate: _adoptionDate,
+      birthDate: _birthDate,
+      onPickAdoptionDate: () => _pickOptionalDate(
+        isDarkMode: isDarkMode,
+        current: _adoptionDate,
+        onPicked: (DateTime? date) => setState(() => _adoptionDate = date),
+      ),
+      onClearAdoptionDate: _adoptionDate == null ? null : () => setState(() => _adoptionDate = null),
+      onPickBirthDate: () => _pickOptionalDate(
+        isDarkMode: isDarkMode,
+        current: _birthDate,
+        onPicked: (DateTime? date) => setState(() => _birthDate = date),
+      ),
+      onClearBirthDate: _birthDate == null ? null : () => setState(() => _birthDate = null),
+      errorText: _errorText,
+      padding: padding,
+      mainAxisSize: mainAxisSize,
+      actions: actions,
+    );
+  }
+}
+
+class _AddPetPanelContentState extends ConsumerState<AddPetPanelContent> with _PetFormState<AddPetPanelContent> {
+  String _defaultPetName = 'Mascota';
+
+  @override
+  void initState() {
+    super.initState();
+    _initPetForm();
+    _loadDefaultPetName();
+  }
+
+  @override
+  void dispose() {
+    _disposePetForm();
+    super.dispose();
+  }
+
+  Future<void> _loadDefaultPetName() async {
+    try {
+      final int nextNumber = await ref.read(myPetsControllerProvider.notifier).getNextDefaultPetNumber();
+      if (mounted) setState(() => _defaultPetName = 'Mascota $nextNumber');
+    } catch (_) {
+      if (mounted) setState(() => _defaultPetName = 'Mascota 1');
+    }
+  }
+
+  Future<void> _savePet() async {
+    await _runPetSave(
+      action: () async {
+        final int petId = await ref
+            .read(myPetsControllerProvider.notifier)
+            .addPet(
+              name: _resolvedPetName(_defaultPetName),
+              photoPath: _storedPhotoPath,
+              adoptionDate: _adoptionDate,
+              birthDate: _birthDate,
+            );
+        if (mounted) await widget.onSaved(petId);
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final Color borderColor = AppPalette.border(widget.isDarkMode);
-    final Color textColor = AppPalette.textPrimary(widget.isDarkMode);
     final double keyboardInset = MediaQuery.of(context).viewInsets.bottom;
 
+    return _buildPetForm(
+      isDarkMode: widget.isDarkMode,
+      fallbackName: _defaultPetName,
+      previewFontWeight: FontWeight.w100,
+      onSubmit: _savePet,
+      canSubmit: !_isSaving,
+      padding: EdgeInsets.fromLTRB(0, 8, 0, 12 + keyboardInset),
+      actions: PanelActionButton(
+        label: 'Guardar Mascota',
+        isBusy: _isSaving,
+        onPressed: _savePet,
+        height: 48,
+        fontSize: 15,
+      ),
+    );
+  }
+}
+
+class _PetFormBody extends StatelessWidget {
+  final bool isDarkMode;
+  final String? photoPath;
+  final Color borderColor, previewTextColor;
+  final bool isPickingPhoto;
+  final VoidCallback onPickPhoto;
+  final TextEditingController nameController;
+  final String fallbackName;
+  final FontWeight previewFontWeight;
+  final ValueChanged<String> onNameSubmitted;
+  final DateTime? adoptionDate, birthDate;
+  final VoidCallback onPickAdoptionDate;
+  final VoidCallback? onClearAdoptionDate;
+  final VoidCallback onPickBirthDate;
+  final VoidCallback? onClearBirthDate;
+  final String? errorText;
+  final EdgeInsets padding;
+  final Widget actions;
+  final MainAxisSize mainAxisSize;
+
+  const _PetFormBody({
+    required this.isDarkMode,
+    required this.photoPath,
+    required this.borderColor,
+    required this.isPickingPhoto,
+    required this.onPickPhoto,
+    required this.nameController,
+    required this.fallbackName,
+    required this.previewTextColor,
+    required this.previewFontWeight,
+    required this.onNameSubmitted,
+    required this.adoptionDate,
+    required this.birthDate,
+    required this.onPickAdoptionDate,
+    required this.onClearAdoptionDate,
+    required this.onPickBirthDate,
+    required this.onClearBirthDate,
+    required this.errorText,
+    required this.padding,
+    required this.actions,
+    this.mainAxisSize = MainAxisSize.max,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return SafeArea(
       child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(0, 8, 0, 12 + keyboardInset),
+        padding: padding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: mainAxisSize,
           children: [
             _PetPhotoEditor(
-              photoPath: _storedPhotoPath,
+              photoPath: photoPath,
               borderColor: borderColor,
-              isBusy: _isPickingPhoto,
-              onEditPressed: _pickPhoto,
+              isBusy: isPickingPhoto,
+              onEditPressed: onPickPhoto,
             ),
             const SizedBox(height: 16),
             ValueListenableBuilder<TextEditingValue>(
-              valueListenable: _nameController,
-              builder:
-                  (
-                    BuildContext context,
-                    TextEditingValue value,
-                    Widget? child,
-                  ) {
-                    final String previewName = value.text.trim().isEmpty
-                        ? _defaultPetName
-                        : value.text.trim();
-                    return Text(
-                      previewName,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w100,
-                      ),
-                    );
-                  },
-            ),
-            const SizedBox(height: 24),
-            _PetNameField(
-              isDarkMode: widget.isDarkMode,
-              controller: _nameController,
-              onSubmitted: (_) {
-                if (!_isSaving) {
-                  _savePet();
-                }
+              valueListenable: nameController,
+              builder: (context, value, child) {
+                final String previewName = value.text.trim().isEmpty ? fallbackName : value.text.trim();
+                return Text(
+                  previewName,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: previewTextColor, fontSize: 20, fontWeight: previewFontWeight),
+                );
               },
             ),
+            const SizedBox(height: 24),
+            _PetNameField(isDarkMode: isDarkMode, controller: nameController, onSubmitted: onNameSubmitted),
             const SizedBox(height: 8),
             _OptionalDateButton(
-              isDarkMode: widget.isDarkMode,
+              isDarkMode: isDarkMode,
               title: 'Fecha de adopción',
-              valueText: _formatOptionalDate(
-                _adoptionDate,
-                'Seleccionar fecha',
-              ),
-              onPressed: () => _pickOptionalDate(
-                current: _adoptionDate,
-                onPicked: (DateTime? date) =>
-                    setState(() => _adoptionDate = date),
-              ),
-              onClear: _adoptionDate == null
-                  ? null
-                  : () => setState(() => _adoptionDate = null),
+              valueText: _formatOptionalPetDate(adoptionDate, 'Seleccionar fecha'),
+              onPressed: onPickAdoptionDate,
+              onClear: onClearAdoptionDate,
             ),
             const SizedBox(height: 8),
             _OptionalDateButton(
-              isDarkMode: widget.isDarkMode,
+              isDarkMode: isDarkMode,
               title: 'Fecha de nacimiento',
-              valueText: _formatOptionalDate(_birthDate, 'Seleccionar fecha'),
-              onPressed: () => _pickOptionalDate(
-                current: _birthDate,
-                onPicked: (DateTime? date) => setState(() => _birthDate = date),
-              ),
-              onClear: _birthDate == null
-                  ? null
-                  : () => setState(() => _birthDate = null),
+              valueText: _formatOptionalPetDate(birthDate, 'Seleccionar fecha'),
+              onPressed: onPickBirthDate,
+              onClear: onClearBirthDate,
             ),
-            if (_errorText != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                _errorText!,
-                style: const TextStyle(
-                  color: AppPalette.dangerRed,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+            if (errorText != null) ...[const SizedBox(height: 8), ReportingFieldErrorText(message: errorText!)],
             const SizedBox(height: 12),
-            SizedBox(
-              height: 48,
-              child: ElevatedButton(
-                onPressed: _isSaving ? null : _savePet,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppPalette.primaryBlue,
-                  foregroundColor: AppPalette.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: _isSaving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppPalette.white,
-                        ),
-                      )
-                    : const Text(
-                        'Guardar Mascota',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-              ),
-            ),
+            actions,
           ],
         ),
       ),
@@ -477,9 +468,7 @@ class _PetCard extends StatelessWidget {
         color: itemBackground,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isSelected
-              ? AppPalette.primaryBlue
-              : (pet.isLost ? AppPalette.reportYellow : Colors.transparent),
+          color: isSelected ? AppPalette.primaryBlue : (pet.isLost ? AppPalette.reportYellow : Colors.transparent),
           width: isSelected || pet.isLost ? 2 : 0,
         ),
       ),
@@ -503,19 +492,7 @@ class _PetCard extends StatelessWidget {
                         child: InkWell(
                           onTap: onPressed,
                           child: SizedBox.expand(
-                            child:
-                                pet.photoPath != null &&
-                                    pet.photoPath!.isNotEmpty
-                                ? buildLocalImageWidget(
-                                    source: pet.photoPath,
-                                    fit: BoxFit.cover,
-                                    fallback: const _PetPlaceholder(),
-                                    errorBuilder:
-                                        (context, error, stackTrace) {
-                                          return const _PetPlaceholder();
-                                        },
-                                  )
-                                : const _PetPlaceholder(),
+                            child: _petImage(pet.photoPath, fit: BoxFit.cover, fallback: const _PetPlaceholder()),
                           ),
                         ),
                       ),
@@ -540,11 +517,7 @@ class _PetCard extends StatelessWidget {
                             child: InkWell(
                               onTap: onEditPressed,
                               customBorder: const CircleBorder(),
-                              child: const Icon(
-                                Icons.settings,
-                                size: 14,
-                                color: AppPalette.charcoal,
-                              ),
+                              child: const Icon(Icons.settings, size: 14, color: AppPalette.charcoal),
                             ),
                           ),
                         ),
@@ -561,11 +534,7 @@ class _PetCard extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: textColor,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -602,25 +571,11 @@ class _PetPhotoEditor extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: SizedBox.expand(
-                child: photoPath != null && photoPath!.isNotEmpty
-                    ? buildLocalImageWidget(
-                        source: photoPath,
-                        fit: BoxFit.cover,
-                        fallback: const _PetPlaceholder(
-                          iconSize: 54,
-                          backgroundColor: Colors.transparent,
-                        ),
-                        errorBuilder: (context, error, stackTrace) {
-                          return const _PetPlaceholder(
-                            iconSize: 54,
-                            backgroundColor: Colors.transparent,
-                          );
-                        },
-                      )
-                    : const _PetPlaceholder(
-                        iconSize: 54,
-                        backgroundColor: Colors.transparent,
-                      ),
+                child: _petImage(
+                  photoPath,
+                  fit: BoxFit.cover,
+                  fallback: const _PetPlaceholder(iconSize: 54, backgroundColor: Colors.transparent),
+                ),
               ),
             ),
           ),
@@ -639,16 +594,9 @@ class _PetPhotoEditor extends StatelessWidget {
                   child: isBusy
                       ? const Padding(
                           padding: EdgeInsets.all(9),
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppPalette.charcoal,
-                          ),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.charcoal),
                         )
-                      : const Icon(
-                          Icons.edit,
-                          size: 18,
-                          color: AppPalette.charcoal,
-                        ),
+                      : const Icon(Icons.edit, size: 18, color: AppPalette.charcoal),
                 ),
               ),
             ),
@@ -664,11 +612,7 @@ class _PetNameField extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String>? onSubmitted;
 
-  const _PetNameField({
-    required this.isDarkMode,
-    required this.controller,
-    this.onSubmitted,
-  });
+  const _PetNameField({required this.isDarkMode, required this.controller, this.onSubmitted});
 
   @override
   Widget build(BuildContext context) {
@@ -682,38 +626,18 @@ class _PetNameField extends StatelessWidget {
         controller: controller,
         textInputAction: TextInputAction.done,
         onSubmitted: onSubmitted,
-        style: TextStyle(
-          color: textColor,
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-        ),
+        style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w500),
         decoration: InputDecoration(
           hintText: 'Nombre de mascota',
-          hintStyle: const TextStyle(
-            color: AppPalette.textMutedDark,
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
+          hintStyle: const TextStyle(color: AppPalette.textMutedDark, fontSize: 14, fontWeight: FontWeight.w500),
           filled: true,
           fillColor: fieldBackground,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 12,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(
-              color: AppPalette.primaryBlue,
-              width: 1,
-            ),
+            borderSide: const BorderSide(color: AppPalette.primaryBlue, width: 1),
           ),
         ),
       ),
@@ -743,11 +667,7 @@ class _OptionalDateButton extends StatelessWidget {
       children: [
         Text(
           title,
-          style: const TextStyle(
-            color: AppPalette.textMutedDark,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
+          style: const TextStyle(color: AppPalette.textMutedDark, fontSize: 12, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 6),
         Row(
@@ -760,9 +680,7 @@ class _OptionalDateButton extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppPalette.textMutedDark,
                     backgroundColor: AppPalette.fieldBackground(isDarkMode),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   icon: const Icon(Icons.calendar_today_rounded, size: 16),
                   label: Align(
@@ -788,11 +706,7 @@ class _OptionalDateButton extends StatelessWidget {
                 height: 42,
                 child: IconButton(
                   onPressed: onClear,
-                  icon: Icon(
-                    Icons.close,
-                    size: 18,
-                    color: AppPalette.textPrimary(isDarkMode),
-                  ),
+                  icon: Icon(Icons.close, size: 18, color: AppPalette.textPrimary(isDarkMode)),
                   tooltip: 'Quitar fecha',
                 ),
               ),
@@ -804,14 +718,29 @@ class _OptionalDateButton extends StatelessWidget {
   }
 }
 
+Future<DateTime?> _showPetDatePicker(BuildContext context, {required bool isDarkMode, required DateTime initialDate}) {
+  final DateTime now = DateTime.now();
+  return showReportingDatePicker(
+    context: context,
+    isDarkMode: isDarkMode,
+    initialDate: initialDate,
+    firstDate: DateTime(now.year - 30),
+    lastDate: DateTime(now.year, now.month, now.day),
+  );
+}
+
+String _formatOptionalPetDate(DateTime? date, String fallback) {
+  if (date == null) return fallback;
+  final String day = date.day.toString().padLeft(2, '0');
+  final String month = date.month.toString().padLeft(2, '0');
+  return '$day/$month/${date.year}';
+}
+
 class _PetPlaceholder extends StatelessWidget {
   final double iconSize;
   final Color backgroundColor;
 
-  const _PetPlaceholder({
-    this.iconSize = 36,
-    this.backgroundColor = AppPalette.placeholderGray,
-  });
+  const _PetPlaceholder({this.iconSize = 36, this.backgroundColor = AppPalette.placeholderGray});
 
   @override
   Widget build(BuildContext context) {
@@ -824,147 +753,62 @@ class _PetPlaceholder extends StatelessWidget {
   }
 }
 
+Widget _petImage(String? source, {required BoxFit fit, required Widget fallback}) {
+  if (source == null || source.isEmpty) return fallback;
+  return buildLocalImageWidget(
+    source: source,
+    fit: fit,
+    fallback: fallback,
+    errorBuilder: (context, error, stackTrace) => fallback,
+  );
+}
+
 class EditPetPanelContent extends ConsumerStatefulWidget {
   final PetRecord pet;
   final bool isDarkMode;
   final VoidCallback onSaved;
 
-  const EditPetPanelContent({
-    super.key,
-    required this.pet,
-    required this.isDarkMode,
-    required this.onSaved,
-  });
+  const EditPetPanelContent({super.key, required this.pet, required this.isDarkMode, required this.onSaved});
 
   @override
-  ConsumerState<EditPetPanelContent> createState() =>
-      _EditPetPanelContentState();
+  ConsumerState<EditPetPanelContent> createState() => _EditPetPanelContentState();
 }
 
-class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
-  late final TextEditingController _nameController;
-  String? _storedPhotoPath;
-  late DateTime? _adoptionDate;
-  late DateTime? _birthDate;
-  bool _isSaving = false;
+class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> with _PetFormState<EditPetPanelContent> {
   bool _isDeleting = false;
-  bool _isPickingPhoto = false;
-  String? _errorText;
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.pet.name ?? '');
-    _storedPhotoPath = widget.pet.photoPath;
-    _adoptionDate = widget.pet.adoptionDate;
-    _birthDate = widget.pet.birthDate;
+    _initPetForm(
+      initialName: widget.pet.name ?? '',
+      initialPhotoPath: widget.pet.photoPath,
+      initialAdoptionDate: widget.pet.adoptionDate,
+      initialBirthDate: widget.pet.birthDate,
+    );
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _disposePetForm();
     super.dispose();
   }
 
-  Future<void> _pickPhoto() async {
-    setState(() {
-      _errorText = null;
-    });
-    setState(() {
-      _isPickingPhoto = true;
-    });
-
-    try {
-      final String? storedPath = await ref
-          .read(localMediaStorageServiceProvider)
-          .pickAndStorePetPhoto();
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _storedPhotoPath = storedPath;
-      });
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _errorText = 'No se pudo cargar la imagen. Intenta nuevamente.';
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isPickingPhoto = false;
-        });
-      }
-    }
-  }
-
   Future<void> _updatePet() async {
-    setState(() {
-      _errorText = null;
-      _isSaving = true;
-    });
-
-    final String resolvedName = _nameController.text.trim().isEmpty
-        ? widget.pet.displayName
-        : _nameController.text.trim();
-
-    try {
-      await ref
-          .read(myPetsControllerProvider.notifier)
-          .updatePet(
-            petId: widget.pet.id,
-            name: resolvedName,
-            photoPath: _storedPhotoPath,
-            adoptionDate: _adoptionDate,
-            birthDate: _birthDate,
-          );
-
-      if (!mounted) {
-        return;
-      }
-
-      widget.onSaved();
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _errorText = 'No se pudo guardar la mascota. Intenta nuevamente.';
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSaving = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _pickOptionalDate({
-    required DateTime? current,
-    required ValueChanged<DateTime?> onPicked,
-  }) async {
-    final DateTime now = DateTime.now();
-    final DateTime? picked = await showReportingDatePicker(
-      context: context,
-      isDarkMode: widget.isDarkMode,
-      initialDate: current ?? now,
-      firstDate: DateTime(now.year - 30),
-      lastDate: DateTime(now.year, now.month, now.day),
+    await _runPetSave(
+      action: () async {
+        await ref
+            .read(myPetsControllerProvider.notifier)
+            .updatePet(
+              petId: widget.pet.id,
+              name: _resolvedPetName(widget.pet.displayName),
+              photoPath: _storedPhotoPath,
+              adoptionDate: _adoptionDate,
+              birthDate: _birthDate,
+            );
+        if (mounted) widget.onSaved();
+      },
     );
-    if (!mounted) return;
-    onPicked(picked);
-  }
-
-  String _formatOptionalDate(DateTime? date, String fallback) {
-    if (date == null) return fallback;
-    final String day = date.day.toString().padLeft(2, '0');
-    final String month = date.month.toString().padLeft(2, '0');
-    return '$day/$month/${date.year}';
   }
 
   Future<void> _deletePet() async {
@@ -974,19 +818,13 @@ class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
     });
 
     try {
-      await ref
-          .read(myPetsControllerProvider.notifier)
-          .deletePet(petId: widget.pet.id);
+      await ref.read(myPetsControllerProvider.notifier).deletePet(petId: widget.pet.id);
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       widget.onSaved();
     } catch (_) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {
         _errorText = 'No se pudo eliminar la mascota. Intenta nuevamente.';
       });
@@ -999,232 +837,53 @@ class _EditPetPanelContentState extends ConsumerState<EditPetPanelContent> {
     }
   }
 
-  void _showDeleteConfirmation() {
-    final bool isDarkMode = widget.isDarkMode;
-
-    showDialog<bool>(
+  Future<void> _showDeleteConfirmation() async {
+    final bool confirmed = await showAppConfirmationDialog(
       context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          backgroundColor: AppPalette.dialogBackground(isDarkMode),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: AppPalette.border(isDarkMode)),
-          ),
-          title: Text(
-            'Eliminar mascota',
-            style: TextStyle(
-              color: AppPalette.dialogTitle(isDarkMode),
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          content: Text(
-            '¿Estás seguro de que deseas eliminar a ${widget.pet.displayName}?',
-            style: TextStyle(color: AppPalette.dialogBody(isDarkMode)),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(
-                'Cancelar',
-                style: TextStyle(
-                  color: AppPalette.dialogCancel(isDarkMode),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(true);
-                _deletePet();
-              },
-              child: const Text(
-                'Eliminar',
-                style: TextStyle(
-                  color: AppPalette.dangerRed,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+      isDarkMode: widget.isDarkMode,
+      title: 'Eliminar mascota',
+      message: '¿Estás seguro de que deseas eliminar a ${widget.pet.displayName}?',
+      confirmLabel: 'Eliminar',
     );
+    if (confirmed) await _deletePet();
   }
 
   @override
   Widget build(BuildContext context) {
-    final Color borderColor = AppPalette.border(widget.isDarkMode);
-    final Color textColor = AppPalette.textPrimary(widget.isDarkMode);
-
     final double bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
-    return SafeArea(
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.only(bottom: bottomInset),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _PetPhotoEditor(
-                photoPath: _storedPhotoPath,
-                borderColor: borderColor,
-                isBusy: _isPickingPhoto,
-                onEditPressed: _pickPhoto,
-              ),
-              const SizedBox(height: 16),
-              ValueListenableBuilder<TextEditingValue>(
-                valueListenable: _nameController,
-                builder:
-                    (
-                      BuildContext context,
-                      TextEditingValue value,
-                      Widget? child,
-                    ) {
-                      final String previewName = value.text.trim().isEmpty
-                          ? widget.pet.displayName
-                          : value.text.trim();
-                      return Text(
-                        previewName,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: textColor,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      );
-                    },
-              ),
-              const SizedBox(height: 24),
-              _PetNameField(
-                isDarkMode: widget.isDarkMode,
-                controller: _nameController,
-                onSubmitted: (_) {
-                  if (!_isSaving && !_isDeleting) {
-                    _updatePet();
-                  }
-                },
-              ),
-              const SizedBox(height: 8),
-              _OptionalDateButton(
-                isDarkMode: widget.isDarkMode,
-                title: 'Fecha de adopción',
-                valueText: _formatOptionalDate(
-                  _adoptionDate,
-                  'Seleccionar fecha',
-                ),
-                onPressed: () => _pickOptionalDate(
-                  current: _adoptionDate,
-                  onPicked: (DateTime? date) =>
-                      setState(() => _adoptionDate = date),
-                ),
-                onClear: _adoptionDate == null
-                    ? null
-                    : () => setState(() => _adoptionDate = null),
-              ),
-              const SizedBox(height: 8),
-              _OptionalDateButton(
-                isDarkMode: widget.isDarkMode,
-                title: 'Fecha de nacimiento',
-                valueText: _formatOptionalDate(_birthDate, 'Seleccionar fecha'),
-                onPressed: () => _pickOptionalDate(
-                  current: _birthDate,
-                  onPicked: (DateTime? date) =>
-                      setState(() => _birthDate = date),
-                ),
-                onClear: _birthDate == null
-                    ? null
-                    : () => setState(() => _birthDate = null),
-              ),
-              if (_errorText != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  _errorText!,
-                  style: const TextStyle(
-                    color: AppPalette.dangerRed,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 48,
-                      child: ElevatedButton(
-                        onPressed: _isDeleting || _isSaving
-                            ? null
-                            : _showDeleteConfirmation,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppPalette.dangerRed,
-                          foregroundColor: AppPalette.white,
-                          elevation: 0,
-                          disabledBackgroundColor: AppPalette.dangerRed
-                              .withValues(alpha: 0.6),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: _isDeleting
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: AppPalette.white,
-                                ),
-                              )
-                            : const Text(
-                                'Eliminar',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: SizedBox(
-                      height: 48,
-                      child: ElevatedButton(
-                        onPressed: _isSaving || _isDeleting ? null : _updatePet,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppPalette.primaryBlue,
-                          foregroundColor: AppPalette.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: _isSaving
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: AppPalette.white,
-                                ),
-                              )
-                            : const Text(
-                                'Guardar',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+    return _buildPetForm(
+      isDarkMode: widget.isDarkMode,
+      fallbackName: widget.pet.displayName,
+      previewFontWeight: FontWeight.w700,
+      onSubmit: _updatePet,
+      canSubmit: !_isSaving && !_isDeleting,
+      padding: EdgeInsets.only(bottom: bottomInset),
+      mainAxisSize: MainAxisSize.min,
+      actions: Row(
+        children: [
+          Expanded(
+            child: PanelActionButton(
+              label: 'Eliminar',
+              isBusy: _isDeleting,
+              onPressed: _isSaving ? null : _showDeleteConfirmation,
+              height: 48,
+              fontSize: 15,
+              backgroundColor: AppPalette.dangerRed,
+              disabledBackgroundColor: AppPalette.dangerRed.withValues(alpha: 0.6),
+            ),
           ),
-        ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: PanelActionButton(
+              label: 'Guardar',
+              isBusy: _isSaving,
+              onPressed: _isDeleting ? null : _updatePet,
+              height: 48,
+              fontSize: 15,
+            ),
+          ),
+        ],
       ),
     );
   }

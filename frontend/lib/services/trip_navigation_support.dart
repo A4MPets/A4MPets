@@ -2,10 +2,7 @@ import 'package:latlong2/latlong.dart';
 
 /// Result returned after trimming reached waypoints from an active trip.
 class WaypointProgressResult {
-  const WaypointProgressResult({
-    required this.remainingWaypoints,
-    required this.removedWaypoints,
-  });
+  const WaypointProgressResult({required this.remainingWaypoints, required this.removedWaypoints});
 
   final List<LatLng> remainingWaypoints;
   final int removedWaypoints;
@@ -28,23 +25,15 @@ class TripWaypointProgressor {
     int removed = 0;
 
     while (nextRemaining.isNotEmpty) {
-      final double distanceToNext = distanceCalculator.distance(
-        currentLocation,
-        nextRemaining.first,
-      );
+      final double distanceToNext = distanceCalculator.distance(currentLocation, nextRemaining.first);
 
-      if (distanceToNext > waypointArrivalMeters) {
-        break;
-      }
+      if (distanceToNext > waypointArrivalMeters) break;
 
       nextRemaining.removeAt(0);
       removed += 1;
     }
 
-    return WaypointProgressResult(
-      remainingWaypoints: nextRemaining,
-      removedWaypoints: removed,
-    );
+    return WaypointProgressResult(remainingWaypoints: nextRemaining, removedWaypoints: removed);
   }
 }
 
@@ -87,14 +76,9 @@ class TripRerouteController {
 
   /// Decides whether a reroute should run immediately or can be deferred.
   bool shouldTrigger({required LatLng location, required bool force}) {
-    if (force || _lastRerouteLocation == null || _lastRerouteAt == null) {
-      return true;
-    }
+    if (force || _lastRerouteLocation == null || _lastRerouteAt == null) return true;
 
-    final double movedMeters = _distanceCalculator.distance(
-      location,
-      _lastRerouteLocation!,
-    );
+    final double movedMeters = _distanceCalculator.distance(location, _lastRerouteLocation!);
     final Duration elapsed = DateTime.now().difference(_lastRerouteAt!);
 
     return movedMeters >= _minDistanceMeters || elapsed >= _minInterval;
@@ -122,9 +106,7 @@ class TripRerouteController {
     _queuedLocation = null;
     _queuedWaypoints = null;
 
-    if (location == null || waypoints == null || waypoints.isEmpty) {
-      return null;
-    }
+    if (location == null || waypoints == null || waypoints.isEmpty) return null;
 
     return QueuedTripReroute(location: location, waypoints: waypoints);
   }

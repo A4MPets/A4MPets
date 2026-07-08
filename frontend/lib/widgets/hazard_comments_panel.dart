@@ -11,7 +11,9 @@ import '../models/report_comment_record.dart';
 import '../providers/local_data_providers.dart';
 import '../theme/app_palette.dart';
 import 'shared/local_image_widget.dart';
+import 'shared/panel_action_button.dart';
 import 'shared/panel_scroll_view.dart';
+import 'reporting_form_widgets.dart';
 
 enum ReportCommentSubjectType { hazard, lostPet, foundPet, generic }
 
@@ -19,11 +21,7 @@ class HazardCommentsPanelContent extends StatelessWidget {
   final bool isDarkMode;
   final HazardReportRecord hazard;
 
-  const HazardCommentsPanelContent({
-    super.key,
-    required this.isDarkMode,
-    required this.hazard,
-  });
+  const HazardCommentsPanelContent({super.key, required this.isDarkMode, required this.hazard});
 
   @override
   Widget build(BuildContext context) {
@@ -48,41 +46,33 @@ class ReportCommentsPanelContent extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<ReportCommentsPanelContent> createState() =>
-      _ReportCommentsPanelContentState();
+  ConsumerState<ReportCommentsPanelContent> createState() => _ReportCommentsPanelContentState();
 }
 
-class _ReportCommentsPanelContentState
-    extends ConsumerState<ReportCommentsPanelContent> {
-  static const String _confirmHazardText =
-      'Confirmo que hay un peligro en este area';
+class _ReportCommentsPanelContentState extends ConsumerState<ReportCommentsPanelContent> {
+  static const String _confirmHazardText = 'Confirmo que hay un peligro en este area';
   static const String _denyHazardText = 'No veo que haya peligro en este area';
 
-  late final TextEditingController _commentController;
+  final TextEditingController _commentController = TextEditingController();
   Future<List<ReportCommentRecord>>? _hazardCommentsFuture;
   bool _isSending = false;
   String? _sendErrorText;
 
-  bool get _showsQuickHazardActions =>
-      widget.subjectType == ReportCommentSubjectType.hazard;
+  bool get _showsQuickHazardActions => widget.subjectType == ReportCommentSubjectType.hazard;
 
   @override
   void initState() {
     super.initState();
-    _commentController = TextEditingController();
-    if (_showsQuickHazardActions) {
-      _reloadHazardComments();
-    }
+    if (_showsQuickHazardActions) _reloadHazardComments();
   }
 
   @override
   void didUpdateWidget(covariant ReportCommentsPanelContent oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.subjectType != oldWidget.subjectType ||
-        widget.reportId != oldWidget.reportId) {
-      if (_showsQuickHazardActions) {
+    if (widget.subjectType != oldWidget.subjectType || widget.reportId != oldWidget.reportId) {
+      if (_showsQuickHazardActions)
         _reloadHazardComments();
-      } else {
+      else {
         _hazardCommentsFuture = null;
       }
     }
@@ -95,16 +85,12 @@ class _ReportCommentsPanelContentState
   }
 
   void _reloadHazardComments() {
-    _hazardCommentsFuture = ref
-        .read(userLocalRepositoryProvider)
-        .getHazardComments(widget.reportId);
+    _hazardCommentsFuture = ref.read(userLocalRepositoryProvider).getHazardComments(widget.reportId);
   }
 
   Future<void> _sendComment([String? presetText]) async {
     final String text = (presetText ?? _commentController.text).trim();
-    if (text.isEmpty) {
-      return;
-    }
+    if (text.isEmpty) return;
 
     setState(() {
       _sendErrorText = null;
@@ -112,9 +98,7 @@ class _ReportCommentsPanelContentState
     });
 
     try {
-      final LocalUserProfile profile = await ref.read(
-        localUserProfileProvider.future,
-      );
+      final LocalUserProfile profile = await ref.read(localUserProfileProvider.future);
 
       final ReportCommentRecord comment = ReportCommentRecord(
         authorUsername: profile.isAuthenticated ? profile.username : 'Anonimo',
@@ -128,110 +112,76 @@ class _ReportCommentsPanelContentState
         case ReportCommentSubjectType.hazard:
           await ref
               .read(hazardReportsControllerProvider.notifier)
-              .addCommentToHazard(
-                hazardId: widget.reportId,
-                comment: HazardCommentRecord(
-                  authorUsername: comment.authorUsername,
-                  authorAvatarUrl: comment.authorAvatarUrl,
-                  isAnonymous: comment.isAnonymous,
-                  commentText: comment.commentText,
-                  createdAt: comment.createdAt,
-                ),
-              );
+              .addCommentToHazard(hazardId: widget.reportId, comment: comment);
         case ReportCommentSubjectType.lostPet:
           await ref
               .read(lostPetReportsControllerProvider.notifier)
-              .addCommentToLostPetReport(
-                reportId: widget.reportId,
-                comment: comment,
-              );
+              .addCommentToLostPetReport(reportId: widget.reportId, comment: comment);
         case ReportCommentSubjectType.foundPet:
           await ref
               .read(foundPetReportsControllerProvider.notifier)
-              .addCommentToFoundPetReport(
-                reportId: widget.reportId,
-                comment: comment,
-              );
+              .addCommentToFoundPetReport(reportId: widget.reportId, comment: comment);
         case ReportCommentSubjectType.generic:
           await ref
               .read(genericReportsControllerProvider.notifier)
-              .addCommentToGenericReport(
-                reportId: widget.reportId,
-                comment: comment,
-              );
+              .addCommentToGenericReport(reportId: widget.reportId, comment: comment);
       }
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       _commentController.clear();
-      if (_showsQuickHazardActions) {
-        setState(_reloadHazardComments);
-      }
+      if (_showsQuickHazardActions) setState(_reloadHazardComments);
     } catch (_) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _sendErrorText = 'No se pudo enviar el comentario. Intenta nuevamente.';
-      });
+      if (!mounted) return;
+      setState(() => _sendErrorText = 'No se pudo enviar el comentario. Intenta nuevamente.');
     } finally {
-      if (mounted) {
-        setState(() {
-          _isSending = false;
-        });
-      }
+      if (mounted) setState(() => _isSending = false);
     }
   }
 
   List<ReportCommentRecord> _currentComments() {
     switch (widget.subjectType) {
       case ReportCommentSubjectType.hazard:
-        final List<HazardReportRecord> hazards =
-            ref.watch(hazardReportsControllerProvider).asData?.value ??
-            const <HazardReportRecord>[];
-        return hazards
-                .where((HazardReportRecord item) => item.id == widget.reportId)
-                .firstOrNull
-                ?.comments ??
-            const <ReportCommentRecord>[];
+        return _commentsFrom(
+          ref.watch(hazardReportsControllerProvider).asData?.value,
+          (HazardReportRecord item) => item.id == widget.reportId,
+          (HazardReportRecord item) => item.comments,
+        );
       case ReportCommentSubjectType.lostPet:
-        final List<LostPetReportRecord> reports =
-            ref.watch(lostPetReportsControllerProvider).asData?.value ??
-            const <LostPetReportRecord>[];
-        return reports
-                .where((LostPetReportRecord item) => item.id == widget.reportId)
-                .firstOrNull
-                ?.comments ??
-            const <ReportCommentRecord>[];
+        return _commentsFrom(
+          ref.watch(lostPetReportsControllerProvider).asData?.value,
+          (LostPetReportRecord item) => item.id == widget.reportId,
+          (LostPetReportRecord item) => item.comments,
+        );
       case ReportCommentSubjectType.foundPet:
-        final List<FoundPetReportRecord> reports =
-            ref.watch(foundPetReportsControllerProvider).asData?.value ??
-            const <FoundPetReportRecord>[];
-        return reports
-                .where(
-                  (FoundPetReportRecord item) => item.id == widget.reportId,
-                )
-                .firstOrNull
-                ?.comments ??
-            const <ReportCommentRecord>[];
+        return _commentsFrom(
+          ref.watch(foundPetReportsControllerProvider).asData?.value,
+          (FoundPetReportRecord item) => item.id == widget.reportId,
+          (FoundPetReportRecord item) => item.comments,
+        );
       case ReportCommentSubjectType.generic:
-        final List<GenericReportRecord> reports =
-            ref.watch(genericReportsControllerProvider).asData?.value ??
-            const <GenericReportRecord>[];
-        return reports
-                .where((GenericReportRecord item) => item.id == widget.reportId)
-                .firstOrNull
-                ?.comments ??
-            const <ReportCommentRecord>[];
+        return _commentsFrom(
+          ref.watch(genericReportsControllerProvider).asData?.value,
+          (GenericReportRecord item) => item.id == widget.reportId,
+          (GenericReportRecord item) => item.comments,
+        );
     }
+  }
+
+  List<ReportCommentRecord> _commentsFrom<T>(
+    List<T>? items,
+    bool Function(T item) matches,
+    List<ReportCommentRecord> Function(T item) comments,
+  ) {
+    for (final T item in items ?? <T>[]) {
+      if (matches(item)) return comments(item);
+    }
+    return const <ReportCommentRecord>[];
   }
 
   @override
   Widget build(BuildContext context) {
-    final Future<List<ReportCommentRecord>>? hazardCommentsFuture =
-        _hazardCommentsFuture;
+    final Future<List<ReportCommentRecord>>? hazardCommentsFuture = _hazardCommentsFuture;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -243,8 +193,7 @@ class _ReportCommentsPanelContentState
                   builder: (BuildContext context, snapshot) {
                     return _buildCommentsList(
                       snapshot.data ?? const <ReportCommentRecord>[],
-                      isLoading:
-                          snapshot.connectionState != ConnectionState.done,
+                      isLoading: snapshot.connectionState != ConnectionState.done,
                     );
                   },
                 )
@@ -255,42 +204,22 @@ class _ReportCommentsPanelContentState
           Row(
             children: [
               Expanded(
-                child: OutlinedButton(
-                  onPressed: _isSending
-                      ? null
-                      : () => _sendComment(_confirmHazardText),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppPalette.primaryBlue,
-                    side: const BorderSide(color: AppPalette.primaryBlue),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    'Confirmar peligro',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                  ),
+                child: PanelActionButton(
+                  label: 'Confirmar peligro',
+                  onPressed: _isSending ? null : () => _sendComment(_confirmHazardText),
+                  fontSize: 12,
+                  foregroundColor: AppPalette.primaryBlue,
+                  borderColor: AppPalette.primaryBlue,
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: OutlinedButton(
-                  onPressed: _isSending
-                      ? null
-                      : () => _sendComment(_denyHazardText),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppPalette.dangerRed,
-                    side: const BorderSide(color: AppPalette.dangerRed),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    'Desmentir peligro',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                  ),
+                child: PanelActionButton(
+                  label: 'Desmentir peligro',
+                  onPressed: _isSending ? null : () => _sendComment(_denyHazardText),
+                  fontSize: 12,
+                  foregroundColor: AppPalette.dangerRed,
+                  borderColor: AppPalette.dangerRed,
                 ),
               ),
             ],
@@ -302,9 +231,7 @@ class _ReportCommentsPanelContentState
             if (event is KeyDownEvent &&
                 event.logicalKey == LogicalKeyboardKey.enter &&
                 !HardwareKeyboard.instance.isShiftPressed) {
-              if (!_isSending) {
-                _sendComment();
-              }
+              if (!_isSending) _sendComment();
               return KeyEventResult.handled;
             }
             return KeyEventResult.ignored;
@@ -312,16 +239,10 @@ class _ReportCommentsPanelContentState
           child: TextField(
             controller: _commentController,
             onSubmitted: (_) {
-              if (!_isSending) {
-                _sendComment();
-              }
+              if (!_isSending) _sendComment();
             },
             onChanged: (_) {
-              if (_sendErrorText != null) {
-                setState(() {
-                  _sendErrorText = null;
-                });
-              }
+              if (_sendErrorText != null) setState(() => _sendErrorText = null);
             },
             textInputAction: TextInputAction.send,
             maxLength: 140,
@@ -334,82 +255,27 @@ class _ReportCommentsPanelContentState
             ),
             decoration: InputDecoration(
               hintText: 'Escribe un comentario...',
-              hintStyle: const TextStyle(
-                color: AppPalette.textMutedDark,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-              counterStyle: const TextStyle(
-                color: AppPalette.textMutedDark,
-                fontSize: 11,
-              ),
+              hintStyle: const TextStyle(color: AppPalette.textMutedDark, fontSize: 14, fontWeight: FontWeight.w500),
+              counterStyle: const TextStyle(color: AppPalette.textMutedDark, fontSize: 11),
               filled: true,
               fillColor: AppPalette.fieldBackground(widget.isDarkMode),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 12,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: AppPalette.primaryBlue,
-                  width: 1,
-                ),
+                borderSide: const BorderSide(color: AppPalette.primaryBlue, width: 1),
               ),
             ),
           ),
         ),
-        if (_sendErrorText != null) ...[
-          const SizedBox(height: 6),
-          Text(
-            _sendErrorText!,
-            style: const TextStyle(
-              color: AppPalette.dangerRed,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+        if (_sendErrorText != null) ...[const SizedBox(height: 6), ReportingFieldErrorText(message: _sendErrorText!)],
         const SizedBox(height: 10),
-        SizedBox(
-          height: 44,
-          child: ElevatedButton(
-            onPressed: _isSending ? null : _sendComment,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppPalette.primaryBlue,
-              foregroundColor: AppPalette.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: _isSending
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppPalette.white,
-                    ),
-                  )
-                : const Text(
-                    'Enviar comentario',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                  ),
-          ),
-        ),
+        PanelActionButton(label: 'Enviar comentario', isBusy: _isSending, onPressed: _sendComment),
       ],
     );
   }
 
-  Widget _buildCommentsList(
-    List<ReportCommentRecord> comments, {
-    bool isLoading = false,
-  }) {
+  Widget _buildCommentsList(List<ReportCommentRecord> comments, {bool isLoading = false}) {
     return PanelScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -417,13 +283,7 @@ class _ReportCommentsPanelContentState
           if (isLoading)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 18),
-              child: Center(
-                child: SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
+              child: Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))),
             ),
           if (!isLoading && comments.isEmpty)
             Container(
@@ -445,10 +305,7 @@ class _ReportCommentsPanelContentState
             ...comments.map(
               (ReportCommentRecord comment) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: _CommentTile(
-                  isDarkMode: widget.isDarkMode,
-                  comment: comment,
-                ),
+                child: _CommentTile(isDarkMode: widget.isDarkMode, comment: comment),
               ),
             ),
         ],
@@ -469,10 +326,7 @@ class _CommentTile extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: AppPalette.cardBackground(isDarkMode),
-        borderRadius: BorderRadius.circular(12),
-      ),
+      decoration: BoxDecoration(color: AppPalette.cardBackground(isDarkMode), borderRadius: BorderRadius.circular(12)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -502,11 +356,7 @@ class _CommentTile extends StatelessWidget {
                     Expanded(
                       child: Text(
                         comment.authorUsername,
-                        style: TextStyle(
-                          color: textColor,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w700),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -523,11 +373,7 @@ class _CommentTile extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   comment.commentText,
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w500),
                 ),
               ],
             ),
@@ -546,9 +392,7 @@ class _CommentTile extends StatelessWidget {
 
   String _formatRelativeTime(DateTime createdAt) {
     final Duration diff = DateTime.now().difference(createdAt);
-    if (diff.inSeconds < 60) {
-      return 'Hace un momento';
-    }
+    if (diff.inSeconds < 60) return 'Hace un momento';
     if (diff.inMinutes < 60) {
       return 'Hace ${diff.inMinutes} min';
     }
@@ -560,9 +404,7 @@ class _CommentTile extends StatelessWidget {
       return 'Hace $days dia${days == 1 ? '' : 's'}';
     }
     final int weeks = (diff.inDays / 7).floor();
-    if (weeks < 5) {
-      return 'Hace $weeks sem';
-    }
+    if (weeks < 5) return 'Hace $weeks sem';
     final int months = (diff.inDays / 30).floor();
     if (months < 12) {
       return 'Hace $months mes${months == 1 ? '' : 'es'}';
@@ -570,8 +412,4 @@ class _CommentTile extends StatelessWidget {
     final int years = (diff.inDays / 365).floor();
     return 'Hace $years ano${years == 1 ? '' : 's'}';
   }
-}
-
-extension<T> on Iterable<T> {
-  T? get firstOrNull => isEmpty ? null : first;
 }

@@ -56,9 +56,7 @@ class _PanelScrollViewState extends State<PanelScrollView> {
         data: ScrollbarThemeData(
           thumbColor: WidgetStatePropertyAll<Color>(thumbColor),
           trackColor: WidgetStatePropertyAll<Color>(trackColor),
-          trackBorderColor: const WidgetStatePropertyAll<Color>(
-            Colors.transparent,
-          ),
+          trackBorderColor: const WidgetStatePropertyAll<Color>(Colors.transparent),
           thickness: const WidgetStatePropertyAll<double>(8),
           radius: const Radius.circular(999),
         ),
@@ -84,9 +82,7 @@ class _PanelScrollViewState extends State<PanelScrollView> {
           data: ScrollbarThemeData(
             thumbColor: WidgetStatePropertyAll<Color>(thumbColor),
             trackColor: WidgetStatePropertyAll<Color>(trackColor),
-            trackBorderColor: const WidgetStatePropertyAll<Color>(
-              Colors.transparent,
-            ),
+            trackBorderColor: const WidgetStatePropertyAll<Color>(Colors.transparent),
             thickness: const WidgetStatePropertyAll<double>(8),
             radius: const Radius.circular(999),
           ),
@@ -98,11 +94,7 @@ class _PanelScrollViewState extends State<PanelScrollView> {
             radius: const Radius.circular(999),
             child: SizedBox(
               height: constraints.maxHeight,
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                padding: widget.padding,
-                child: spacedChild,
-              ),
+              child: SingleChildScrollView(controller: _scrollController, padding: widget.padding, child: spacedChild),
             ),
           ),
         );

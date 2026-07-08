@@ -14,8 +14,7 @@ class PlannedRouteResult {
 
   final List<LatLng> polyline;
   final List<RouteNavigationInstruction> navigationInstructions;
-  final double distanceMeters;
-  final double durationSeconds;
+  final double distanceMeters, durationSeconds;
   final String profile;
   final int hazardsConsidered;
 }

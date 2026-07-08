@@ -35,29 +35,13 @@ class ReportTypeSelectorPanelContent extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _ReportTypeButton(
-          label: 'Peligro',
-          color: AppPalette.dangerRed,
-          onPressed: onHazardPressed,
-        ),
+        _ReportTypeButton(label: 'Peligro', color: AppPalette.dangerRed, onPressed: onHazardPressed),
         const SizedBox(height: 8),
-        _ReportTypeButton(
-          label: 'Mascota perdida',
-          color: AppPalette.reportYellow,
-          onPressed: onLostPetPressed,
-        ),
+        _ReportTypeButton(label: 'Mascota perdida', color: AppPalette.reportYellow, onPressed: onLostPetPressed),
         const SizedBox(height: 8),
-        _ReportTypeButton(
-          label: 'Mascota encontrada',
-          color: AppPalette.reportGreen,
-          onPressed: onFoundPetPressed,
-        ),
+        _ReportTypeButton(label: 'Mascota encontrada', color: AppPalette.reportGreen, onPressed: onFoundPetPressed),
         const SizedBox(height: 8),
-        _ReportTypeButton(
-          label: 'Otro',
-          color: AppPalette.charcoal,
-          onPressed: onGenericPressed,
-        ),
+        _ReportTypeButton(label: 'Otro', color: AppPalette.charcoal, onPressed: onGenericPressed),
       ],
     );
   }
@@ -82,27 +66,13 @@ class _AnonymousReportTypeSelector extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _ReportTypeButton(
-          label: 'Peligro',
-          color: AppPalette.dangerRed,
-          onPressed: onHazardPressed,
-        ),
+        _ReportTypeButton(label: 'Peligro', color: AppPalette.dangerRed, onPressed: onHazardPressed),
         const SizedBox(height: 8),
-        _LockedReportTypeButton(
-          label: 'Mascota perdida',
-          onPressed: onLostPetPressed,
-        ),
+        _LockedReportTypeButton(label: 'Mascota perdida', onPressed: onLostPetPressed),
         const SizedBox(height: 8),
-        _LockedReportTypeButton(
-          label: 'Mascota encontrada',
-          onPressed: onFoundPetPressed,
-        ),
+        _LockedReportTypeButton(label: 'Mascota encontrada', onPressed: onFoundPetPressed),
         const SizedBox(height: 8),
-        _ReportTypeButton(
-          label: 'Otro',
-          color: AppPalette.charcoal,
-          onPressed: onGenericPressed,
-        ),
+        _ReportTypeButton(label: 'Otro', color: AppPalette.charcoal, onPressed: onGenericPressed),
       ],
     );
   }
@@ -128,21 +98,12 @@ class ReportAuthRequiredPanelContent extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Icon(
-          Icons.warning_amber_rounded,
-          size: 46,
-          color: AppPalette.textMutedDark,
-        ),
+        const Icon(Icons.warning_amber_rounded, size: 46, color: AppPalette.textMutedDark),
         const SizedBox(height: 12),
         Text(
           message,
           textAlign: TextAlign.center,
-          style: TextStyle(
-            color: textColor,
-            fontSize: 14,
-            height: 1.25,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(color: textColor, fontSize: 14, height: 1.25, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 16),
         SizedBox(
@@ -153,14 +114,9 @@ class ReportAuthRequiredPanelContent extends StatelessWidget {
               backgroundColor: AppPalette.primaryBlue,
               foregroundColor: AppPalette.white,
               elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text(
-              'Iniciar sesion',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
-            ),
+            child: const Text('Iniciar sesion', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
           ),
         ),
       ],
@@ -190,9 +146,7 @@ class _LockedReportTypeButton extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           foregroundColor: AppPalette.textMutedDark,
           side: const BorderSide(color: AppPalette.textMutedDark),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );
@@ -204,11 +158,7 @@ class _ReportTypeButton extends StatelessWidget {
   final Color color;
   final VoidCallback onPressed;
 
-  const _ReportTypeButton({
-    required this.label,
-    required this.color,
-    required this.onPressed,
-  });
+  const _ReportTypeButton({required this.label, required this.color, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -219,14 +169,9 @@ class _ReportTypeButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
-        child: Text(
-          label,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-        ),
+        child: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
       ),
     );
   }

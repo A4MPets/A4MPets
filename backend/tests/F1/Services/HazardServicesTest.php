@@ -24,7 +24,7 @@ class HazardServicesTest extends TestCase
      */
     public function test_hazard_routing_risk_filter_normalizes_and_decides_selected_risks(): void
     {
-        $filter = new HazardRoutingRiskFilter();
+        $filter = new HazardRoutingRiskFilter;
 
         $this->assertSame(['low', 'medium', 'high', 'other'], $filter->normalizeSelectedFilters(null));
         $this->assertSame(['high', 'other'], $filter->normalizeSelectedFilters(['HIGH', 'other', 'bad', 'high']));
@@ -40,7 +40,7 @@ class HazardServicesTest extends TestCase
      */
     public function test_hazard_report_service_store_update_paginate_delete_and_permissions(): void
     {
-        $service = new HazardReportService(new HazardValueNormalizer(), new ReportCommentService());
+        $service = new HazardReportService(new HazardValueNormalizer, new ReportCommentService);
         $user = User::factory()->create(['name' => 'Hazard QA']);
 
         $hazard = $service->store([
@@ -66,6 +66,12 @@ class HazardServicesTest extends TestCase
         $this->assertFalse($service->canMutate(null, $hazard));
         $this->assertTrue($service->canDelete($user->id));
         $this->assertFalse($service->canDelete(null));
+        $this->assertTrue($service->canDelete($user->id, $hazard));
+        $this->assertFalse($service->canDelete(User::factory()->create()->id, $hazard));
+        $this->assertTrue($service->canDelete(
+            User::factory()->create()->id,
+            HazardReport::factory()->create(['user_id' => null])
+        ));
 
         $result = $service->update($hazard, [
             'risk_level_code' => 'low',
@@ -80,7 +86,7 @@ class HazardServicesTest extends TestCase
         $this->assertSame('Peligro actualizado', $result['hazard']->narrative_description);
         $this->assertGreaterThanOrEqual(1, $service->paginate(['risk_level' => 'low', 'per_page' => 5])->total());
 
-        $payload = (new HazardResponseFormatter())->formatHazard($result['hazard']);
+        $payload = (new HazardResponseFormatter)->formatHazard($result['hazard']);
         $this->assertSame('low', $payload['risk_level_code']);
 
         $service->delete($hazard);
@@ -92,7 +98,7 @@ class HazardServicesTest extends TestCase
      */
     public function test_hazard_sync_documents_removed_local_sync_contract_as_error(): void
     {
-        $service = new HazardReportService(new HazardValueNormalizer(), new ReportCommentService());
+        $service = new HazardReportService(new HazardValueNormalizer, new ReportCommentService);
 
         $result = $service->sync([[
             'local_id' => 'hazard-local',
@@ -117,7 +123,7 @@ class HazardServicesTest extends TestCase
     {
         HazardReport::factory()->create();
 
-        $unsynced = (new HazardReportService(new HazardValueNormalizer(), new ReportCommentService()))->unsynced();
+        $unsynced = (new HazardReportService(new HazardValueNormalizer, new ReportCommentService))->unsynced();
 
         $this->assertGreaterThanOrEqual(1, $unsynced->count());
     }

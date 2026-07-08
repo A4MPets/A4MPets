@@ -6,6 +6,7 @@ use App\Models\ApiToken;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Tests\Concerns\CreatesApiToken;
 use Tests\TestCase;
 
@@ -14,7 +15,7 @@ use Tests\TestCase;
  */
 class AuthProfileExtraTest extends TestCase
 {
-    use RefreshDatabase, CreatesApiToken;
+    use CreatesApiToken, RefreshDatabase;
 
     public function test_me_and_profile_update_require_or_use_resolved_api_token_user(): void
     {
@@ -58,5 +59,44 @@ class AuthProfileExtraTest extends TestCase
         $this->withHeaders(['Authorization' => 'Bearer invalid-token'])
             ->getJson('/api/auth/me')
             ->assertStatus(401);
+    }
+
+    public function test_expired_or_legacy_token_without_expiration_is_rejected(): void
+    {
+        $user = User::factory()->create();
+
+        $expiredPlainToken = Str::random(64);
+        ApiToken::create([
+            'user_id' => $user->id,
+            'name' => 'expired-token',
+            'token_hash' => hash('sha256', $expiredPlainToken),
+            'last_used_at' => now()->subDays(31),
+            'expires_at' => now()->subMinute(),
+        ]);
+
+        $this->withHeaders(['Authorization' => 'Bearer '.$expiredPlainToken])
+            ->getJson('/api/auth/me')
+            ->assertStatus(401);
+
+        $this->assertDatabaseMissing('api_tokens', [
+            'token_hash' => hash('sha256', $expiredPlainToken),
+        ]);
+
+        $legacyPlainToken = Str::random(64);
+        ApiToken::create([
+            'user_id' => $user->id,
+            'name' => 'legacy-token',
+            'token_hash' => hash('sha256', $legacyPlainToken),
+            'last_used_at' => now(),
+            'expires_at' => null,
+        ]);
+
+        $this->withHeaders(['Authorization' => 'Bearer '.$legacyPlainToken])
+            ->getJson('/api/auth/me')
+            ->assertStatus(401);
+
+        $this->assertDatabaseMissing('api_tokens', [
+            'token_hash' => hash('sha256', $legacyPlainToken),
+        ]);
     }
 }

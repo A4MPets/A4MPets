@@ -13,9 +13,7 @@ void _invalidateUserScopedData(WidgetRef ref) {
 
 extension _MapPageAuthAndProfileState on _MapPageState {
   void _openProfilePanel(bool isDarkMode) {
-    if (_hasOpenPanels) {
-      return;
-    }
+    if (_hasOpenPanels) return;
 
     ref.invalidate(localUserProfileProvider);
     _pushPanel(_buildProfileRoute(isDarkMode));
@@ -45,16 +43,12 @@ extension _MapPageAuthAndProfileState on _MapPageState {
     }
 
     try {
-      await ref
-          .read(userLocalRepositoryProvider)
-          .login(login: login, password: password);
+      await ref.read(userLocalRepositoryProvider).login(login: login, password: password);
       await ref.read(localMediaStorageServiceProvider).clearStoredMedia();
 
       _invalidateUserScopedData(ref);
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       _updatePageState(() {
         _panelStack.clear();
@@ -68,12 +62,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
     }
   }
 
-  Future<void> _handleRegister(
-    String username,
-    String email,
-    String password,
-    String passwordConfirmation,
-  ) async {
+  Future<void> _handleRegister(String username, String email, String password, String passwordConfirmation) async {
     if (mounted) {
       _updatePageState(() {
         _isAuthRequestLoading = true;
@@ -83,19 +72,12 @@ extension _MapPageAuthAndProfileState on _MapPageState {
     try {
       await ref
           .read(userLocalRepositoryProvider)
-          .register(
-            username: username,
-            email: email,
-            password: password,
-            passwordConfirmation: passwordConfirmation,
-          );
+          .register(username: username, email: email, password: password, passwordConfirmation: passwordConfirmation);
       await ref.read(localMediaStorageServiceProvider).clearStoredMedia();
 
       _invalidateUserScopedData(ref);
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       _updatePageState(() {
         _panelStack.clear();
@@ -122,9 +104,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
 
       _invalidateUserScopedData(ref);
 
-      if (!mounted) {
-        return null;
-      }
+      if (!mounted) return null;
 
       _updatePageState(() {
         _panelStack.clear();
@@ -167,32 +147,23 @@ extension _MapPageAuthAndProfileState on _MapPageState {
   }
 
   Future<void> _closeAddPetPanelAfterSave(int petId) async {
-    if (!_hasOpenPanels) {
-      return;
-    }
+    if (!_hasOpenPanels) return;
 
     final bool returningToTripPetSelection =
-        _panelStack.length > 1 &&
-        _panelStack[_panelStack.length - 2].isTripPetSelectionPanel;
+        _panelStack.length > 1 && _panelStack[_panelStack.length - 2].isTripPetSelectionPanel;
     final bool returningToLostPetSelection =
-        _panelStack.length > 1 &&
-        _panelStack[_panelStack.length - 2].isLostPetPetSelectionPanel;
+        _panelStack.length > 1 && _panelStack[_panelStack.length - 2].isLostPetPetSelectionPanel;
 
     _updatePageState(() {
       _panelStack.removeLast();
     });
 
-    if (!returningToTripPetSelection && !returningToLostPetSelection) {
-      return;
-    }
+    if (!returningToTripPetSelection && !returningToLostPetSelection) return;
 
     await ref.read(myPetsControllerProvider.notifier).reload();
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
-    final List<PetRecord> pets =
-        ref.read(myPetsControllerProvider).asData?.value ?? const <PetRecord>[];
+    final List<PetRecord> pets = ref.read(myPetsControllerProvider).asData?.value ?? const <PetRecord>[];
     PetRecord? savedPet;
     for (final PetRecord pet in pets) {
       if (pet.id == petId) {
@@ -210,9 +181,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       return;
     }
 
-    if (savedPet == null) {
-      return;
-    }
+    if (savedPet == null) return;
 
     _selectLostPetForReport(savedPet);
   }
@@ -227,7 +196,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       expandHorizontal: false,
       expandVertical: false,
       scrollContent: false,
-      isProfilePanel: true,
+      kind: PanelKind.profile,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
         return ProfileMenuPanel(
@@ -252,7 +221,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       expandHorizontal: false,
       expandVertical: false,
       scrollContent: false,
-      isLoginPanel: true,
+      kind: PanelKind.login,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
         return LoginPanelContent(
@@ -274,7 +243,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       expandHorizontal: false,
       expandVertical: false,
       scrollContent: false,
-      isRegisterPanel: true,
+      kind: PanelKind.register,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
         return RegisterPanelContent(
@@ -298,25 +267,20 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       expandHorizontal: false,
       expandVertical: true,
       scrollContent: false,
-      isManagePetsPanel: true,
+      kind: PanelKind.managePets,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
         return ManagePetsPanelContent(
           isDarkMode: isDarkMode,
           onAddPetPressed: () => _openAddPetPanel(isDarkMode),
-          onViewPetPressed: (PetRecord pet) =>
-              _openPetDetailsPanel(isDarkMode, pet),
-          onEditPetPressed: (PetRecord pet) =>
-              _openEditPetPanel(isDarkMode, pet),
+          onViewPetPressed: (PetRecord pet) => _openPetDetailsPanel(isDarkMode, pet),
+          onEditPetPressed: (PetRecord pet) => _openEditPetPanel(isDarkMode, pet),
         );
       },
     );
   }
 
-  _PanelRoute _buildAddPetRoute(
-    bool isDarkMode, {
-    PanelAnchor anchor = PanelAnchor.topLeft,
-  }) {
+  _PanelRoute _buildAddPetRoute(bool isDarkMode, {PanelAnchor anchor = PanelAnchor.topLeft}) {
     return _PanelRoute(
       transitionKey: ++_panelTransitionSeed,
       title: 'Agregar mascota',
@@ -330,10 +294,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       scrollContent: false,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
-        return AddPetPanelContent(
-          isDarkMode: isDarkMode,
-          onSaved: _closeAddPetPanelAfterSave,
-        );
+        return AddPetPanelContent(isDarkMode: isDarkMode, onSaved: _closeAddPetPanelAfterSave);
       },
     );
   }
@@ -352,11 +313,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
       scrollContent: false,
       borderRadius: BorderRadius.circular(22),
       contentBuilder: (BuildContext context) {
-        return EditPetPanelContent(
-          pet: pet,
-          isDarkMode: isDarkMode,
-          onSaved: _closeCurrentPanel,
-        );
+        return EditPetPanelContent(pet: pet, isDarkMode: isDarkMode, onSaved: _closeCurrentPanel);
       },
     );
   }
@@ -378,8 +335,7 @@ extension _MapPageAuthAndProfileState on _MapPageState {
         return PetDetailsPanelContent(
           pet: pet,
           isDarkMode: isDarkMode,
-          onEditPressed: (PetRecord currentPet) =>
-              _openEditPetPanel(isDarkMode, currentPet),
+          onEditPressed: (PetRecord currentPet) => _openEditPetPanel(isDarkMode, currentPet),
           onMarkedFound: _closeCurrentPanel,
         );
       },

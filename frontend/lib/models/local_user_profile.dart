@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'model_parsing.dart';
+
 class LocalUserProfile {
   final int id;
   final String username;
@@ -8,6 +10,7 @@ class LocalUserProfile {
   final int? backendUserId;
   final String? email;
   final String? accessToken;
+  final DateTime? tokenExpiresAt;
   final DateTime? lastSyncedAt;
 
   const LocalUserProfile({
@@ -18,6 +21,7 @@ class LocalUserProfile {
     this.backendUserId,
     this.email,
     this.accessToken,
+    this.tokenExpiresAt,
     this.lastSyncedAt,
   });
 
@@ -30,23 +34,21 @@ class LocalUserProfile {
       backendUserId: null,
       email: null,
       accessToken: null,
+      tokenExpiresAt: null,
     );
   }
 
   factory LocalUserProfile.fromMap(Map<String, Object?> map) {
     return LocalUserProfile(
-      id: _readInt(map['id']) ?? 1,
+      id: readInt(map['id'], 1),
       username: map['username'] as String? ?? 'Usuario',
       avatarPath: map['avatar_path'] as String?,
-      isAuthenticated: _readBool(map['is_authenticated']),
-      backendUserId: _readInt(map['backend_user_id']),
+      isAuthenticated: readBool(map['is_authenticated']),
+      backendUserId: readOptionalInt(map['backend_user_id']),
       email: map['email'] as String?,
       accessToken: map['access_token'] as String?,
-      lastSyncedAt: map['last_synced_at'] == null
-          ? null
-          : DateTime.fromMillisecondsSinceEpoch(
-              _readInt(map['last_synced_at']) ?? 0,
-            ),
+      tokenExpiresAt: readDateTime(map['token_expires_at']),
+      lastSyncedAt: readDateTime(map['last_synced_at']),
     );
   }
 
@@ -59,44 +61,17 @@ class LocalUserProfile {
       'backend_user_id': backendUserId,
       'email': email,
       'access_token': accessToken,
+      'token_expires_at': tokenExpiresAt?.millisecondsSinceEpoch,
       'last_synced_at': lastSyncedAt?.millisecondsSinceEpoch,
     };
   }
 
   factory LocalUserProfile.fromJson(String raw) {
-    return LocalUserProfile.fromMap(
-      (jsonDecode(raw) as Map<String, dynamic>).cast<String, Object?>(),
-    );
+    return LocalUserProfile.fromMap((jsonDecode(raw) as Map<String, dynamic>).cast<String, Object?>());
   }
 
   String toJson() {
     return jsonEncode(toMap());
-  }
-
-  static int? _readInt(Object? value) {
-    if (value is int) {
-      return value;
-    }
-    if (value is num) {
-      return value.toInt();
-    }
-    if (value is String) {
-      return int.tryParse(value);
-    }
-    return null;
-  }
-
-  static bool _readBool(Object? value) {
-    if (value is bool) {
-      return value;
-    }
-    if (value is num) {
-      return value != 0;
-    }
-    if (value is String) {
-      return value == '1' || value.toLowerCase() == 'true';
-    }
-    return false;
   }
 
   LocalUserProfile copyWith({
@@ -107,6 +82,7 @@ class LocalUserProfile {
     int? backendUserId,
     String? email,
     String? accessToken,
+    DateTime? tokenExpiresAt,
     DateTime? lastSyncedAt,
   }) {
     return LocalUserProfile(
@@ -117,6 +93,7 @@ class LocalUserProfile {
       backendUserId: backendUserId ?? this.backendUserId,
       email: email ?? this.email,
       accessToken: accessToken ?? this.accessToken,
+      tokenExpiresAt: tokenExpiresAt ?? this.tokenExpiresAt,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
     );
   }

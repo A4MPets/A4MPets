@@ -73,9 +73,7 @@ class GuestDataStore {
     final DateTime now = DateTime.now();
     final List<PetRecord> pets = (await getPets())
         .map((PetRecord pet) {
-          if (pet.id != petId) {
-            return pet;
-          }
+          if (pet.id != petId) return pet;
           return PetRecord(
             id: pet.id,
             localUuid: pet.localUuid,
@@ -100,9 +98,7 @@ class GuestDataStore {
   }
 
   Future<void> deletePet({required int petId}) async {
-    final List<PetRecord> pets = (await getPets())
-        .where((PetRecord pet) => pet.id != petId)
-        .toList(growable: false);
+    final List<PetRecord> pets = (await getPets()).where((PetRecord pet) => pet.id != petId).toList(growable: false);
     await _savePets(pets);
   }
 
@@ -111,9 +107,7 @@ class GuestDataStore {
     final DateTime now = DateTime.now();
     final List<PetRecord> pets = (await getPets())
         .map((PetRecord pet) {
-          if (!selectedIds.contains(pet.id)) {
-            return pet;
-          }
+          if (!selectedIds.contains(pet.id)) return pet;
           return PetRecord(
             id: pet.id,
             localUuid: pet.localUuid,
@@ -141,9 +135,7 @@ class GuestDataStore {
     final DateTime now = DateTime.now();
     final List<PetRecord> pets = (await getPets())
         .map((PetRecord pet) {
-          if (pet.id != petId) {
-            return pet;
-          }
+          if (pet.id != petId) return pet;
           return PetRecord(
             id: pet.id,
             localUuid: pet.localUuid,
@@ -167,10 +159,7 @@ class GuestDataStore {
     await _savePets(pets);
   }
 
-  Future<int> addRoute({
-    required String name,
-    required List<RoutePoint> points,
-  }) async {
+  Future<int> addRoute({required String name, required List<RoutePoint> points}) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final int id = await _nextId(prefs, _nextRouteIdKey);
     final DateTime now = DateTime.now();
@@ -191,17 +180,11 @@ class GuestDataStore {
     return id;
   }
 
-  Future<void> updateRoute({
-    required int routeId,
-    required String name,
-    required List<RoutePoint> points,
-  }) async {
+  Future<void> updateRoute({required int routeId, required String name, required List<RoutePoint> points}) async {
     final DateTime now = DateTime.now();
     final List<RouteRecord> routes = (await getRoutes())
         .map((RouteRecord route) {
-          if (route.id != routeId) {
-            return route;
-          }
+          if (route.id != routeId) return route;
           return RouteRecord(
             id: route.id,
             remoteId: route.remoteId,
@@ -235,18 +218,12 @@ class GuestDataStore {
 
   Future<void> _savePets(List<PetRecord> pets) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _petsKey,
-      jsonEncode(pets.map((PetRecord pet) => pet.toMap()).toList()),
-    );
+    await prefs.setString(_petsKey, jsonEncode(pets.map((PetRecord pet) => pet.toMap()).toList()));
   }
 
   Future<void> _saveRoutes(List<RouteRecord> routes) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _routesKey,
-      jsonEncode(routes.map((RouteRecord route) => route.toMap()).toList()),
-    );
+    await prefs.setString(_routesKey, jsonEncode(routes.map((RouteRecord route) => route.toMap()).toList()));
   }
 
   Future<int> _nextId(SharedPreferences prefs, String key) async {
@@ -256,9 +233,7 @@ class GuestDataStore {
   }
 
   List<dynamic> _decodeList(String? raw) {
-    if (raw == null || raw.isEmpty) {
-      return const <dynamic>[];
-    }
+    if (raw == null || raw.isEmpty) return const <dynamic>[];
     try {
       final Object? decoded = jsonDecode(raw);
       return decoded is List<dynamic> ? decoded : const <dynamic>[];

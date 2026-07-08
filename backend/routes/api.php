@@ -19,7 +19,7 @@ Route::prefix('auth')->group(function (): void {
 
 Route::prefix('hazards')->group(function (): void {
     Route::get('/', [HazardReportController::class, 'index']);
-    Route::post('/', [HazardReportController::class, 'store'])->middleware('api.token');
+    Route::post('/', [HazardReportController::class, 'store'])->middleware('api.token:required');
     Route::get('/{hazardReport}', [HazardReportController::class, 'show']);
     Route::get('/{hazardReport}/comments', [HazardReportController::class, 'comments']);
     Route::post('/{hazardReport}/comments', [HazardReportController::class, 'storeComment'])->middleware('api.token');
@@ -39,7 +39,7 @@ Route::prefix('found-pet-reports')->group(function (): void {
 
 Route::prefix('generic-reports')->group(function (): void {
     Route::get('/', [GenericReportController::class, 'index']);
-    Route::post('/', [GenericReportController::class, 'store'])->middleware('api.token');
+    Route::post('/', [GenericReportController::class, 'store'])->middleware('api.token:required');
     Route::get('/{genericReport}', [GenericReportController::class, 'show']);
     Route::get('/{genericReport}/comments', [GenericReportController::class, 'comments']);
 });
@@ -53,7 +53,7 @@ Route::prefix('pets')->group(function (): void {
 
 Route::prefix('routes')->group(function (): void {
     Route::get('/', [TravelRouteController::class, 'index'])->middleware('api.token:required');
-    Route::post('/plan', [RoutePlanningController::class, 'plan'])->middleware('api.token');
+    Route::post('/plan', [RoutePlanningController::class, 'plan'])->middleware('api.token:required');
     Route::get('/{route}', [TravelRouteController::class, 'show']);
 });
 
@@ -62,6 +62,7 @@ Route::middleware('api.token:required')->group(function (): void {
         Route::get('/me', [AuthController::class, 'me']);
         Route::put('/profile', [AuthController::class, 'updateProfile']);
         Route::post('/logout', [AuthController::class, 'logout']);
+        Route::delete('/account', [AuthController::class, 'deleteAccount']);
     });
 
     Route::prefix('hazards')->group(function (): void {

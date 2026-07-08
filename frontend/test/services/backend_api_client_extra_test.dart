@@ -107,5 +107,27 @@ void main() {
         expect(delete?.statusCode, equals(502));
       },
     );
+
+    test('deleteWithFallback envia body JSON cuando se provee', () async {
+      final BackendApiClient client = BackendApiClient(
+        httpClient: MockClient((http.Request request) async {
+          expect(request.method, equals('DELETE'));
+          expect(request.body, contains('"confirmation":"ELIMINAR"'));
+          expect(request.headers['Authorization'], equals('Bearer token-qa'));
+          return http.Response('{"success":true}', 200);
+        }),
+      );
+
+      final http.Response? response = await client.deleteWithFallback(
+        '/auth/account',
+        body: <String, Object?>{
+          'password': 'secret',
+          'confirmation': 'ELIMINAR',
+        },
+        bearerToken: 'token-qa',
+      );
+
+      expect(response?.statusCode, equals(200));
+    });
   });
 }

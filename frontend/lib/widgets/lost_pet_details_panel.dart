@@ -3,9 +3,8 @@ import 'package:flutter/material.dart';
 import '../models/lost_pet_report_record.dart';
 import '../models/pet_record.dart';
 import '../theme/app_palette.dart';
-import 'shared/image_preview_dialog.dart';
-import 'shared/local_image_widget.dart';
 import 'shared/panel_scroll_view.dart';
+import 'shared/report_detail_widgets.dart';
 
 class LostPetDetailsPanelContent extends StatelessWidget {
   final bool isDarkMode;
@@ -40,72 +39,82 @@ class LostPetDetailsPanelContent extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.w800),
                 ),
-                _PhotoBlock(
+                ReportPhotoBlock(
                   isDarkMode: isDarkMode,
                   label: 'Foto de la mascota',
-                  source:
-                      pet?.photoPath ?? report.petPhotoUrl ?? report.photoUrl,
-                  placeholderIcon: Icons.pets,
+                  source: pet?.photoPath ?? report.petPhotoUrl ?? report.photoUrl,
+                  fallbackIcon: Icons.pets,
+                  labelColor: textColor,
+                  labelFontSize: 13,
+                  labelFontWeight: FontWeight.w800,
+                  labelSpacing: 8,
                 ),
                 const SizedBox(height: 12),
                 const SizedBox(height: 12),
                 if (pet != null) ...[
-                  _DetailsRow(
+                  ReportDetailsRow(
                     isDarkMode: isDarkMode,
                     label: 'Fecha de registro',
-                    value: _formatDate(pet!.registeredAt),
+                    value: formatReportDate(pet!.registeredAt),
+                    padding: const EdgeInsets.only(bottom: 8),
                   ),
                   if (pet!.adoptionDate != null)
-                    _DetailsRow(
+                    ReportDetailsRow(
                       isDarkMode: isDarkMode,
                       label: 'Fecha de adopción',
-                      value: _formatDate(pet!.adoptionDate!),
+                      value: formatReportDate(pet!.adoptionDate!),
+                      padding: const EdgeInsets.only(bottom: 8),
                     ),
                   if (pet!.birthDate != null)
-                    _DetailsRow(
+                    ReportDetailsRow(
                       isDarkMode: isDarkMode,
                       label: 'Fecha de nacimiento',
-                      value: _formatDate(pet!.birthDate!),
+                      value: formatReportDate(pet!.birthDate!),
+                      padding: const EdgeInsets.only(bottom: 8),
                     ),
                   const SizedBox(height: 10),
                 ],
                 _SectionTitle(isDarkMode: isDarkMode, label: 'Reporte'),
                 const SizedBox(height: 8),
-                _DetailsRow(
+                ReportDetailsRow(
                   isDarkMode: isDarkMode,
                   label: 'Fecha de desaparición',
-                  value: _formatDate(report.disappearanceDate),
+                  value: formatReportDate(report.disappearanceDate),
+                  padding: const EdgeInsets.only(bottom: 8),
                 ),
-                _DetailsRow(
+                ReportDetailsRow(
                   isDarkMode: isDarkMode,
                   label: 'Ultima ubicación',
                   value:
                       '${report.lastSeenLatitude.toStringAsFixed(5)}, ${report.lastSeenLongitude.toStringAsFixed(5)}',
+                  padding: const EdgeInsets.only(bottom: 8),
                 ),
-                _DetailsRow(
+                ReportDetailsRow(
                   isDarkMode: isDarkMode,
                   label: 'Detalles',
                   value: report.details,
+                  padding: const EdgeInsets.only(bottom: 8),
                 ),
                 if (report.phone != null && report.phone!.trim().isNotEmpty)
-                  _DetailsRow(
+                  ReportDetailsRow(
                     isDarkMode: isDarkMode,
                     label: 'Telefono',
                     value: report.phone!,
+                    padding: const EdgeInsets.only(bottom: 8),
                   ),
                 if (report.photoUrl != null && report.photoUrl!.isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  _PhotoBlock(
+                  ReportPhotoBlock(
                     isDarkMode: isDarkMode,
                     label: 'Foto del reporte',
                     source: report.photoUrl,
-                    placeholderIcon: Icons.image_outlined,
+                    fallbackIcon: Icons.image_outlined,
+                    labelColor: textColor,
+                    labelFontSize: 13,
+                    labelFontWeight: FontWeight.w800,
+                    labelSpacing: 8,
                   ),
                 ],
               ],
@@ -113,116 +122,12 @@ class LostPetDetailsPanelContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        SizedBox(
-          height: 44,
-          child: ElevatedButton(
-            onPressed: onViewComments,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppPalette.placeholderGray,
-              foregroundColor: AppPalette.charcoal,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text(
-              'Ver comentarios',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ),
-        if (onDebugDelete != null && debugDeleteLabel != null) ...[
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 44,
-            child: OutlinedButton(
-              onPressed: onDebugDelete,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppPalette.dangerRed,
-                side: const BorderSide(color: AppPalette.dangerRed),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                debugDeleteLabel!,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  static String _formatDate(DateTime date) {
-    final String day = date.day.toString().padLeft(2, '0');
-    final String month = date.month.toString().padLeft(2, '0');
-    return '$day/$month/${date.year}';
-  }
-}
-
-class _PhotoBlock extends StatelessWidget {
-  final bool isDarkMode;
-  final String label;
-  final String? source;
-  final IconData placeholderIcon;
-
-  const _PhotoBlock({
-    required this.isDarkMode,
-    required this.label,
-    required this.source,
-    required this.placeholderIcon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final String? imageSource = source?.trim();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _SectionTitle(isDarkMode: isDarkMode, label: label),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 180,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: imageSource != null && imageSource.isNotEmpty
-                ? ExpandableImage(
-                    source: imageSource,
-                    isDarkMode: isDarkMode,
-                    title: label,
-                    child: buildLocalImageWidget(
-                      source: imageSource,
-                      fit: BoxFit.cover,
-                      fallback: _ImageFallback(icon: placeholderIcon),
-                      errorBuilder: (_, _, _) =>
-                          _ImageFallback(icon: placeholderIcon),
-                    ),
-                  )
-                : _ImageFallback(icon: placeholderIcon),
-          ),
+        ReportDetailsActions(
+          onViewComments: onViewComments,
+          debugDeleteLabel: debugDeleteLabel,
+          onDebugDelete: onDebugDelete,
         ),
       ],
-    );
-  }
-}
-
-class _ImageFallback extends StatelessWidget {
-  final IconData icon;
-
-  const _ImageFallback({required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppPalette.placeholderGray,
-      alignment: Alignment.center,
-      child: Icon(icon, color: AppPalette.iconGray, size: 34),
     );
   }
 }
@@ -237,54 +142,7 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label,
-      style: TextStyle(
-        color: AppPalette.textPrimary(isDarkMode),
-        fontSize: 13,
-        fontWeight: FontWeight.w800,
-      ),
-    );
-  }
-}
-
-class _DetailsRow extends StatelessWidget {
-  final bool isDarkMode;
-  final String label;
-  final String value;
-
-  const _DetailsRow({
-    required this.isDarkMode,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: isDarkMode
-                  ? AppPalette.textMutedDark
-                  : AppPalette.iconGray,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              color: AppPalette.textPrimary(isDarkMode),
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
+      style: TextStyle(color: AppPalette.textPrimary(isDarkMode), fontSize: 13, fontWeight: FontWeight.w800),
     );
   }
 }

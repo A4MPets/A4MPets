@@ -19,8 +19,7 @@ class OsmRoutingService {
 
   List<String> get _apiBaseUrls {
     final List<String> urls = <String>[
-      if (_workingApiBaseUrl != null && _workingApiBaseUrl!.isNotEmpty)
-        _workingApiBaseUrl!,
+      if (_workingApiBaseUrl != null && _workingApiBaseUrl!.isNotEmpty) _workingApiBaseUrl!,
       ..._splitConfiguredBaseUrls(_configuredApiBaseUrl),
       'http://127.0.0.1:8000/api',
       if (!kIsWeb) 'http://10.0.2.2:8000/api',
@@ -64,12 +63,7 @@ class OsmRoutingService {
 
     final Map<String, Object?> payload = <String, Object?>{
       'points': waypoints
-          .map(
-            (LatLng point) => <String, double>{
-              'lat': point.latitude,
-              'lng': point.longitude,
-            },
-          )
+          .map((LatLng point) => <String, double>{'lat': point.latitude, 'lng': point.longitude})
           .toList(growable: false),
       'avoid_hazards': avoidHazards,
       'hazard_risk_filters': normalizedRiskFilters,
@@ -83,10 +77,7 @@ class OsmRoutingService {
         final http.Response current = await http
             .post(
               Uri.parse('$baseUrl/routes/plan'),
-              headers: <String, String>{
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-              },
+              headers: <String, String>{'Content-Type': 'application/json', 'Accept': 'application/json'},
               body: jsonEncode(payload),
             )
             .timeout(const Duration(seconds: 8));
@@ -101,46 +92,29 @@ class OsmRoutingService {
       }
     }
 
-    if (response == null) {
-      throw Exception('No fue posible conectar con el backend de rutas.');
-    }
+    if (response == null) throw Exception('No fue posible conectar con el backend de rutas.');
 
     if (response.statusCode != 200) {
-      throw Exception(
-        'Backend de rutas respondió con código ${response.statusCode}.',
-      );
+      throw Exception('Backend de rutas respondió con código ${response.statusCode}.');
     }
 
-    final Map<String, dynamic> decoded =
-        jsonDecode(response.body) as Map<String, dynamic>;
-    if (decoded['success'] != true) {
-      throw Exception('El backend no pudo calcular la ruta.');
-    }
+    final Map<String, dynamic> decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    if (decoded['success'] != true) throw Exception('El backend no pudo calcular la ruta.');
 
     final Map<String, dynamic>? data = decoded['data'] as Map<String, dynamic>?;
     final List<dynamic>? coords = data?['coordinates'] as List<dynamic>?;
 
-    if (coords == null || coords.isEmpty) {
-      throw Exception('La geometría de la ruta llegó vacía.');
-    }
+    if (coords == null || coords.isEmpty) throw Exception('La geometría de la ruta llegó vacía.');
 
     final List<LatLng> polyline = coords
         .map((dynamic raw) {
           final List<dynamic> pair = raw as List<dynamic>;
-          return LatLng(
-            (pair[1] as num).toDouble(),
-            (pair[0] as num).toDouble(),
-          );
+          return LatLng((pair[1] as num).toDouble(), (pair[0] as num).toDouble());
         })
         .toList(growable: false);
     final List<RouteNavigationInstruction> navigationInstructions =
-        (data?['navigation_instructions'] as List<dynamic>? ??
-                const <dynamic>[])
-            .map(
-              (dynamic raw) => RouteNavigationInstruction.fromMap(
-                (raw as Map<String, dynamic>),
-              ),
-            )
+        (data?['navigation_instructions'] as List<dynamic>? ?? const <dynamic>[])
+            .map((dynamic raw) => RouteNavigationInstruction.fromMap((raw as Map<String, dynamic>)))
             .toList(growable: false);
 
     return PlannedRouteResult(

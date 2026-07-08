@@ -19,12 +19,8 @@ import '../models/route_record.dart';
 import '../providers/audio_feedback_provider.dart';
 import '../providers/audio_feedback_settings_provider.dart';
 import '../providers/local_data_providers.dart';
-import '../providers/panel_flow_provider.dart';
-import '../providers/report_flow_provider.dart';
-import '../providers/route_editor_provider.dart';
 import '../providers/theme_provider.dart';
 import '../providers/trip_transport_preference_provider.dart';
-import '../providers/trip_flow_provider.dart';
 import '../services/navigation_audio_message_builder.dart';
 import '../services/navigation_audio_progress.dart';
 import '../services/hazard_risk_filtering.dart';
@@ -53,7 +49,9 @@ import '../widgets/pet_management_panels.dart';
 import '../widgets/profile_menu_panel.dart';
 import '../widgets/report_type_selector_panel.dart';
 import '../widgets/route_management_panels.dart';
+import '../widgets/shared/confirmation_dialog.dart';
 import '../widgets/shared/local_image_widget.dart';
+import '../widgets/shared/panel_action_button.dart';
 
 part 'map_page_auth.dart';
 part 'map_page_components.dart';
@@ -87,8 +85,7 @@ class _MapPageState extends ConsumerState<MapPage> {
   List<LatLng> _draftRoutePoints = <LatLng>[];
   List<LatLng> _draftRoutePolyline = <LatLng>[];
   List<LatLng> _routePolylineWaypoints = <LatLng>[];
-  List<ColoredRouteSegment> _hazardColoredRouteSegments =
-      <ColoredRouteSegment>[];
+  List<ColoredRouteSegment> _hazardColoredRouteSegments = <ColoredRouteSegment>[];
   _RouteMapTool _activeRouteTool = _RouteMapTool.addPoint;
   int? _selectedPointIndexForEdit;
   int? _selectedRouteId;
@@ -127,9 +124,7 @@ class _MapPageState extends ConsumerState<MapPage> {
   // Trip navigation state.
   final Set<int> _selectedTripPetIds = <int>{};
   _TripTransportMethod _selectedTripTransport = _TripTransportMethod.walking;
-  Set<String> _selectedTripHazardRiskFilters = <String>{
-    ...HazardRiskFiltering.allRoutingFilters,
-  };
+  Set<String> _selectedTripHazardRiskFilters = <String>{...HazardRiskFiltering.allRoutingFilters};
   RouteRecord? _selectedTripRoute;
   bool _isTripActive = false;
   bool _tripArrivalHandled = false;
@@ -142,8 +137,7 @@ class _MapPageState extends ConsumerState<MapPage> {
   int _userLocationRefreshRevision = 0;
   List<LatLng> _tripRemainingWaypoints = <LatLng>[];
   bool _isTripStartPanelMinimized = false;
-  List<RouteNavigationInstruction> _activeNavigationInstructions =
-      const <RouteNavigationInstruction>[];
+  List<RouteNavigationInstruction> _activeNavigationInstructions = const <RouteNavigationInstruction>[];
   final Set<String> _spokenFarApproachInstructionIds = <String>{};
   final Set<String> _spokenApproachInstructionIds = <String>{};
   final Set<String> _spokenImmediateInstructionIds = <String>{};
@@ -157,34 +151,28 @@ class _MapPageState extends ConsumerState<MapPage> {
   static const double _tripRerouteMinDistanceMeters = 18;
   static const Duration _tripRerouteMinInterval = Duration(seconds: 6);
 
-  late final TripRerouteController _tripRerouteController =
-      TripRerouteController(
-        distanceCalculator: _distanceCalculator,
-        minDistanceMeters: _tripRerouteMinDistanceMeters,
-        minInterval: _tripRerouteMinInterval,
-      );
+  late final TripRerouteController _tripRerouteController = TripRerouteController(
+    distanceCalculator: _distanceCalculator,
+    minDistanceMeters: _tripRerouteMinDistanceMeters,
+    minInterval: _tripRerouteMinInterval,
+  );
   ProviderSubscription<String>? _tripTransportPreferenceSubscription;
 
   @override
   void initState() {
     super.initState();
-    _tripTransportPreferenceSubscription = ref.listenManual<String>(
-      tripTransportPreferenceProvider,
-      (String? previous, String next) {
-        final _TripTransportMethod resolved = _tripTransportMethodFromName(
-          next,
-        );
-        if (_selectedTripTransport == resolved || !mounted) {
-          return;
-        }
+    _tripTransportPreferenceSubscription = ref.listenManual<String>(tripTransportPreferenceProvider, (
+      String? previous,
+      String next,
+    ) {
+      final _TripTransportMethod resolved = _tripTransportMethodFromName(next);
+      if (_selectedTripTransport == resolved || !mounted) return;
 
-        _updatePageState(() {
-          _selectedTripTransport = resolved;
-        });
-        _refreshTripRoutePreviewForPreferences();
-      },
-      fireImmediately: true,
-    );
+      _updatePageState(() {
+        _selectedTripTransport = resolved;
+      });
+      _refreshTripRoutePreviewForPreferences();
+    }, fireImmediately: true);
   }
 
   @override
@@ -196,171 +184,36 @@ class _MapPageState extends ConsumerState<MapPage> {
   bool get _hasOpenPanels => _panelStack.isNotEmpty;
 
   bool get _isDebugDetailPanelOpen {
-    if (!_hasOpenPanels) {
-      return false;
-    }
+    if (!_hasOpenPanels) return false;
 
     final _PanelRoute currentPanel = _panelStack.last;
-    return currentPanel.isHazardDetailsPanel ||
-        currentPanel.isLostPetDetailsPanel ||
-        currentPanel.isFoundPetDetailsPanel ||
-        currentPanel.isGenericReportDetailsPanel;
+    return currentPanel.isReportDetailsPanel;
   }
 
   String? get _debugDeleteLabel {
-    if (!_isDebugDetailPanelOpen) {
-      return null;
-    }
+    if (!_isDebugDetailPanelOpen) return null;
 
-    final _PanelRoute currentPanel = _panelStack.last;
-    if (currentPanel.isHazardDetailsPanel) {
-      return 'Borrar peligro';
-    }
-    if (currentPanel.isLostPetDetailsPanel) {
-      return 'Borrar mascota perdida';
-    }
-    if (currentPanel.isFoundPetDetailsPanel) {
-      return 'Borrar mascota encontrada';
-    }
-    if (currentPanel.isGenericReportDetailsPanel) {
-      return 'Borrar reporte';
-    }
-    return null;
+    return switch (_panelStack.last.kind) {
+      PanelKind.hazardDetails => 'Borrar peligro',
+      PanelKind.lostPetDetails => 'Borrar mascota perdida',
+      PanelKind.foundPetDetails => 'Borrar mascota encontrada',
+      PanelKind.genericReportDetails => 'Borrar reporte',
+      _ => null,
+    };
   }
 
   void _updatePageState(VoidCallback mutation) {
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     setState(mutation);
-    _syncModularFlowProviders();
-  }
-
-  void _syncModularFlowProviders() {
-    ref
-        .read(panelFlowProvider.notifier)
-        .replace(
-          PanelFlowState(
-            transitionSeed: _panelTransitionSeed,
-            stack: _panelStack
-                .map(
-                  (_PanelRoute route) => PanelEntry(
-                    kind: route.kind,
-                    transitionKey: route.transitionKey,
-                    isMinimized: route.isMinimized,
-                  ),
-                )
-                .toList(growable: false),
-          ),
-        );
-    ref
-        .read(routeEditorProvider.notifier)
-        .replace(
-          RouteEditorState(
-            draftRoutePoints: _draftRoutePoints,
-            draftRoutePolyline: _draftRoutePolyline,
-            routePolylineWaypoints: _routePolylineWaypoints,
-            activeTool: _activeRouteTool == _RouteMapTool.editPoint
-                ? RouteMapTool.editPoint
-                : RouteMapTool.addPoint,
-            selectedPointIndexForEdit: _selectedPointIndexForEdit,
-            selectedRouteId: _selectedRouteId,
-            editingRouteId: _editingRouteId,
-            editingRouteName: _editingRouteName,
-          ),
-        );
-    ref
-        .read(reportFlowProvider.notifier)
-        .replace(
-          ReportFlowState(
-            isSelectingHazardLocationOnMap: _isSelectingHazardLocationOnMap,
-            activeSelectionContext:
-                _activeReportSelectionContext ==
-                    _ReportMapSelectionContext.hazard
-                ? ReportMapSelectionContext.hazard
-                : (_activeReportSelectionContext ==
-                          _ReportMapSelectionContext.lostPet
-                      ? ReportMapSelectionContext.lostPet
-                      : (_activeReportSelectionContext ==
-                                _ReportMapSelectionContext.foundPet
-                            ? ReportMapSelectionContext.foundPet
-                            : (_activeReportSelectionContext ==
-                                      _ReportMapSelectionContext.generic
-                                  ? ReportMapSelectionContext.generic
-                                  : null))),
-            manualHazardLocation: _manualHazardLocation,
-            manualLostPetLocation: _manualLostPetLocation,
-            manualFoundPetLocation: _manualFoundPetLocation,
-            manualGenericReportLocation: _manualGenericReportLocation,
-            hazardDraftPreview: _hazardDraftPreview == null
-                ? null
-                : ReportDraftState(
-                    location: _hazardDraftPreview!.location,
-                    impactRadiusMeters: _hazardDraftPreview!.impactRadiusMeters,
-                    riskLevelCode: _hazardDraftPreview!.riskLevelCode,
-                  ),
-            genericReportDraftPreview: _genericReportDraftPreview == null
-                ? null
-                : ReportDraftState(
-                    location: _genericReportDraftPreview!.location,
-                    impactRadiusMeters:
-                        _genericReportDraftPreview!.impactRadiusMeters,
-                    riskLevelCode: _genericReportDraftPreview!.riskLevelCode,
-                  ),
-            selectedHazard: _selectedHazard,
-            selectedLostPetReport: _selectedLostPetReport,
-            selectedFoundPetReport: _selectedFoundPetReport,
-            selectedGenericReport: _selectedGenericReport,
-            selectedLostPetForReport: _selectedLostPetForReport,
-            selectedLostReportForFoundReport: _selectedLostReportForFoundReport,
-            showLowRiskHazardCircles: _showLowRiskHazardCircles,
-            showMediumRiskHazardCircles: _showMediumRiskHazardCircles,
-            showHighRiskHazardCircles: _showHighRiskHazardCircles,
-            showLostPetReports: _showLostPetReports,
-            showFoundPetReports: _showFoundPetReports,
-            showGenericReports: _showGenericReports,
-          ),
-        );
-    ref
-        .read(tripFlowProvider.notifier)
-        .replace(
-          TripFlowState(
-            selectedPetIds: _selectedTripPetIds,
-            selectedTransport:
-                _selectedTripTransport == _TripTransportMethod.vehicle
-                ? TripTransportMethod.vehicle
-                : TripTransportMethod.walking,
-            selectedHazardRiskFilters: _selectedTripHazardRiskFilters,
-            selectedRoute: _selectedTripRoute,
-            isTripActive: _isTripActive,
-            arrivalHandled: _tripArrivalHandled,
-            startErrorText: _tripStartErrorText,
-            latestUserLocation: _latestUserLocation,
-            isUserLocationLoading: _isUserLocationLoading,
-            userLocationErrorText: _userLocationErrorText,
-            remainingWaypoints: _tripRemainingWaypoints,
-            activeNavigationInstructions: _activeNavigationInstructions,
-          ),
-        );
   }
 
   bool get _isTripNavigationContext {
-    if (_selectedTripRoute == null) {
-      return false;
-    }
+    if (_selectedTripRoute == null) return false;
 
-    if (_isTripActive) {
-      return true;
-    }
+    if (_isTripActive) return true;
 
-    return _panelStack.any(
-      (_PanelRoute route) =>
-          route.isTripStartPanel ||
-          route.isTripPanel ||
-          route.isTripRouteSelectionPanel ||
-          route.isTripPetSelectionPanel,
-    );
+    return _panelStack.any((_PanelRoute route) => route.isTripFlowPanel);
   }
 
   bool get _isAudioFeedbackEnabled {
@@ -368,9 +221,7 @@ class _MapPageState extends ConsumerState<MapPage> {
   }
 
   _TripTransportMethod _tripTransportMethodFromName(String value) {
-    return value == _TripTransportMethod.vehicle.name
-        ? _TripTransportMethod.vehicle
-        : _TripTransportMethod.walking;
+    return value == _TripTransportMethod.vehicle.name ? _TripTransportMethod.vehicle : _TripTransportMethod.walking;
   }
 
   void _syncAndReloadData() {
@@ -394,8 +245,7 @@ class _MapPageState extends ConsumerState<MapPage> {
 
   List<HazardReportRecord> get _visibleHazardCircles {
     final List<HazardReportRecord> hazardReports =
-        ref.watch(hazardReportsControllerProvider).asData?.value ??
-        const <HazardReportRecord>[];
+        ref.watch(hazardReportsControllerProvider).asData?.value ?? const <HazardReportRecord>[];
 
     return hazardReports
         .where((HazardReportRecord report) {
@@ -414,9 +264,7 @@ class _MapPageState extends ConsumerState<MapPage> {
   }
 
   List<LatLng> get _renderedRoutePoints {
-    if (_hasOpenPanels && _panelStack.last.isAddRoutePanel) {
-      return List<LatLng>.from(_draftRoutePoints);
-    }
+    if (_hasOpenPanels && _panelStack.last.isAddRoutePanel) return List<LatLng>.from(_draftRoutePoints);
 
     if (_isTripNavigationContext) {
       final List<LatLng> activePoints = _tripRemainingWaypoints.isNotEmpty
@@ -429,17 +277,12 @@ class _MapPageState extends ConsumerState<MapPage> {
   }
 
   List<LatLng> get _renderedRoutePolylinePoints {
-    if (_hasOpenPanels && _panelStack.last.isAddRoutePanel) {
-      return List<LatLng>.from(_draftRoutePolyline);
-    }
+    if (_hasOpenPanels && _panelStack.last.isAddRoutePanel) return List<LatLng>.from(_draftRoutePolyline);
 
-    if (_draftRoutePolyline.isNotEmpty) {
-      return List<LatLng>.from(_draftRoutePolyline);
-    }
+    if (_draftRoutePolyline.isNotEmpty) return List<LatLng>.from(_draftRoutePolyline);
 
-    if (_isTripNavigationContext && _latestUserLocation != null) {
+    if (_isTripNavigationContext && _latestUserLocation != null)
       return <LatLng>[_latestUserLocation!, ..._renderedRoutePoints];
-    }
 
     return <LatLng>[];
   }
@@ -450,15 +293,11 @@ class _MapPageState extends ConsumerState<MapPage> {
     final _PanelRoute? activePanel = _hasOpenPanels ? _panelStack.last : null;
     final bool activePanelAnchoredBottom =
         activePanel != null &&
-        (activePanel.anchor == PanelAnchor.bottomLeft ||
-            activePanel.anchor == PanelAnchor.bottomRight);
+        (activePanel.anchor == PanelAnchor.bottomLeft || activePanel.anchor == PanelAnchor.bottomRight);
     final LatLng? tripFocusTarget = _isTripActive ? _latestUserLocation : null;
     final LatLng? hazardFocusTarget = _selectedHazard == null
         ? null
-        : LatLng(
-            _selectedHazard!.incidentLatitude,
-            _selectedHazard!.incidentLongitude,
-          );
+        : LatLng(_selectedHazard!.incidentLatitude, _selectedHazard!.incidentLongitude);
 
     return Scaffold(
       body: MapWidget(
@@ -467,18 +306,12 @@ class _MapPageState extends ConsumerState<MapPage> {
         zoom: 13,
         controls: MapControlsConfig(
           hideDefaultControls: _hasOpenPanels,
-          keepReportDangerVisible:
-              _hasOpenPanels && _panelStack.last.isTripPanel,
+          keepReportDangerVisible: _hasOpenPanels && _panelStack.last.isTripPanel,
           keepModifyLocationVisible:
-              _hasOpenPanels &&
-              (_panelStack.last.isTripStartPanel ||
-                  _panelStack.last.isTripPanel),
+              _hasOpenPanels && (_panelStack.last.isTripStartPanel || _panelStack.last.isTripPanel),
           onProfileTap: () => _openProfilePanel(isDarkMode),
           panelOverlay: Stack(
-            children: <Widget>[
-              _buildPanelOverlay(isDarkMode),
-              _buildProximityAlertOverlay(isDarkMode),
-            ],
+            children: <Widget>[_buildPanelOverlay(isDarkMode), _buildProximityAlertOverlay(isDarkMode)],
           ),
           onSettingsTap: () => _openHazardLayersSettingsPanel(isDarkMode),
           onStartTrip: () => _openStartTripPanel(isDarkMode),
@@ -490,36 +323,25 @@ class _MapPageState extends ConsumerState<MapPage> {
           coloredRouteSegments: _hazardColoredRouteSegments,
           selectedRoutePointIndex: _selectedPointIndexForEdit,
           onRoutePointPointerDown: (int index) {
-            if (_activeRouteTool != _RouteMapTool.editPoint) {
-              return;
-            }
+            if (_activeRouteTool != _RouteMapTool.editPoint) return;
             setState(() {
               _selectedPointIndexForEdit = index;
             });
           },
           canDragRoutePoints:
-              _hasOpenPanels &&
-              _panelStack.last.isAddRoutePanel &&
-              _activeRouteTool == _RouteMapTool.editPoint,
+              _hasOpenPanels && _panelStack.last.isAddRoutePanel && _activeRouteTool == _RouteMapTool.editPoint,
           onRoutePointDragStart: _onRoutePointDragStart,
           onRoutePointDragUpdate: _onRoutePointDragUpdate,
           onRoutePointDragEnd: _onRoutePointDragEnd,
           onRoutePointTap: (int index) {
-            if (_activeRouteTool != _RouteMapTool.editPoint) {
-              return;
-            }
+            if (_activeRouteTool != _RouteMapTool.editPoint) return;
             setState(() {
               _selectedPointIndexForEdit = index;
             });
           },
           isSelectingRoutePoint:
-              _hasOpenPanels &&
-              _panelStack.last.isAddRoutePanel &&
-              _activeRouteTool == _RouteMapTool.addPoint,
-          routeSelectionHintAtTop:
-              activePanel != null &&
-              activePanel.isAddRoutePanel &&
-              activePanelAnchoredBottom,
+              _hasOpenPanels && _panelStack.last.isAddRoutePanel && _activeRouteTool == _RouteMapTool.addPoint,
+          routeSelectionHintAtTop: activePanel != null && activePanel.isAddRoutePanel && activePanelAnchoredBottom,
         ),
         reportOverlay: MapReportOverlayConfig(
           hazardReports: _visibleHazardCircles,
@@ -528,44 +350,28 @@ class _MapPageState extends ConsumerState<MapPage> {
           foundPetReports: _visibleFoundPetReports,
           genericReports: _visibleGenericReports,
           highlightedHazard: _selectedHazard,
-          hazardDraftLocation:
-              _hasOpenPanels && _panelStack.last.isReportHazardPanel
+          hazardDraftLocation: _hasOpenPanels && _panelStack.last.isReportHazardPanel
               ? (_manualHazardLocation ?? _latestUserLocation)
               : null,
-          hazardDraftImpactRadiusMeters:
-              _hazardDraftPreview?.impactRadiusMeters,
+          hazardDraftImpactRadiusMeters: _hazardDraftPreview?.impactRadiusMeters,
           hazardDraftRiskLevelCode: _hazardDraftPreview?.riskLevelCode,
           isSelectingHazardLocation:
-              _hasOpenPanels &&
-              _panelStack.last.isReportHazardPanel &&
-              _isSelectingHazardLocationOnMap,
-          lostPetDraftLocation:
-              _hasOpenPanels && _panelStack.last.isLostPetReportPanel
+              _hasOpenPanels && _panelStack.last.isReportHazardPanel && _isSelectingHazardLocationOnMap,
+          lostPetDraftLocation: _hasOpenPanels && _panelStack.last.isLostPetReportPanel
               ? (_manualLostPetLocation ?? _latestUserLocation)
               : null,
-          foundPetDraftLocation:
-              _hasOpenPanels && _panelStack.last.isFoundPetReportPanel
+          foundPetDraftLocation: _hasOpenPanels && _panelStack.last.isFoundPetReportPanel
               ? (_manualFoundPetLocation ?? _latestUserLocation)
               : null,
-          genericReportDraftLocation:
-              _hasOpenPanels && _panelStack.last.isGenericReportPanel
+          genericReportDraftLocation: _hasOpenPanels && _panelStack.last.isGenericReportPanel
               ? (_manualGenericReportLocation ?? _latestUserLocation)
               : null,
-          genericReportDraftImpactRadiusMeters:
-              _genericReportDraftPreview?.impactRadiusMeters,
-          genericReportDraftRiskLevelCode:
-              _genericReportDraftPreview?.riskLevelCode,
+          genericReportDraftImpactRadiusMeters: _genericReportDraftPreview?.impactRadiusMeters,
+          genericReportDraftRiskLevelCode: _genericReportDraftPreview?.riskLevelCode,
           isSelectingReportLocation:
               _activeReportSelectionContext != null &&
-              _activeReportSelectionContext !=
-                  _ReportMapSelectionContext.hazard,
-          reportSelectionHintAtTop:
-              activePanel != null &&
-              (activePanel.isReportHazardPanel ||
-                  activePanel.isLostPetReportPanel ||
-                  activePanel.isFoundPetReportPanel ||
-                  activePanel.isGenericReportPanel) &&
-              activePanelAnchoredBottom,
+              _activeReportSelectionContext != _ReportMapSelectionContext.hazard,
+          reportSelectionHintAtTop: activePanel != null && activePanel.isReportEditorPanel && activePanelAnchoredBottom,
           onHazardTap: (HazardReportRecord hazard) {
             _openHazardDetailsPanel(isDarkMode, hazard);
           },
@@ -578,37 +384,26 @@ class _MapPageState extends ConsumerState<MapPage> {
           onGenericReportTap: (GenericReportRecord report) {
             _openGenericReportDetailsPanel(isDarkMode, report);
           },
-          reportSelectionHintText:
-              _activeReportSelectionContext ==
-                  _ReportMapSelectionContext.lostPet
+          reportSelectionHintText: _activeReportSelectionContext == _ReportMapSelectionContext.lostPet
               ? 'Toca el mapa para ubicar la mascota perdida'
-              : (_activeReportSelectionContext ==
-                        _ReportMapSelectionContext.foundPet
+              : (_activeReportSelectionContext == _ReportMapSelectionContext.foundPet
                     ? 'Toca el mapa para ubicar la mascota encontrada'
                     : 'Toca el mapa para ubicar el reporte'),
-          reportSelectionHintColor:
-              _activeReportSelectionContext ==
-                  _ReportMapSelectionContext.lostPet
+          reportSelectionHintColor: _activeReportSelectionContext == _ReportMapSelectionContext.lostPet
               ? AppPalette.reportYellow
-              : (_activeReportSelectionContext ==
-                        _ReportMapSelectionContext.foundPet
+              : (_activeReportSelectionContext == _ReportMapSelectionContext.foundPet
                     ? AppPalette.reportGreen
                     : AppPalette.charcoal),
           onMapTap: _onMapTap,
         ),
         camera: MapCameraConfig(
-          cameraFocusTarget:
-              tripFocusTarget ?? hazardFocusTarget ?? _reportFocusTarget,
+          cameraFocusTarget: tripFocusTarget ?? hazardFocusTarget ?? _reportFocusTarget,
           cameraFocusZoom: tripFocusTarget != null
               ? null
-              : (hazardFocusTarget == null
-                    ? null
-                    : _hazardFocusZoomFor(_selectedHazard!)),
+              : (hazardFocusTarget == null ? null : _hazardFocusZoomFor(_selectedHazard!)),
           cameraFocusRevision: tripFocusTarget != null
               ? _tripUserFocusRevision
-              : (hazardFocusTarget != null
-                    ? _hazardFocusRevision
-                    : _reportFocusRevision),
+              : (hazardFocusTarget != null ? _hazardFocusRevision : _reportFocusRevision),
         ),
         location: MapLocationConfig(
           onUserLocationChanged: _handleUserLocationChanged,

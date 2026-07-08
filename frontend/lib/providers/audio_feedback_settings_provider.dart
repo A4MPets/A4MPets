@@ -14,8 +14,7 @@ class AudioFeedbackSettingsController extends Notifier<bool> {
 
   Future<void> setEnabled(bool isEnabled) async {
     state = isEnabled;
-    final SharedPreferences prefs =
-        _prefs ?? await SharedPreferences.getInstance();
+    final SharedPreferences prefs = _prefs ?? await SharedPreferences.getInstance();
     _prefs = prefs;
     await prefs.setBool(_audioFeedbackEnabledKey, isEnabled);
   }
@@ -23,15 +22,11 @@ class AudioFeedbackSettingsController extends Notifier<bool> {
   Future<void> _loadPersistedValue() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     _prefs = prefs;
-    final bool persistedValue =
-        prefs.getBool(_audioFeedbackEnabledKey) ?? true;
-    if (state != persistedValue) {
-      state = persistedValue;
-    }
+    final bool persistedValue = prefs.getBool(_audioFeedbackEnabledKey) ?? true;
+    if (state != persistedValue) state = persistedValue;
   }
 }
 
-final audioFeedbackEnabledProvider =
-    NotifierProvider<AudioFeedbackSettingsController, bool>(
-      AudioFeedbackSettingsController.new,
-    );
+final audioFeedbackEnabledProvider = NotifierProvider<AudioFeedbackSettingsController, bool>(
+  AudioFeedbackSettingsController.new,
+);

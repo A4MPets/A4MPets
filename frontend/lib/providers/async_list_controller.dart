@@ -38,12 +38,24 @@ abstract class AsyncListController<T> extends AsyncNotifier<List<T>> {
   Future<void> silentlyRefresh() async {
     try {
       final List<T> latest = await _loadOnce();
-      if (!_isDisposed) {
-        state = AsyncData<List<T>>(latest);
-      }
+      if (!_isDisposed) state = AsyncData<List<T>>(latest);
     } catch (_) {
       // Preserve the last successful UI state on refresh failures.
     }
+  }
+
+  Future<R> mutateAndReload<R>(Future<R> Function() mutation, {bool bestEffort = false}) async {
+    final R result = await mutation();
+    if (!bestEffort) {
+      await reload();
+      return result;
+    }
+    try {
+      await reload();
+    } catch (_) {
+      // The mutation already succeeded; keep that result even if refresh fails.
+    }
+    return result;
   }
 
   void _registerRefreshLifecycle() {
@@ -57,9 +69,7 @@ abstract class AsyncListController<T> extends AsyncNotifier<List<T>> {
     final Duration? interval = refreshInterval;
     if (interval != null) {
       _refreshTimer ??= Timer.periodic(interval, (_) async {
-        if (_isDisposed) {
-          return;
-        }
+        if (_isDisposed) return;
 
         await silentlyRefresh();
       });
@@ -74,16 +84,12 @@ abstract class AsyncListController<T> extends AsyncNotifier<List<T>> {
 
   Future<List<T>> _loadOnce() {
     final Future<List<T>>? activeLoad = _activeLoad;
-    if (activeLoad != null) {
-      return activeLoad;
-    }
+    if (activeLoad != null) return activeLoad;
 
     final Future<List<T>> nextLoad = loadItems();
     _activeLoad = nextLoad;
     nextLoad.whenComplete(() {
-      if (identical(_activeLoad, nextLoad)) {
-        _activeLoad = null;
-      }
+      if (identical(_activeLoad, nextLoad)) _activeLoad = null;
     });
     return nextLoad;
   }

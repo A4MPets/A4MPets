@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../models/hazard_report_record.dart';
 import '../theme/app_palette.dart';
-import 'shared/image_preview_dialog.dart';
-import 'shared/local_image_widget.dart';
+import 'shared/panel_action_button.dart';
 import 'shared/panel_scroll_view.dart';
+import 'shared/report_detail_widgets.dart';
 
 class HazardDetailsPanelContent extends StatelessWidget {
   final bool isDarkMode;
@@ -30,101 +30,77 @@ class HazardDetailsPanelContent extends StatelessWidget {
         Expanded(
           child: Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.transparent,
-              borderRadius: BorderRadius.circular(14),
-            ),
+            decoration: BoxDecoration(color: Colors.transparent, borderRadius: BorderRadius.circular(14)),
             child: PanelScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _DetailsRow(
+                  ReportDetailsRow(
                     label: 'Radio de afectación',
                     value: '${hazard.impactRadiusMeters} m',
                     isDarkMode: isDarkMode,
+                    boxed: true,
                   ),
                   const SizedBox(height: 10),
-                  _DetailsRow(
+                  ReportDetailsRow(
                     label: 'Categoría',
-                    value: HazardReportRecord.categoryLabelFromCode(
-                      hazard.categoryCode,
-                    ),
+                    value: HazardReportRecord.categoryLabelFromCode(hazard.categoryCode),
                     isDarkMode: isDarkMode,
+                    boxed: true,
                   ),
                   const SizedBox(height: 10),
-                  _DetailsRow(
+                  ReportDetailsRow(
                     label: 'Descripción',
                     value: hazard.narrativeDescription,
                     isDarkMode: isDarkMode,
+                    boxed: true,
                     maxLines: 6,
                   ),
                   const SizedBox(height: 10),
-                  _DetailsRow(
+                  ReportDetailsRow(
                     label: 'Fecha de reporte',
-                    value: _formatDateTime(hazard.reportedAt),
+                    value: formatReportDateTime(hazard.reportedAt),
                     isDarkMode: isDarkMode,
+                    boxed: true,
                   ),
                   const SizedBox(height: 10),
-                  _DetailsRow(
+                  ReportDetailsRow(
                     label: 'Duración aproximada',
-                    value: HazardReportRecord.durationLabelFromCode(
-                      hazard.estimatedDurationCode,
-                    ),
+                    value: HazardReportRecord.durationLabelFromCode(hazard.estimatedDurationCode),
                     isDarkMode: isDarkMode,
+                    boxed: true,
                   ),
                   const SizedBox(height: 10),
-                  _DetailsRow(
+                  ReportDetailsRow(
                     label: 'Nivel de riesgo',
-                    value: HazardReportRecord.riskLabelFromCode(
-                      hazard.riskLevelCode,
-                    ),
+                    value: HazardReportRecord.riskLabelFromCode(hazard.riskLevelCode),
                     isDarkMode: isDarkMode,
+                    boxed: true,
                   ),
                   const SizedBox(height: 10),
-                  const Text(
-                    'Foto del peligro',
-                    style: TextStyle(
-                      color: AppPalette.textMutedDark,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  _HazardPhotoPreview(
-                    photoSource: hazard.evidencePhotoUrl,
+                  ReportPhotoBlock(
+                    label: 'Foto del peligro',
+                    source: hazard.evidencePhotoUrl,
                     isDarkMode: isDarkMode,
+                    fallbackText: 'Sin foto',
+                    height: 160,
+                    labelFontWeight: FontWeight.w600,
+                    imageBorderRadius: 12,
+                    boxed: true,
                   ),
                   const SizedBox(height: 10),
                   Text(
                     'Reportado por: ${hazard.reportedByUsername}',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: AppPalette.textMutedDark,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: const TextStyle(color: AppPalette.textMutedDark, fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                   if (onDebugDelete != null && debugDeleteLabel != null) ...[
                     const SizedBox(height: 12),
-                    SizedBox(
-                      height: 44,
-                      child: OutlinedButton(
-                        onPressed: onDebugDelete,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppPalette.dangerRed,
-                          side: const BorderSide(color: AppPalette.dangerRed),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          debugDeleteLabel!,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
+                    PanelActionButton(
+                      label: debugDeleteLabel!,
+                      onPressed: onDebugDelete,
+                      foregroundColor: AppPalette.dangerRed,
+                      borderColor: AppPalette.dangerRed,
                     ),
                   ],
                 ],
@@ -133,144 +109,8 @@ class HazardDetailsPanelContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        SizedBox(
-          height: 44,
-          child: ElevatedButton(
-            onPressed: onViewComments,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppPalette.placeholderGray,
-              foregroundColor: AppPalette.charcoal,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text(
-              'Ver comentarios',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ),
+        ReportDetailsActions(onViewComments: onViewComments),
       ],
-    );
-  }
-
-  String _formatDateTime(DateTime dateTime) {
-    final String day = dateTime.day.toString().padLeft(2, '0');
-    final String month = dateTime.month.toString().padLeft(2, '0');
-    final String year = dateTime.year.toString();
-    final String hour = dateTime.hour.toString().padLeft(2, '0');
-    final String minute = dateTime.minute.toString().padLeft(2, '0');
-    return '$day/$month/$year $hour:$minute';
-  }
-}
-
-class _DetailsRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool isDarkMode;
-  final int maxLines;
-
-  const _DetailsRow({
-    required this.label,
-    required this.value,
-    required this.isDarkMode,
-    this.maxLines = 2,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final Color textColor = AppPalette.textPrimary(isDarkMode);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppPalette.textMutedDark,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            color: AppPalette.fieldBackground(isDarkMode),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            value,
-            maxLines: maxLines,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: textColor,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _HazardPhotoPreview extends StatelessWidget {
-  final String? photoSource;
-  final bool isDarkMode;
-
-  const _HazardPhotoPreview({
-    required this.photoSource,
-    required this.isDarkMode,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 160,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppPalette.border(isDarkMode)),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: photoSource != null && photoSource!.isNotEmpty
-            ? ExpandableImage(
-                source: photoSource!,
-                isDarkMode: isDarkMode,
-                title: 'Foto del peligro',
-                child: buildLocalImageWidget(
-                  source: photoSource,
-                  fit: BoxFit.cover,
-                  fallback: const _NoPhotoPlaceholder(),
-                  errorBuilder: (context, error, stackTrace) =>
-                      const _NoPhotoPlaceholder(),
-                ),
-              )
-            : const _NoPhotoPlaceholder(),
-      ),
-    );
-  }
-}
-
-class _NoPhotoPlaceholder extends StatelessWidget {
-  const _NoPhotoPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppPalette.placeholderGray,
-      child: const Center(
-        child: Text(
-          'Sin foto',
-          style: TextStyle(
-            color: AppPalette.iconGray,
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
     );
   }
 }

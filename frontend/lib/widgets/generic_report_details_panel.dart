@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../models/generic_report_record.dart';
 import '../theme/app_palette.dart';
-import 'shared/image_preview_dialog.dart';
-import 'shared/local_image_widget.dart';
 import 'shared/panel_scroll_view.dart';
+import 'shared/report_detail_widgets.dart';
 
 class GenericReportDetailsPanelContent extends StatelessWidget {
   final bool isDarkMode;
@@ -35,157 +34,45 @@ class GenericReportDetailsPanelContent extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (report.photoUrl != null && report.photoUrl!.isNotEmpty)
-                  SizedBox(
-                    height: 180,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(14),
-                      child: ExpandableImage(
-                        source: report.photoUrl!,
-                        isDarkMode: isDarkMode,
-                        title: 'Foto del reporte',
-                        child: buildLocalImageWidget(
-                          source: report.photoUrl,
-                          fit: BoxFit.cover,
-                          fallback: const _ImageFallback(),
-                          errorBuilder: (_, _, _) => const _ImageFallback(),
-                        ),
-                      ),
-                    ),
-                  ),
-                if (report.photoUrl != null && report.photoUrl!.isNotEmpty)
-                  const SizedBox(height: 12),
+                  ReportPhotoBlock(isDarkMode: isDarkMode, label: 'Foto del reporte', source: report.photoUrl),
+                if (report.photoUrl != null && report.photoUrl!.isNotEmpty) const SizedBox(height: 12),
                 Text(
                   'Reporte',
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
-                _DetailsRow(
-                  label: 'Fecha',
-                  value: _formatDate(report.reportedDate),
-                ),
+                ReportDetailsRow(isDarkMode: isDarkMode, label: 'Fecha', value: formatReportDate(report.reportedDate)),
                 const SizedBox(height: 8),
-                _DetailsRow(
+                ReportDetailsRow(
+                  isDarkMode: isDarkMode,
                   label: 'Riesgo',
-                  value: GenericReportRecord.riskLabelFromCode(
-                    report.riskLevelCode,
-                  ),
+                  value: GenericReportRecord.riskLabelFromCode(report.riskLevelCode),
                 ),
                 if (report.impactRadiusMeters > 0) ...[
                   const SizedBox(height: 8),
-                  _DetailsRow(
+                  ReportDetailsRow(
+                    isDarkMode: isDarkMode,
                     label: 'Radio de afectación',
                     value: '${report.impactRadiusMeters} m',
                   ),
                 ],
                 const SizedBox(height: 8),
-                _DetailsRow(label: 'Descripción', value: report.description),
+                ReportDetailsRow(isDarkMode: isDarkMode, label: 'Descripción', value: report.description),
               ],
             ),
           ),
         ),
         const SizedBox(height: 10),
-        SizedBox(
-          height: 44,
-          child: ElevatedButton(
-            onPressed: onViewComments,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppPalette.placeholderGray,
-              foregroundColor: AppPalette.charcoal,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text(
-              'Ver comentarios',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-            ),
-          ),
+        ReportDetailsActions(
+          onViewComments: onViewComments,
+          debugDeleteLabel: debugDeleteLabel,
+          onDebugDelete: onDebugDelete,
         ),
-        if (onDebugDelete != null && debugDeleteLabel != null) ...[
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 44,
-            child: OutlinedButton(
-              onPressed: onDebugDelete,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppPalette.dangerRed,
-                side: const BorderSide(color: AppPalette.dangerRed),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                debugDeleteLabel!,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-        ],
         const SizedBox(height: 8),
         Text(
           'Reportado por: ${report.reportedByUsername}',
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: AppPalette.textMutedDark,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-  }
-
-  static String _formatDate(DateTime date) {
-    final String day = date.day.toString().padLeft(2, '0');
-    final String month = date.month.toString().padLeft(2, '0');
-    return '$day/$month/${date.year}';
-  }
-}
-
-class _ImageFallback extends StatelessWidget {
-  const _ImageFallback();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(color: AppPalette.placeholderGray);
-  }
-}
-
-class _DetailsRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _DetailsRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppPalette.textMutedDark,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            color: AppPalette.charcoal,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+          style: const TextStyle(color: AppPalette.textMutedDark, fontSize: 12, fontWeight: FontWeight.w600),
         ),
       ],
     );

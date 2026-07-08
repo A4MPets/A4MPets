@@ -21,19 +21,19 @@ class LoginTest extends TestCase
     public function test_login_with_email_returns_token_and_200(): void
     {
         $user = User::factory()->create([
-            'email'    => 'qa.login@a4mpets.test',
+            'email' => 'qa.login@a4mpets.test',
             'password' => Hash::make('password_qa_123'),
         ]);
 
         $response = $this->postJson('/api/auth/login', [
-            'login'    => 'qa.login@a4mpets.test',
+            'login' => 'qa.login@a4mpets.test',
             'password' => 'password_qa_123',
         ]);
 
         $response->assertStatus(200)
             ->assertJsonStructure([
                 'success',
-                'data' => ['user', 'access_token', 'token_type'],
+                'data' => ['user', 'access_token', 'token_type', 'expires_at'],
             ])
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.token_type', 'Bearer');
@@ -45,12 +45,12 @@ class LoginTest extends TestCase
     public function test_login_with_username_returns_token_and_200(): void
     {
         $user = User::factory()->create([
-            'name'     => 'qa_username_test',
+            'name' => 'qa_username_test',
             'password' => Hash::make('password_qa_123'),
         ]);
 
         $response = $this->postJson('/api/auth/login', [
-            'login'    => 'qa_username_test',
+            'login' => 'qa_username_test',
             'password' => 'password_qa_123',
         ]);
 
@@ -65,12 +65,12 @@ class LoginTest extends TestCase
     public function test_login_with_wrong_credentials_returns_422(): void
     {
         $user = User::factory()->create([
-            'email'    => 'real@a4mpets.test',
+            'email' => 'real@a4mpets.test',
             'password' => Hash::make('correct_password'),
         ]);
 
         $response = $this->postJson('/api/auth/login', [
-            'login'    => 'real@a4mpets.test',
+            'login' => 'real@a4mpets.test',
             'password' => 'wrong_password',
         ]);
 
@@ -84,7 +84,7 @@ class LoginTest extends TestCase
     public function test_login_with_nonexistent_user_returns_422(): void
     {
         $response = $this->postJson('/api/auth/login', [
-            'login'    => 'noexiste@a4mpets.test',
+            'login' => 'noexiste@a4mpets.test',
             'password' => 'cualquier_pass',
         ]);
 
@@ -102,13 +102,13 @@ class LoginTest extends TestCase
 
         // Login para obtener token
         $loginResponse = $this->postJson('/api/auth/login', [
-            'login'    => $user->email,
+            'login' => $user->email,
             'password' => 'pass_qa_123',
         ]);
         $token = $loginResponse->json('data.access_token');
 
         // Logout con el token
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
             ->postJson('/api/auth/logout');
 
         $response->assertStatus(200)

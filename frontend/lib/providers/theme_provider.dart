@@ -16,6 +16,4 @@ class ThemeModeController extends Notifier<bool> {
   }
 }
 
-final themeModeProvider = NotifierProvider<ThemeModeController, bool>(
-  ThemeModeController.new,
-);
+final themeModeProvider = NotifierProvider<ThemeModeController, bool>(ThemeModeController.new);

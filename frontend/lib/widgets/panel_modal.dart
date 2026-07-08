@@ -11,25 +11,25 @@ class AppModalPanel extends StatefulWidget {
   final String? title;
   final Widget child;
   final PanelAnchor anchor;
-  final double? width;
-  final double? height;
-  final bool expandHorizontal;
-  final bool expandVertical;
-  final bool adaptHeightToContent;
-  final double? maxHeight;
-  final double? maxHeightFactor;
-  final double? mobileMaxHeightFactor;
-  final double? desktopMaxHeightFactor;
+  final double? width,
+      height,
+      maxHeight,
+      maxHeightFactor,
+      mobileMaxHeightFactor,
+      desktopMaxHeightFactor,
+      contentTopPadding;
+  final bool expandHorizontal,
+      expandVertical,
+      adaptHeightToContent,
+      showBackButton,
+      scrollContent,
+      showLoadingIndicator,
+      canMinimize,
+      isMinimized;
   final BorderRadius borderRadius;
   final VoidCallback onClosePressed;
-  final bool showBackButton;
-  final bool scrollContent;
-  final double? contentTopPadding;
   final Duration animationDuration;
   final Curve animationCurve;
-  final bool showLoadingIndicator;
-  final bool canMinimize;
-  final bool isMinimized;
   final double minimizedHeight;
   final VoidCallback? onToggleMinimize;
 
@@ -74,46 +74,30 @@ class _AppModalPanelState extends State<AppModalPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final Color panelBackground = widget.isDarkMode
-        ? const Color(0xCC201E1E)
-        : const Color(0xCCE6E6E6);
+    final Color panelBackground = widget.isDarkMode ? const Color(0xCC201E1E) : const Color(0xCCE6E6E6);
 
-    final Color titleColor = widget.isDarkMode
-        ? const Color(0xFFAAAAAA)
-        : const Color(0xFF404040);
+    final Color titleColor = widget.isDarkMode ? const Color(0xFFAAAAAA) : const Color(0xFF404040);
 
-    final bool hasTitle =
-        widget.title != null && widget.title!.trim().isNotEmpty;
+    final bool hasTitle = widget.title != null && widget.title!.trim().isNotEmpty;
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final EdgeInsets viewPadding = MediaQuery.of(context).padding;
         final bool isMobile = constraints.maxWidth <= 900;
-        final double safeTopInset =
-            widget.anchor == PanelAnchor.topLeft ||
-                widget.anchor == PanelAnchor.topRight
+        final double safeTopInset = widget.anchor == PanelAnchor.topLeft || widget.anchor == PanelAnchor.topRight
             ? viewPadding.top
             : 0;
         final double safeBottomInset =
-            widget.anchor == PanelAnchor.bottomLeft ||
-                widget.anchor == PanelAnchor.bottomRight
+            widget.anchor == PanelAnchor.bottomLeft || widget.anchor == PanelAnchor.bottomRight
             ? viewPadding.bottom
             : 0;
-        final double availableWidth =
-            constraints.maxWidth - (AppModalPanel._margin * 2);
+        final double availableWidth = constraints.maxWidth - (AppModalPanel._margin * 2);
         final double availableHeight =
-            constraints.maxHeight -
-            (AppModalPanel._margin * 2) -
-            safeTopInset -
-            safeBottomInset;
+            constraints.maxHeight - (AppModalPanel._margin * 2) - safeTopInset - safeBottomInset;
 
         final double resolvedWidth = widget.adaptHeightToContent
-            ? (isMobile && widget.expandHorizontal
-                  ? availableWidth
-                  : math.min(widget.width ?? 380, availableWidth))
-            : (isMobile || widget.expandHorizontal
-                  ? availableWidth
-                  : math.min(widget.width ?? 380, availableWidth));
+            ? (isMobile && widget.expandHorizontal ? availableWidth : math.min(widget.width ?? 380, availableWidth))
+            : (isMobile || widget.expandHorizontal ? availableWidth : math.min(widget.width ?? 380, availableWidth));
 
         final double? responsiveMaxHeightFactor = isMobile
             ? widget.mobileMaxHeightFactor ?? widget.maxHeightFactor
@@ -125,9 +109,7 @@ class _AppModalPanelState extends State<AppModalPanel> {
                   : (widget.maxHeight ?? availableHeight))
             : (responsiveMaxHeightFactor != null
                   ? availableHeight * responsiveMaxHeightFactor
-                  : (widget.maxHeight ??
-                        widget.height ??
-                        availableHeight * 0.62));
+                  : (widget.maxHeight ?? widget.height ?? availableHeight * 0.62));
 
         final double resolvedMaxHeight = widget.expandVertical
             ? availableHeight
@@ -136,16 +118,10 @@ class _AppModalPanelState extends State<AppModalPanel> {
         final double resolvedFixedHeight = widget.expandVertical
             ? availableHeight
             : math.min(widget.height ?? resolvedMaxHeight, resolvedMaxHeight);
-        final double resolvedMinimizedHeight = math.min(
-          widget.minimizedHeight,
-          resolvedFixedHeight,
-        );
-        final double targetPanelHeight = widget.isMinimized
-            ? resolvedMinimizedHeight
-            : resolvedFixedHeight;
+        final double resolvedMinimizedHeight = math.min(widget.minimizedHeight, resolvedFixedHeight);
+        final double targetPanelHeight = widget.isMinimized ? resolvedMinimizedHeight : resolvedFixedHeight;
 
-        final double resolvedTopPadding =
-            widget.contentTopPadding ?? (hasTitle ? 56 : 12);
+        final double resolvedTopPadding = widget.contentTopPadding ?? (hasTitle ? 56 : 12);
 
         final Widget panelBody = Padding(
           padding: EdgeInsets.fromLTRB(
@@ -163,20 +139,13 @@ class _AppModalPanelState extends State<AppModalPanel> {
               child: ConstrainedBox(
                 constraints: BoxConstraints(
                   maxWidth: resolvedWidth,
-                  maxHeight: widget.adaptHeightToContent && !widget.isMinimized
-                      ? resolvedMaxHeight
-                      : targetPanelHeight,
+                  maxHeight: widget.adaptHeightToContent && !widget.isMinimized ? resolvedMaxHeight : targetPanelHeight,
                 ),
                 child: SizedBox(
                   width: resolvedWidth,
-                  height: widget.adaptHeightToContent && !widget.isMinimized
-                      ? null
-                      : targetPanelHeight,
+                  height: widget.adaptHeightToContent && !widget.isMinimized ? null : targetPanelHeight,
                   child: Container(
-                    decoration: BoxDecoration(
-                      color: panelBackground,
-                      borderRadius: widget.borderRadius,
-                    ),
+                    decoration: BoxDecoration(color: panelBackground, borderRadius: widget.borderRadius),
                     child: Stack(
                       children: [
                         if (widget.scrollContent)
@@ -204,12 +173,7 @@ class _AppModalPanelState extends State<AppModalPanel> {
                           Offstage(
                             offstage: widget.isMinimized,
                             child: SingleChildScrollView(
-                              padding: EdgeInsets.fromLTRB(
-                                16,
-                                resolvedTopPadding,
-                                16,
-                                18,
-                              ),
+                              padding: EdgeInsets.fromLTRB(16, resolvedTopPadding, 16, 18),
                               child: widget.child,
                             ),
                           )
@@ -218,12 +182,7 @@ class _AppModalPanelState extends State<AppModalPanel> {
                             child: Offstage(
                               offstage: widget.isMinimized,
                               child: Padding(
-                                padding: EdgeInsets.fromLTRB(
-                                  16,
-                                  resolvedTopPadding,
-                                  16,
-                                  18,
-                                ),
+                                padding: EdgeInsets.fromLTRB(16, resolvedTopPadding, 16, 18),
                                 child: widget.child,
                               ),
                             ),
@@ -238,24 +197,16 @@ class _AppModalPanelState extends State<AppModalPanel> {
                                   ? '${widget.isMinimized ? 'Expandir' : 'Minimizar'} panel ${widget.title}'
                                   : widget.title,
                               button: widget.canMinimize,
-                              onTap: widget.canMinimize
-                                  ? widget.onToggleMinimize
-                                  : null,
+                              onTap: widget.canMinimize ? widget.onToggleMinimize : null,
                               child: GestureDetector(
                                 behavior: HitTestBehavior.opaque,
-                                onTap: widget.canMinimize
-                                    ? widget.onToggleMinimize
-                                    : null,
+                                onTap: widget.canMinimize ? widget.onToggleMinimize : null,
                                 child: Text(
                                   widget.title!,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: titleColor,
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  style: TextStyle(color: titleColor, fontSize: 17, fontWeight: FontWeight.w600),
                                 ),
                               ),
                             ),
@@ -267,9 +218,8 @@ class _AppModalPanelState extends State<AppModalPanel> {
                             right: 0,
                             child: Center(
                               child: Semantics(
-                                label:
-                                    '${widget.isMinimized ? 'Expandir' : 'Minimizar'} panel ${widget.title ?? ''}'
-                                        .trim(),
+                                label: '${widget.isMinimized ? 'Expandir' : 'Minimizar'} panel ${widget.title ?? ''}'
+                                    .trim(),
                                 button: true,
                                 onTap: widget.onToggleMinimize,
                                 child: GestureDetector(
@@ -283,12 +233,8 @@ class _AppModalPanelState extends State<AppModalPanel> {
                                       width: 42,
                                       height: 5,
                                       decoration: BoxDecoration(
-                                        color: widget.isDarkMode
-                                            ? const Color(0x66FFFFFF)
-                                            : const Color(0x66404040),
-                                        borderRadius: BorderRadius.circular(
-                                          999,
-                                        ),
+                                        color: widget.isDarkMode ? const Color(0x66FFFFFF) : const Color(0x66404040),
+                                        borderRadius: BorderRadius.circular(999),
                                       ),
                                     ),
                                   ),
@@ -302,19 +248,14 @@ class _AppModalPanelState extends State<AppModalPanel> {
                               ignoring: true,
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: widget.isDarkMode
-                                      ? const Color(0x55201E1E)
-                                      : const Color(0x55E6E6E6),
+                                  color: widget.isDarkMode ? const Color(0x55201E1E) : const Color(0x55E6E6E6),
                                   borderRadius: widget.borderRadius,
                                 ),
                                 child: const Center(
                                   child: SizedBox(
                                     width: 28,
                                     height: 28,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      color: Color(0xFF5984BC),
-                                    ),
+                                    child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF5984BC)),
                                   ),
                                 ),
                               ),
@@ -337,9 +278,7 @@ class _AppModalPanelState extends State<AppModalPanel> {
           ),
         );
 
-        if (_hasPlayedEntranceAnimation) {
-          return panelBody;
-        }
+        if (_hasPlayedEntranceAnimation) return panelBody;
 
         return TweenAnimationBuilder<double>(
           tween: Tween<double>(begin: 0, end: 1),
@@ -389,24 +328,14 @@ class _PanelScrollableBody extends StatefulWidget {
   final double topPadding;
   final bool adaptHeightToContent;
 
-  const _PanelScrollableBody({
-    required this.child,
-    required this.topPadding,
-    required this.adaptHeightToContent,
-  });
+  const _PanelScrollableBody({required this.child, required this.topPadding, required this.adaptHeightToContent});
 
   @override
   State<_PanelScrollableBody> createState() => _PanelScrollableBodyState();
 }
 
 class _PanelScrollableBodyState extends State<_PanelScrollableBody> {
-  late final ScrollController _scrollController;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController = ScrollController();
-  }
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void dispose() {
@@ -416,13 +345,7 @@ class _PanelScrollableBodyState extends State<_PanelScrollableBody> {
 
   @override
   Widget build(BuildContext context) {
-    final EdgeInsets contentPadding = EdgeInsets.fromLTRB(
-      16,
-      widget.topPadding,
-      0,
-      18,
-    );
-    final Widget spacedChild = widget.child;
+    final EdgeInsets contentPadding = EdgeInsets.fromLTRB(16, widget.topPadding, 0, 18);
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final Color thumbColor = isDarkMode
         ? AppPalette.borderLight.withValues(alpha: 0.94)
@@ -432,61 +355,49 @@ class _PanelScrollableBodyState extends State<_PanelScrollableBody> {
         : AppPalette.charcoal.withValues(alpha: 0.42);
 
     if (widget.adaptHeightToContent) {
-      return ScrollbarTheme(
-        data: ScrollbarThemeData(
-          thumbColor: WidgetStatePropertyAll<Color>(thumbColor),
-          trackColor: WidgetStatePropertyAll<Color>(trackColor),
-          trackBorderColor: const WidgetStatePropertyAll<Color>(
-            Colors.transparent,
-          ),
-          thickness: const WidgetStatePropertyAll<double>(8),
-          radius: const Radius.circular(999),
-        ),
-        child: Scrollbar(
+      return _themedScrollbar(
+        thumbColor: thumbColor,
+        trackColor: trackColor,
+        child: ListView(
           controller: _scrollController,
-          thumbVisibility: true,
-          trackVisibility: true,
-          thickness: 8,
-          radius: const Radius.circular(999),
-          child: ListView(
-            controller: _scrollController,
-            padding: contentPadding,
-            shrinkWrap: true,
-            children: [spacedChild],
-          ),
+          padding: contentPadding,
+          shrinkWrap: true,
+          children: [widget.child],
         ),
       );
     }
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        return ScrollbarTheme(
-          data: ScrollbarThemeData(
-            thumbColor: WidgetStatePropertyAll<Color>(thumbColor),
-            trackColor: WidgetStatePropertyAll<Color>(trackColor),
-            trackBorderColor: const WidgetStatePropertyAll<Color>(
-              Colors.transparent,
-            ),
-            thickness: const WidgetStatePropertyAll<double>(8),
-            radius: const Radius.circular(999),
-          ),
-          child: Scrollbar(
-            controller: _scrollController,
-            thumbVisibility: true,
-            trackVisibility: true,
-            thickness: 8,
-            radius: const Radius.circular(999),
-            child: SizedBox(
-              height: constraints.maxHeight,
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                padding: contentPadding,
-                child: spacedChild,
-              ),
-            ),
+        return _themedScrollbar(
+          thumbColor: thumbColor,
+          trackColor: trackColor,
+          child: SizedBox(
+            height: constraints.maxHeight,
+            child: SingleChildScrollView(controller: _scrollController, padding: contentPadding, child: widget.child),
           ),
         );
       },
+    );
+  }
+
+  Widget _themedScrollbar({required Color thumbColor, required Color trackColor, required Widget child}) {
+    return ScrollbarTheme(
+      data: ScrollbarThemeData(
+        thumbColor: WidgetStatePropertyAll<Color>(thumbColor),
+        trackColor: WidgetStatePropertyAll<Color>(trackColor),
+        trackBorderColor: const WidgetStatePropertyAll<Color>(Colors.transparent),
+        thickness: const WidgetStatePropertyAll<double>(8),
+        radius: const Radius.circular(999),
+      ),
+      child: Scrollbar(
+        controller: _scrollController,
+        thumbVisibility: true,
+        trackVisibility: true,
+        thickness: 8,
+        radius: const Radius.circular(999),
+        child: child,
+      ),
     );
   }
 }
@@ -495,10 +406,7 @@ class _PanelBackOrCloseButton extends StatelessWidget {
   final bool showBackIcon;
   final VoidCallback onPressed;
 
-  const _PanelBackOrCloseButton({
-    required this.showBackIcon,
-    required this.onPressed,
-  });
+  const _PanelBackOrCloseButton({required this.showBackIcon, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {

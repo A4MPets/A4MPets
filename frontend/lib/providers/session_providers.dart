@@ -10,9 +10,7 @@ final sessionStoreProvider = Provider<SessionStore>((ref) {
   return SessionStore();
 });
 
-final localMediaStorageServiceProvider = Provider<LocalMediaStorageService>((
-  ref,
-) {
+final localMediaStorageServiceProvider = Provider<LocalMediaStorageService>((ref) {
   return LocalMediaStorageService();
 });
 

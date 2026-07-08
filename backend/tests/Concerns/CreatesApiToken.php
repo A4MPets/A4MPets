@@ -20,6 +20,7 @@ trait CreatesApiToken
             'name' => 'test-token',
             'token_hash' => hash('sha256', $plainToken),
             'last_used_at' => now(),
+            'expires_at' => now()->addMinutes((int) config('auth.api_token_lifetime_minutes', 43200)),
         ]);
 
         return [

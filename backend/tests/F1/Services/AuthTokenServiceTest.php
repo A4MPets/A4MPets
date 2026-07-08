@@ -22,20 +22,23 @@ class AuthTokenServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new AuthTokenService();
+        $this->service = new AuthTokenService;
     }
 
     /**
-     * F1-001: issueToken genera token de 64 caracteres y lo almacena como hash SHA-256
+     * F1-001: issueToken genera token de 64 caracteres, hash SHA-256 y caducidad real
      */
-    public function test_issue_token_returns_64_char_plain_token_and_stores_sha256_hash(): void
+    public function test_issue_token_returns_64_char_plain_token_and_stores_sha256_hash_with_expiration(): void
     {
+        config(['auth.api_token_lifetime_minutes' => 60]);
         $user = User::factory()->create();
+        $minimumExpiration = now()->addMinutes(60)->subSecond();
 
         $result = $this->service->issueToken($user, 'mobile-register');
 
         // Verifica que retorna plain_token
         $this->assertArrayHasKey('plain_token', $result);
+        $this->assertArrayHasKey('expires_at', $result);
 
         // Verifica longitud de 64 caracteres
         $this->assertEquals(64, strlen($result['plain_token']));
@@ -43,10 +46,15 @@ class AuthTokenServiceTest extends TestCase
         // Verifica que existe registro en api_tokens con hash SHA-256
         $expectedHash = hash('sha256', $result['plain_token']);
         $this->assertDatabaseHas('api_tokens', [
-            'user_id'    => $user->id,
-            'name'       => 'mobile-register',
+            'user_id' => $user->id,
+            'name' => 'mobile-register',
             'token_hash' => $expectedHash,
         ]);
+
+        $apiToken = ApiToken::where('token_hash', $expectedHash)->firstOrFail();
+        $this->assertNotNull($apiToken->expires_at);
+        $this->assertTrue($apiToken->expires_at->greaterThanOrEqualTo($minimumExpiration));
+        $this->assertTrue($apiToken->expires_at->isFuture());
     }
 
     /**
@@ -71,7 +79,7 @@ class AuthTokenServiceTest extends TestCase
         $user = User::factory()->create();
 
         // Emitir token
-        $result  = $this->service->issueToken($user, 'mobile-login');
+        $result = $this->service->issueToken($user, 'mobile-login');
         $apiToken = ApiToken::where('user_id', $user->id)->first();
 
         $this->assertNotNull($apiToken);
@@ -105,8 +113,8 @@ class AuthTokenServiceTest extends TestCase
     public function test_format_user_returns_only_expected_fields(): void
     {
         $user = User::factory()->create([
-            'name'              => 'qa_test',
-            'email'             => 'qa@test.com',
+            'name' => 'qa_test',
+            'email' => 'qa@test.com',
             'profile_photo_url' => 'http://example.com/photo.jpg',
         ]);
 

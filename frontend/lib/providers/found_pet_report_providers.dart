@@ -6,23 +6,18 @@ import '../repositories/user_local_repository.dart';
 import 'async_list_controller.dart';
 import 'session_providers.dart';
 
-final foundPetReportsControllerProvider =
-    AsyncNotifierProvider<
-      FoundPetReportsController,
-      List<FoundPetReportRecord>
-    >(FoundPetReportsController.new);
+final foundPetReportsControllerProvider = AsyncNotifierProvider<FoundPetReportsController, List<FoundPetReportRecord>>(
+  FoundPetReportsController.new,
+);
 
-class FoundPetReportsController
-    extends AsyncListController<FoundPetReportRecord> {
+class FoundPetReportsController extends AsyncListController<FoundPetReportRecord> {
   UserLocalRepository get _repository => ref.read(userLocalRepositoryProvider);
 
   @override
   Duration get refreshInterval => const Duration(seconds: 60);
 
   @override
-  Future<List<FoundPetReportRecord>> loadItems() {
-    return _repository.getFoundPetReports();
-  }
+  Future<List<FoundPetReportRecord>> loadItems() => _repository.getFoundPetReports();
 
   Future<void> addFoundPetReport({
     int? petId,
@@ -35,41 +30,26 @@ class FoundPetReportsController
     String? photoUrl,
     String? phone,
   }) async {
-    await _repository.addFoundPetReport(
-      petId: petId,
-      petLocalUuid: petLocalUuid,
-      matchedLostPetReportId: matchedLostPetReportId,
-      latitude: latitude,
-      longitude: longitude,
-      details: details,
-      foundDate: foundDate,
-      photoUrl: photoUrl,
-      phone: phone,
+    await mutateAndReload(
+      () => _repository.addFoundPetReport(
+        petId: petId,
+        petLocalUuid: petLocalUuid,
+        matchedLostPetReportId: matchedLostPetReportId,
+        latitude: latitude,
+        longitude: longitude,
+        details: details,
+        foundDate: foundDate,
+        photoUrl: photoUrl,
+        phone: phone,
+      ),
     );
-    await reload();
   }
 
-  Future<void> syncWithBackend() => reload();
-
-  Future<void> addCommentToFoundPetReport({
-    required int reportId,
-    required ReportCommentRecord comment,
-  }) async {
-    await _repository.addCommentToFoundPetReport(
-      reportId: reportId,
-      comment: comment,
-    );
-    await reload();
+  Future<void> addCommentToFoundPetReport({required int reportId, required ReportCommentRecord comment}) async {
+    await mutateAndReload(() => _repository.addCommentToFoundPetReport(reportId: reportId, comment: comment));
   }
 
-  Future<void> deleteFoundPetReport({
-    required int reportId,
-    String? remoteId,
-  }) async {
-    await _repository.deleteFoundPetReport(
-      reportId: reportId,
-      remoteId: remoteId,
-    );
-    await reload();
+  Future<void> deleteFoundPetReport({required int reportId, String? remoteId}) async {
+    await mutateAndReload(() => _repository.deleteFoundPetReport(reportId: reportId, remoteId: remoteId));
   }
 }

@@ -53,11 +53,7 @@ class HazardLayersPanelContent extends StatelessWidget {
         children: [
           Text(
             'Indice de visualización',
-            style: TextStyle(
-              color: textColor,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(color: textColor, fontSize: 15, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
           Container(
@@ -71,19 +67,13 @@ class HazardLayersPanelContent extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'Modo oscuro',
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w700),
                   ),
                 ),
                 Switch.adaptive(
                   value: isDarkModeEnabled,
                   activeThumbColor: AppPalette.primaryBlue,
-                  activeTrackColor: AppPalette.primaryBlue.withValues(
-                    alpha: 0.45,
-                  ),
+                  activeTrackColor: AppPalette.primaryBlue.withValues(alpha: 0.45),
                   onChanged: onToggleDarkMode,
                 ),
               ],
@@ -101,19 +91,13 @@ class HazardLayersPanelContent extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'Audio de navegación y alertas',
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w700),
                   ),
                 ),
                 Switch.adaptive(
                   value: audioFeedbackEnabled,
                   activeThumbColor: AppPalette.primaryBlue,
-                  activeTrackColor: AppPalette.primaryBlue.withValues(
-                    alpha: 0.45,
-                  ),
+                  activeTrackColor: AppPalette.primaryBlue.withValues(alpha: 0.45),
                   onChanged: onToggleAudioFeedback,
                 ),
               ],
@@ -123,11 +107,7 @@ class HazardLayersPanelContent extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             'Peligros',
-            style: TextStyle(
-              color: textColor,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(color: textColor, fontSize: 15, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
           _LayerCheckbox(
@@ -156,11 +136,7 @@ class HazardLayersPanelContent extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             'Problemáticas Zoosociales',
-            style: TextStyle(
-              color: textColor,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(color: textColor, fontSize: 15, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
           _LayerCheckbox(
@@ -226,21 +202,14 @@ class _LayerCheckbox extends StatelessWidget {
                 onChanged: (bool? value) => onChanged(value ?? false),
                 shape: const CircleBorder(),
                 activeColor: color,
-                side: BorderSide(
-                  color: AppPalette.border(isDarkMode),
-                  width: 1.4,
-                ),
+                side: BorderSide(color: AppPalette.border(isDarkMode), width: 1.4),
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 label,
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w600),
               ),
             ),
           ],

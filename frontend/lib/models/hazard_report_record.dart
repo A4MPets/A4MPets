@@ -1,28 +1,20 @@
-import 'dart:convert';
-
+import 'model_parsing.dart';
 import 'report_comment_record.dart';
 
 typedef HazardCommentRecord = ReportCommentRecord;
 
 class HazardReportRecord {
   final int id;
-  final String localUuid;
+  final String localUuid, syncStatus;
   final String? remoteId;
-  final String syncStatus;
-  final DateTime lastModifiedAt;
-  final double incidentLatitude;
-  final double incidentLongitude;
+  final DateTime lastModifiedAt, reportedAt, createdAt, updatedAt;
+  final double incidentLatitude, incidentLongitude;
   final int impactRadiusMeters;
-  final String categoryCode;
-  final String narrativeDescription;
-  final DateTime reportedAt;
-  final String estimatedDurationCode;
-  final String riskLevelCode;
+  final String categoryCode, narrativeDescription;
+  final String estimatedDurationCode, riskLevelCode;
   final String? evidencePhotoUrl;
   final String reportedByUsername;
   final List<HazardCommentRecord> comments;
-  final DateTime createdAt;
-  final DateTime updatedAt;
   final bool needsSync;
 
   const HazardReportRecord({
@@ -48,16 +40,10 @@ class HazardReportRecord {
   });
 
   factory HazardReportRecord.fromMap(Map<String, Object?> map) {
-    final String commentsJson = map['comments_json'] as String? ?? '[]';
-    final List<dynamic> rawComments = jsonDecode(commentsJson) as List<dynamic>;
     final int nowMs = DateTime.now().millisecondsSinceEpoch;
-    final int idValue = (map['id'] as num?)?.toInt() ?? 0;
-    final int createdAtMs = (map['created_at'] as num?)?.toInt() ?? nowMs;
-    final int updatedAtMs = (map['updated_at'] as num?)?.toInt() ?? createdAtMs;
-    final int reportedAtMs =
-        (map['reported_at'] as num?)?.toInt() ?? updatedAtMs;
-    final int lastModifiedMs =
-        (map['last_modified_at'] as num?)?.toInt() ?? updatedAtMs;
+    final int idValue = readInt(map['id']);
+    final int createdAtMs = readInt(map['created_at'], nowMs);
+    final int updatedAtMs = readInt(map['updated_at'], createdAtMs);
     final String fallbackLocalUuid = 'legacy-${map['id'] ?? nowMs}';
 
     return HazardReportRecord(
@@ -65,26 +51,21 @@ class HazardReportRecord {
       localUuid: map['local_uuid'] as String? ?? fallbackLocalUuid,
       remoteId: map['remote_id']?.toString(),
       syncStatus: map['sync_status'] as String? ?? 'created',
-      lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(lastModifiedMs),
-      incidentLatitude: (map['incident_latitude'] as num).toDouble(),
-      incidentLongitude: (map['incident_longitude'] as num).toDouble(),
-      impactRadiusMeters: (map['impact_radius_meters'] as num).toInt(),
+      lastModifiedAt: readDateTimeOr(map['last_modified_at'], updatedAtMs),
+      incidentLatitude: readDouble(map['incident_latitude']),
+      incidentLongitude: readDouble(map['incident_longitude']),
+      impactRadiusMeters: readInt(map['impact_radius_meters']),
       categoryCode: map['category_code'] as String,
       narrativeDescription: map['narrative_description'] as String,
-      reportedAt: DateTime.fromMillisecondsSinceEpoch(reportedAtMs),
+      reportedAt: readDateTimeOr(map['reported_at'], updatedAtMs),
       estimatedDurationCode: map['estimated_duration_code'] as String,
       riskLevelCode: map['risk_level_code'] as String,
       evidencePhotoUrl: map['evidence_photo_url'] as String?,
       reportedByUsername: map['reported_by_username'] as String? ?? 'Anonimo',
-      comments: rawComments
-          .map(
-            (dynamic item) =>
-                HazardCommentRecord.fromMap(item as Map<String, dynamic>),
-          )
-          .toList(growable: false),
+      comments: readReportComments(map['comments_json']),
       createdAt: DateTime.fromMillisecondsSinceEpoch(createdAtMs),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(updatedAtMs),
-      needsSync: (map['needs_sync'] as int? ?? 0) == 1,
+      needsSync: readBool(map['needs_sync']),
     );
   }
 
@@ -105,9 +86,7 @@ class HazardReportRecord {
       'risk_level_code': riskLevelCode,
       'evidence_photo_url': evidencePhotoUrl,
       'reported_by_username': reportedByUsername,
-      'comments_json': jsonEncode(
-        comments.map((HazardCommentRecord c) => c.toMap()).toList(),
-      ),
+      'comments_json': writeReportComments(comments),
       'created_at': createdAt.millisecondsSinceEpoch,
       'updated_at': updatedAt.millisecondsSinceEpoch,
       'needs_sync': needsSync ? 1 : 0,

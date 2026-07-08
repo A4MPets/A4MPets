@@ -24,12 +24,8 @@ class ReportCommentRecord {
   }
 
   static bool _parseBool(Object? value, {required bool fallback}) {
-    if (value is bool) {
-      return value;
-    }
-    if (value is num) {
-      return value != 0;
-    }
+    if (value is bool) return value;
+    if (value is num) return value != 0;
     if (value is String) {
       final String normalized = value.trim().toLowerCase();
       if (<String>{'1', 'true', 'yes', 'si', 'sí'}.contains(normalized)) {
@@ -43,18 +39,12 @@ class ReportCommentRecord {
   }
 
   static DateTime _parseCreatedAt(Object? value) {
-    if (value is num) {
-      return DateTime.fromMillisecondsSinceEpoch(value.toInt());
-    }
+    if (value is num) return DateTime.fromMillisecondsSinceEpoch(value.toInt());
     if (value is String) {
       final int? timestamp = int.tryParse(value);
-      if (timestamp != null) {
-        return DateTime.fromMillisecondsSinceEpoch(timestamp);
-      }
+      if (timestamp != null) return DateTime.fromMillisecondsSinceEpoch(timestamp);
       final DateTime? parsed = DateTime.tryParse(value);
-      if (parsed != null) {
-        return parsed;
-      }
+      if (parsed != null) return parsed;
     }
     return DateTime.now();
   }

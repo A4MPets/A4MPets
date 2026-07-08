@@ -1,26 +1,15 @@
-import 'dart:convert';
-
+import 'model_parsing.dart';
 import 'report_comment_record.dart';
 
 class FoundPetReportRecord {
   final int id;
-  final String localUuid;
-  final String? remoteId;
-  final String syncStatus;
-  final DateTime lastModifiedAt;
-  final int? petId;
-  final String? petLocalUuid;
-  final int? matchedLostPetReportId;
-  final double latitude;
-  final double longitude;
+  final String localUuid, syncStatus;
+  final String? remoteId, petLocalUuid, photoUrl, petPhotoUrl, phone;
+  final DateTime lastModifiedAt, foundDate, createdAt, updatedAt;
+  final int? petId, matchedLostPetReportId;
+  final double latitude, longitude;
   final String details;
-  final DateTime foundDate;
-  final String? photoUrl;
-  final String? petPhotoUrl;
-  final String? phone;
   final List<ReportCommentRecord> comments;
-  final DateTime createdAt;
-  final DateTime updatedAt;
   final bool needsSync;
 
   const FoundPetReportRecord({
@@ -46,42 +35,30 @@ class FoundPetReportRecord {
   });
 
   factory FoundPetReportRecord.fromMap(Map<String, Object?> map) {
-    final String commentsJson = map['comments_json'] as String? ?? '[]';
-    final List<dynamic> rawComments = jsonDecode(commentsJson) as List<dynamic>;
     final int nowMs = DateTime.now().millisecondsSinceEpoch;
-    final int createdAtMs = (map['created_at'] as num?)?.toInt() ?? nowMs;
-    final int updatedAtMs = (map['updated_at'] as num?)?.toInt() ?? createdAtMs;
-    final int lastModifiedMs =
-        (map['last_modified_at'] as num?)?.toInt() ?? updatedAtMs;
-    final int foundDateMs = (map['found_date'] as num?)?.toInt() ?? createdAtMs;
+    final int createdAtMs = readInt(map['created_at'], nowMs);
+    final int updatedAtMs = readInt(map['updated_at'], createdAtMs);
 
     return FoundPetReportRecord(
-      id: (map['id'] as num?)?.toInt() ?? 0,
-      localUuid:
-          map['local_uuid'] as String? ?? 'found-${map['id'] ?? createdAtMs}',
+      id: readInt(map['id']),
+      localUuid: map['local_uuid'] as String? ?? 'found-${map['id'] ?? createdAtMs}',
       remoteId: map['remote_id']?.toString(),
       syncStatus: map['sync_status'] as String? ?? 'created',
-      lastModifiedAt: DateTime.fromMillisecondsSinceEpoch(lastModifiedMs),
-      petId: (map['pet_id'] as num?)?.toInt(),
+      lastModifiedAt: readDateTimeOr(map['last_modified_at'], updatedAtMs),
+      petId: readOptionalInt(map['pet_id']),
       petLocalUuid: map['pet_local_uuid'] as String?,
-      matchedLostPetReportId: (map['matched_lost_pet_report_id'] as num?)
-          ?.toInt(),
-      latitude: (map['latitude'] as num).toDouble(),
-      longitude: (map['longitude'] as num).toDouble(),
+      matchedLostPetReportId: readOptionalInt(map['matched_lost_pet_report_id']),
+      latitude: readDouble(map['latitude']),
+      longitude: readDouble(map['longitude']),
       details: map['details'] as String? ?? '',
-      foundDate: DateTime.fromMillisecondsSinceEpoch(foundDateMs),
+      foundDate: readDateTimeOr(map['found_date'], createdAtMs),
       photoUrl: map['photo_url'] as String?,
       petPhotoUrl: map['pet_photo_url'] as String?,
       phone: map['phone'] as String?,
-      comments: rawComments
-          .map(
-            (dynamic item) =>
-                ReportCommentRecord.fromMap(item as Map<String, dynamic>),
-          )
-          .toList(growable: false),
+      comments: readReportComments(map['comments_json']),
       createdAt: DateTime.fromMillisecondsSinceEpoch(createdAtMs),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(updatedAtMs),
-      needsSync: (map['needs_sync'] as int? ?? 0) == 1,
+      needsSync: readBool(map['needs_sync']),
     );
   }
 
@@ -102,9 +79,7 @@ class FoundPetReportRecord {
       'photo_url': photoUrl,
       'pet_photo_url': petPhotoUrl,
       'phone': phone,
-      'comments_json': jsonEncode(
-        comments.map((ReportCommentRecord c) => c.toMap()).toList(),
-      ),
+      'comments_json': writeReportComments(comments),
       'created_at': createdAt.millisecondsSinceEpoch,
       'updated_at': updatedAt.millisecondsSinceEpoch,
       'needs_sync': needsSync ? 1 : 0,

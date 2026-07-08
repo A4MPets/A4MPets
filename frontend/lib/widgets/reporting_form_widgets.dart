@@ -3,12 +3,22 @@ import 'package:flutter/services.dart';
 
 import '../theme/app_palette.dart';
 import 'shared/local_image_widget.dart';
+import 'shared/panel_scroll_view.dart';
 
 class ReportingSelectionOption {
-  final String code;
-  final String label;
+  final String code, label;
 
   const ReportingSelectionOption(this.code, this.label);
+}
+
+final List<TextInputFormatter> reportingPhoneInputFormatters = <TextInputFormatter>[
+  FilteringTextInputFormatter.allow(RegExp(r'[0-9+\-\s()]')),
+];
+
+String formatReportingDate(DateTime date) {
+  final String day = date.day.toString().padLeft(2, '0');
+  final String month = date.month.toString().padLeft(2, '0');
+  return '$day/$month/${date.year}';
 }
 
 Future<DateTime?> showReportingDatePicker({
@@ -41,45 +51,68 @@ Future<DateTime?> showReportingDatePicker({
             backgroundColor: dialogBackground,
             headerBackgroundColor: AppPalette.primaryBlue,
             headerForegroundColor: selectedForegroundColor,
-            dayForegroundColor: WidgetStateProperty.resolveWith<Color?>((
-              Set<WidgetState> states,
-            ) {
-              if (states.contains(WidgetState.selected)) {
-                return selectedForegroundColor;
-              }
+            dayForegroundColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+              if (states.contains(WidgetState.selected)) return selectedForegroundColor;
               return foregroundColor;
             }),
-            yearForegroundColor: WidgetStateProperty.resolveWith<Color?>((
-              Set<WidgetState> states,
-            ) {
-              if (states.contains(WidgetState.selected)) {
-                return selectedForegroundColor;
-              }
+            yearForegroundColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+              if (states.contains(WidgetState.selected)) return selectedForegroundColor;
               return foregroundColor;
             }),
-            todayForegroundColor: WidgetStateProperty.resolveWith<Color?>((
-              Set<WidgetState> states,
-            ) {
-              if (states.contains(WidgetState.selected)) {
-                return selectedForegroundColor;
-              }
+            todayForegroundColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+              if (states.contains(WidgetState.selected)) return selectedForegroundColor;
               return AppPalette.primaryBlue;
             }),
             todayBorder: const BorderSide(color: AppPalette.primaryBlue),
           ),
-          dialogTheme: baseTheme.dialogTheme.copyWith(
-            backgroundColor: dialogBackground,
-          ),
-          textButtonTheme: TextButtonThemeData(
-            style: TextButton.styleFrom(
-              foregroundColor: AppPalette.primaryBlue,
-            ),
-          ),
+          dialogTheme: baseTheme.dialogTheme.copyWith(backgroundColor: dialogBackground),
+          textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(foregroundColor: AppPalette.primaryBlue)),
         ),
         child: child ?? const SizedBox.shrink(),
       );
     },
   );
+}
+
+class ReportingPanelScaffold extends StatelessWidget {
+  final List<Widget> children;
+  final String submitLabel;
+  final bool isBusy;
+  final VoidCallback onSubmit;
+  final Color submitColor;
+  final String? submitValidationErrorText;
+  final bool usePanelScrollView;
+
+  const ReportingPanelScaffold({
+    super.key,
+    required this.children,
+    required this.submitLabel,
+    required this.isBusy,
+    required this.onSubmit,
+    required this.submitColor,
+    this.submitValidationErrorText,
+    this.usePanelScrollView = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget content = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: usePanelScrollView ? PanelScrollView(child: content) : SingleChildScrollView(child: content),
+        ),
+        const SizedBox(height: 12),
+        if (submitValidationErrorText != null) ...[
+          ReportingFieldErrorText(message: submitValidationErrorText!),
+          const SizedBox(height: 8),
+        ],
+        ReportingPrimaryButton(label: submitLabel, isBusy: isBusy, onPressed: onSubmit, backgroundColor: submitColor),
+      ],
+    );
+  }
 }
 
 class ReportingFieldErrorText extends StatelessWidget {
@@ -91,11 +124,7 @@ class ReportingFieldErrorText extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       message,
-      style: const TextStyle(
-        color: AppPalette.dangerRed,
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-      ),
+      style: const TextStyle(color: AppPalette.dangerRed, fontSize: 12, fontWeight: FontWeight.w600),
     );
   }
 }
@@ -104,11 +133,7 @@ class ReportingLabeledField extends StatelessWidget {
   final String label;
   final Widget child;
 
-  const ReportingLabeledField({
-    super.key,
-    required this.label,
-    required this.child,
-  });
+  const ReportingLabeledField({super.key, required this.label, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -117,11 +142,7 @@ class ReportingLabeledField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: AppPalette.textMutedDark,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
+          style: const TextStyle(color: AppPalette.textMutedDark, fontSize: 12, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 6),
         child,
@@ -159,23 +180,15 @@ class ReportingDropdownField extends StatelessWidget {
           value: value,
           isExpanded: true,
           dropdownColor: AppPalette.fieldBackground(isDarkMode),
-          style: TextStyle(
-            color: AppPalette.textPrimary(isDarkMode),
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: AppPalette.textPrimary(isDarkMode), fontSize: 13, fontWeight: FontWeight.w600),
           items: items
               .map(
-                (ReportingSelectionOption option) => DropdownMenuItem<String>(
-                  value: option.code,
-                  child: Text(option.label),
-                ),
+                (ReportingSelectionOption option) =>
+                    DropdownMenuItem<String>(value: option.code, child: Text(option.label)),
               )
               .toList(growable: false),
           onChanged: (String? nextValue) {
-            if (nextValue != null) {
-              onChanged(nextValue);
-            }
+            if (nextValue != null) onChanged(nextValue);
           },
         ),
       ),
@@ -189,8 +202,7 @@ class ReportingTextField extends StatelessWidget {
   final String hintText;
   final int maxLines;
   final String? errorText;
-  final ValueChanged<String>? onSubmitted;
-  final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted, onChanged;
   final TextInputType? keyboardType;
   final List<TextInputFormatter>? inputFormatters;
 
@@ -217,24 +229,13 @@ class ReportingTextField extends StatelessWidget {
           maxLines: maxLines,
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
-          style: TextStyle(
-            color: AppPalette.textPrimary(isDarkMode),
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: AppPalette.textPrimary(isDarkMode), fontSize: 13, fontWeight: FontWeight.w600),
           decoration: InputDecoration(
             hintText: hintText,
-            hintStyle: const TextStyle(
-              color: AppPalette.textMutedDark,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
+            hintStyle: const TextStyle(color: AppPalette.textMutedDark, fontSize: 13, fontWeight: FontWeight.w500),
             filled: true,
             fillColor: AppPalette.fieldBackground(isDarkMode),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 12,
-            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: AppPalette.border(isDarkMode)),
@@ -251,10 +252,7 @@ class ReportingTextField extends StatelessWidget {
           onSubmitted: onSubmitted,
           onChanged: onChanged,
         ),
-        if (errorText != null) ...[
-          const SizedBox(height: 6),
-          ReportingFieldErrorText(message: errorText!),
-        ],
+        if (errorText != null) ...[const SizedBox(height: 6), ReportingFieldErrorText(message: errorText!)],
       ],
     );
   }
@@ -320,16 +318,9 @@ class ReportingPhotoField extends StatelessWidget {
                       child: isBusy
                           ? const Padding(
                               padding: EdgeInsets.all(9),
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppPalette.charcoal,
-                              ),
+                              child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.charcoal),
                             )
-                          : const Icon(
-                              Icons.edit,
-                              size: 18,
-                              color: AppPalette.charcoal,
-                            ),
+                          : const Icon(Icons.edit, size: 18, color: AppPalette.charcoal),
                     ),
                   ),
                 ),
@@ -337,10 +328,7 @@ class ReportingPhotoField extends StatelessWidget {
             ],
           ),
         ),
-        if (errorText != null) ...[
-          const SizedBox(height: 6),
-          ReportingFieldErrorText(message: errorText!),
-        ],
+        if (errorText != null) ...[const SizedBox(height: 6), ReportingFieldErrorText(message: errorText!)],
       ],
     );
   }
@@ -349,8 +337,7 @@ class ReportingPhotoField extends StatelessWidget {
 class ReportingCheckboxField extends StatelessWidget {
   final bool isDarkMode;
   final bool value;
-  final String title;
-  final String subtitle;
+  final String title, subtitle;
   final ValueChanged<bool> onChanged;
 
   const ReportingCheckboxField({
@@ -377,19 +364,11 @@ class ReportingCheckboxField extends StatelessWidget {
         contentPadding: const EdgeInsets.symmetric(horizontal: 8),
         title: Text(
           title,
-          style: TextStyle(
-            color: AppPalette.textPrimary(isDarkMode),
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(color: AppPalette.textPrimary(isDarkMode), fontSize: 13, fontWeight: FontWeight.w700),
         ),
         subtitle: Text(
           subtitle,
-          style: const TextStyle(
-            color: AppPalette.textMutedDark,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
+          style: const TextStyle(color: AppPalette.textMutedDark, fontSize: 12, fontWeight: FontWeight.w500),
         ),
         onChanged: (bool? nextValue) => onChanged(nextValue ?? false),
       ),
@@ -402,12 +381,7 @@ class ReportingDateField extends StatelessWidget {
   final String valueText;
   final VoidCallback onTap;
 
-  const ReportingDateField({
-    super.key,
-    required this.isDarkMode,
-    required this.valueText,
-    required this.onTap,
-  });
+  const ReportingDateField({super.key, required this.isDarkMode, required this.valueText, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -419,9 +393,7 @@ class ReportingDateField extends StatelessWidget {
           foregroundColor: AppPalette.textMutedDark,
           side: const BorderSide(color: AppPalette.textMutedDark),
           backgroundColor: AppPalette.fieldBackground(isDarkMode),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         icon: const Icon(Icons.calendar_today_rounded, size: 16),
         label: Align(
@@ -443,6 +415,7 @@ class ReportingSecondaryButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
+  final bool showBorder;
 
   const ReportingSecondaryButton({
     super.key,
@@ -450,6 +423,7 @@ class ReportingSecondaryButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.icon,
+    this.showBorder = true,
   });
 
   @override
@@ -471,10 +445,7 @@ class ReportingSecondaryButton extends StatelessWidget {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -486,11 +457,9 @@ class ReportingSecondaryButton extends StatelessWidget {
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
           foregroundColor: AppPalette.textPrimary(isDarkMode),
-          side: BorderSide(color: AppPalette.border(isDarkMode)),
+          side: showBorder ? BorderSide(color: AppPalette.border(isDarkMode)) : BorderSide.none,
           backgroundColor: AppPalette.fieldBackground(isDarkMode),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         child: child,
       ),
@@ -503,35 +472,11 @@ class ReportingSelectionButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
 
-  const ReportingSelectionButton({
-    super.key,
-    required this.isDarkMode,
-    required this.label,
-    required this.onPressed,
-  });
+  const ReportingSelectionButton({super.key, required this.isDarkMode, required this.label, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 46,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppPalette.textPrimary(isDarkMode),
-          side: BorderSide.none,
-          backgroundColor: AppPalette.fieldBackground(isDarkMode),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-        ),
-      ),
-    );
+    return ReportingSecondaryButton(isDarkMode: isDarkMode, label: label, onPressed: onPressed, showBorder: false);
   }
 }
 
@@ -558,26 +503,15 @@ class ReportingPrimaryButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         child: isBusy
             ? const SizedBox(
                 width: 18,
                 height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
               )
-            : Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+            : Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
       ),
     );
   }
@@ -590,13 +524,7 @@ class _PhotoPlaceholder extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: AppPalette.placeholderGray,
-      child: const Center(
-        child: Icon(
-          Icons.warning_amber_rounded,
-          size: 38,
-          color: AppPalette.iconGray,
-        ),
-      ),
+      child: const Center(child: Icon(Icons.warning_amber_rounded, size: 38, color: AppPalette.iconGray)),
     );
   }
 }

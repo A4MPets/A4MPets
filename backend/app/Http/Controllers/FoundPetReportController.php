@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\RespondsWithReportResources;
 use App\Http\Requests\Reports\StoreFoundPetReportRequest;
 use App\Http\Requests\Reports\StoreReportCommentRequest;
 use App\Http\Requests\Reports\UpdateFoundPetReportRequest;
@@ -14,6 +15,10 @@ use Illuminate\Http\Request;
 
 class FoundPetReportController extends Controller
 {
+    use RespondsWithReportResources;
+
+    private const RELATIONS = ['comments', 'comments.user'];
+
     public function __construct(
         private readonly FoundPetReportService $foundPetReportService,
         private readonly ReportCommentService $reportCommentService,
@@ -22,112 +27,54 @@ class FoundPetReportController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $reports = $this->foundPetReportService->paginate(
+        return $this->paginated($this->foundPetReportService->paginate(
             $request->boolean('include_archived'),
             min((int) $request->query('per_page', 50), 100),
             (int) $request->query('page', 1)
-        );
-
-        return response()->json([
-            'success' => true,
-            'data' => $reports->items(),
-            'pagination' => [
-                'total' => $reports->total(),
-                'per_page' => $reports->perPage(),
-                'current_page' => $reports->currentPage(),
-                'last_page' => $reports->lastPage(),
-            ],
-        ]);
+        ));
     }
 
     public function show(FoundPetReport $foundPetReport): JsonResponse
     {
-        $foundPetReport->load(['comments', 'comments.user']);
-
-        return response()->json([
-            'success' => true,
-            'data' => $foundPetReport,
-        ]);
+        return $this->data($foundPetReport->load(self::RELATIONS));
     }
 
     public function store(StoreFoundPetReportRequest $request): JsonResponse
     {
         if (! $request->user()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Debes iniciar sesion para reportar mascotas encontradas.',
-            ], 401);
+            return response()->json(['success' => false, 'message' => 'Debes iniciar sesion para reportar mascotas encontradas.'], 401);
         }
 
-        $report = $this->foundPetReportService->store(
-            $request->user()?->id,
-            $request->validated()
-        );
-
-        return response()->json([
-            'success' => true,
-            'data' => $report,
-        ], 201);
+        return $this->data($this->foundPetReportService->store($request->user()?->id, $request->validated()), 201);
     }
 
     public function update(UpdateFoundPetReportRequest $request, FoundPetReport $foundPetReport): JsonResponse
     {
         if (! $this->foundPetReportService->canMutate($request->user()?->id, $foundPetReport)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No autorizado',
-            ], 403);
+            return $this->unauthorized();
         }
 
-        $report = $this->foundPetReportService->update($foundPetReport, $request->validated());
-
-        return response()->json([
-            'success' => true,
-            'data' => $report,
-        ]);
+        return $this->data($this->foundPetReportService->update($foundPetReport, $request->validated()));
     }
 
     public function destroy(FoundPetReport $foundPetReport): JsonResponse
     {
         if (! $this->foundPetReportService->canMutate(request()->user()?->id, $foundPetReport)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No autorizado',
-            ], 403);
+            return $this->unauthorized();
         }
 
         $this->foundPetReportService->delete($foundPetReport);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Reporte eliminado',
-        ]);
+        return $this->deleted();
     }
 
     public function comments(FoundPetReport $foundPetReport): JsonResponse
     {
-        $foundPetReport->load(['comments', 'comments.user']);
-
-        return response()->json([
-            'success' => true,
-            'data' => $foundPetReport->comments
-                ->map(fn ($comment) => $this->reportCommentFormatter->formatComment($comment))
-                ->values(),
-        ]);
+        return $this->commentsFor($foundPetReport, self::RELATIONS);
     }
 
     public function storeComment(StoreReportCommentRequest $request, FoundPetReport $foundPetReport): JsonResponse
     {
-        $comment = $this->reportCommentService->storeComment(
-            $foundPetReport,
-            $request->user(),
-            $request->validated()
-        );
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Comentario agregado exitosamente',
-            'data' => $this->reportCommentFormatter->formatComment($comment),
-        ], 201);
+        return $this->createdComment($this->reportCommentService->storeComment($foundPetReport, $request->user(), $request->validated()));
     }
 }
